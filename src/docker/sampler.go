@@ -55,8 +55,8 @@ func populateCPUStat(container docker.CgroupDockerStat, ms *metric.Set) error {
 		MetricCPUPercent(rndCpu),
 		MetricCPUSystemPercent(rndCpu * 0.2),
 		MetricCPUUserPercent(rndCpu * 0.8),
-		MetricMemoryVirtualSizeBytes(10_000_000),
-		MetricMemoryResidentSizeBytes(8_000_000),
+		MetricMemoryVirtualSizeBytes(10000000),
+		MetricMemoryResidentSizeBytes(8000000),
 		MetricIOReadCountPerSecond(0), // take from blkio_stats
 		MetricIOWriteCountPerSecond(0),
 		MetricIOReadBytesPerSecond(0),
