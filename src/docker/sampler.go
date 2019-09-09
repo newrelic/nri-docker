@@ -2,19 +2,18 @@ package docker
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/data/metric"
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/newrelic/infra-integrations-sdk/log"
+	"github.com/newrelic/nri-docker/src/stats"
 )
 
 type ContainerSampler struct {
 	docker *client.Client
+	stats  stats.Provider
 }
 
 func populate(ms *metric.Set, metrics []Metric) error {
@@ -26,7 +25,7 @@ func populate(ms *metric.Set, metrics []Metric) error {
 	return nil
 }
 
-func statMetrics(container types.Container) []Metric {
+func attributeMetrics(container types.Container) []Metric {
 	var cname string
 	if len(container.Names) > 0 {
 		cname = container.Names[0]
@@ -42,31 +41,18 @@ func statMetrics(container types.Container) []Metric {
 	}
 }
 
-func (cs *ContainerSampler) metrics(containerID string) []Metric {
-	// TODO: consider streaming in a long-lived integration
-	apiStats, err := cs.docker.ContainerStats(context.Background(), containerID, false)
+func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
+	stats, err := cs.stats.Fetch(containerID)
 	if err != nil {
-		log.Error("error retrieving container %s stats: %s", containerID, err.Error())
-		return []Metric{}
+		log.Error("error retrieving stats for container %s: %s", containerID, err.Error())
 	}
 
-	jsonStats, err := ioutil.ReadAll(apiStats.Body)
-	if err != nil {
-		log.Error("wrong JSON for container %s stats: %s", containerID, err.Error())
-		return []Metric{}
+	cpu, system, user := stats.CPU()
+	return []Metric{
+		MetricCPUPercent(cpu),
+		MetricCPUSystemPercent(system),
+		MetricCPUUserPercent(user),
 	}
-	_ = apiStats.Body.Close()
-
-	stats := types.Stats{}
-
-	err = json.Unmarshal(jsonStats, &stats)
-	if err != nil {
-		log.Error("wrong JSON for container %s stats: %s", containerID, err.Error())
-		return []Metric{}
-	}
-
-	fmt.Println(string(jsonStats))
-	return []Metric{}
 
 }
 
@@ -108,7 +94,10 @@ func populateCPUStat(container docker.CgroupDockerStat, ms *metric.Set) error {
 func NewContainerSampler() (ContainerSampler, error) {
 	cli, err := client.NewEnvClient()
 	cli.UpdateClientVersion("1.24") // TODO: make it configurable
-	return ContainerSampler{docker: cli}, err
+	return ContainerSampler{
+		docker: cli,
+		stats:  stats.NewAPIProvider(cli),
+	}, err
 }
 
 func (cs *ContainerSampler) SampleAll(entity *integration.Entity) error {
@@ -120,11 +109,15 @@ func (cs *ContainerSampler) SampleAll(entity *integration.Entity) error {
 	for _, container := range containers {
 		ms := entity.NewMetricSet(ContainerSampleName)
 
-		if err := populate(ms, statMetrics(container)); err != nil {
+		if err := populate(ms, attributeMetrics(container)); err != nil {
 			return err
 		}
 
-		cs.metrics(container.ID)
+		if err := populate(ms, cs.statsMetrics(container.ID)); err != nil {
+			return err
+		}
+
+		cs.statsMetrics(container.ID)
 	}
 	return nil
 }
