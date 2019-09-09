@@ -29,15 +29,18 @@ func main() {
 		log.Error(err.Error())
 		os.Exit(1)
 	}
-
-	sampler := docker.NewContainerSampler()
-
 	entity := i.LocalEntity()
-	if err := sampler.Populate(entity.NewMetricSet(docker.ContainerSampleName)); err != nil {
-		log.Error("error populating %q: %s", docker.ContainerSampleName, err.Error())
-		os.Exit(-1)
-	}
-	if err = i.Publish(); err != nil {
+
+	cs, err := docker.NewContainerSampler()
+	exitOnErr(err)
+
+	exitOnErr(cs.SampleAll(entity))
+
+	exitOnErr(i.Publish())
+}
+
+func exitOnErr(err error) {
+	if err != nil {
 		log.Error(err.Error())
 		os.Exit(-1)
 	}

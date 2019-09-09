@@ -12,12 +12,12 @@ func metricFunc(name string, sType metric.SourceType) func(interface{}) Metric {
 
 var (
 	MetricCommandLine             = metricFunc("commandLine", metric.ATTRIBUTE)
-	MetricUser                    = metricFunc("user", metric.ATTRIBUTE)
 	MetricContainerImage          = metricFunc("image", metric.ATTRIBUTE)
 	MetricContainerImageName      = metricFunc("imageName", metric.ATTRIBUTE)
 	MetricContainerName           = metricFunc("name", metric.ATTRIBUTE)
-	MetricContainerID             = metricFunc("id", metric.ATTRIBUTE)
+	MetricContainerID             = metricFunc("containerId", metric.ATTRIBUTE)
 	MetricState                   = metricFunc("state", metric.ATTRIBUTE)
+	MetricStatus                 = metricFunc("status", metric.ATTRIBUTE)
 	MetricCPUPercent              = metricFunc("cpuPercent", metric.GAUGE)
 	MetricCPUSystemPercent        = metricFunc("cpuSystemPercent", metric.GAUGE)
 	MetricCPUUserPercent          = metricFunc("cpuUserPercent", metric.GAUGE)

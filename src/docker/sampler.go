@@ -1,22 +1,50 @@
 package docker
 
 import (
-	"math/rand"
-
+	"context"
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/data/metric"
+	"github.com/newrelic/infra-integrations-sdk/integration"
 )
 
-type Sampler interface {
-	Populate(*metric.Set) error
-}
-
 type ContainerSampler struct {
+	docker *client.Client
 }
 
-func (c ContainerSampler) Populate(ms *metric.Set) error {
+func populate(ms *metric.Set, metrics []Metric) error {
+	for _, metric := range metrics {
+		if err := ms.SetMetric(metric.Name, metric.Value, metric.Type); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func statMetrics(container types.Container) []Metric {
+	var cname string
+	if len(container.Names) > 0 {
+		cname = container.Names[0]
+	}
+	return []Metric{
+		MetricCommandLine(container.Command),
+		MetricContainerID(container.ID),
+		MetricContainerName(cname),
+		MetricContainerImage(container.ImageID),
+		MetricContainerImageName(container.Image),
+		MetricState(container.State),
+		MetricStatus(container.Status),
+	}
+}
+
+/*
+
+func populateCPUStat(container docker.CgroupDockerStat, ms *metric.Set) error {
+
+
 	rndCpu := 10 + rand.Float64()*10
 	for _, metric := range []Metric{
-		MetricCommandLine("/command-exec"),
+		MetricCommandLine( "/command-exec"),
 		MetricUser("root"),
 		MetricContainerImage("12345"),
 		MetricContainerImageName("alpine:latest"),
@@ -45,7 +73,25 @@ func (c ContainerSampler) Populate(ms *metric.Set) error {
 	}
 	return nil
 }
+*/
+func NewContainerSampler() (ContainerSampler, error) {
+	cli, err := client.NewEnvClient()
+	cli.UpdateClientVersion("1.24") // TODO: make it configurable
+	return ContainerSampler{docker: cli}, err
+}
 
-func NewContainerSampler() Sampler {
-	return ContainerSampler{}
+func (cs *ContainerSampler) SampleAll(entity *integration.Entity) error {
+	// TODO: filter by state == running?
+	containers, err := cs.docker.ContainerList(context.Background(), types.ContainerListOptions{})
+	if err != nil {
+		return err
+	}
+	for _, container := range containers {
+		ms := entity.NewMetricSet(ContainerSampleName)
+
+		if err := populate(ms, statMetrics(container)); err != nil {
+			return err
+		}
+	}
+	return nil
 }
