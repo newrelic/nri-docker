@@ -14,21 +14,21 @@ os: linux
 commands:
   all_data:
     command:
-      - ./bin/nr-nri-docker
+      - ./bin/nri-docker
     interval: 15
   metrics:
     command:
-      - ./bin/nr-nri-docker
+      - ./bin/nri-docker
       - --metrics
     interval: 15
   inventory:
     command:
-      - ./bin/nr-nri-docker
+      - ./bin/nri-docker
       - --inventory
-    prefix: config/nr-nri-docker
+    prefix: config/nri-docker
     interval: 15
   events:
     command:
-    - ./bin/nr-nri-docker
+    - ./bin/nri-docker
     - --events
     interval: 15
