@@ -2,10 +2,15 @@ package docker
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/data/metric"
 	"github.com/newrelic/infra-integrations-sdk/integration"
+	"github.com/newrelic/infra-integrations-sdk/log"
 )
 
 type ContainerSampler struct {
@@ -37,6 +42,34 @@ func statMetrics(container types.Container) []Metric {
 	}
 }
 
+func (cs *ContainerSampler) metrics(containerID string) []Metric {
+	// TODO: consider streaming in a long-lived integration
+	apiStats, err := cs.docker.ContainerStats(context.Background(), containerID, false)
+	if err != nil {
+		log.Error("error retrieving container %s stats: %s", containerID, err.Error())
+		return []Metric{}
+	}
+
+	jsonStats, err := ioutil.ReadAll(apiStats.Body)
+	if err != nil {
+		log.Error("wrong JSON for container %s stats: %s", containerID, err.Error())
+		return []Metric{}
+	}
+	_ = apiStats.Body.Close()
+
+	stats := types.Stats{}
+
+	err = json.Unmarshal(jsonStats, &stats)
+	if err != nil {
+		log.Error("wrong JSON for container %s stats: %s", containerID, err.Error())
+		return []Metric{}
+	}
+
+	fmt.Println(string(jsonStats))
+	return []Metric{}
+
+}
+
 /*
 
 func populateCPUStat(container docker.CgroupDockerStat, ms *metric.Set) error {
@@ -44,8 +77,6 @@ func populateCPUStat(container docker.CgroupDockerStat, ms *metric.Set) error {
 
 	rndCpu := 10 + rand.Float64()*10
 	for _, metric := range []Metric{
-		MetricCommandLine( "/command-exec"),
-		MetricUser("root"),
 		MetricContainerImage("12345"),
 		MetricContainerImageName("alpine:latest"),
 		MetricContainerName("containername"),
@@ -92,6 +123,8 @@ func (cs *ContainerSampler) SampleAll(entity *integration.Entity) error {
 		if err := populate(ms, statMetrics(container)); err != nil {
 			return err
 		}
+
+		cs.metrics(container.ID)
 	}
 	return nil
 }
