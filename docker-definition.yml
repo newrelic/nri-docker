@@ -1,0 +1,26 @@
+name: com.newrelic.docker
+description: Reports status and metrics for the Docker service
+protocol_version: 3
+os: linux
+
+commands:
+  all_data:
+    command:
+      - ./bin/nr-docker
+    interval: 15
+  metrics:
+    command:
+      - ./bin/nr-docker
+      - --metrics
+    interval: 15
+  inventory:
+    command:
+      - ./bin/nr-docker
+      - --inventory
+    prefix: config/docker
+    interval: 15
+  events:
+    command:
+      - ./bin/nr-docker
+      - --events
+    interval: 15

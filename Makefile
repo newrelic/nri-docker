@@ -1,68 +1,91 @@
-NATIVEOS	 := $(shell go version | awk -F '[ /]' '{print $$4}')
-NATIVEARCH	 := $(shell go version | awk -F '[ /]' '{print $$5}')
-INTEGRATION  := $(shell basename $(shell pwd))
-BINARY_NAME   = $(INTEGRATION)
-GO_PKGS      := $(shell go list ./... | grep -v "/vendor/")
-GOTOOLS       = github.com/kardianos/govendor \
-		gopkg.in/alecthomas/gometalinter.v2 \
-		github.com/axw/gocov/gocov \
-		github.com/stretchr/testify/assert \
-		github.com/AlekSi/gocov-xml \
+INTEGRATION     := docker
+BINARY_NAME      = nr-$(INTEGRATION)
+SRC_DIR          = ./src/
+VALIDATE_DEPS    = golang.org/x/lint/golint
+TEST_DEPS        = github.com/axw/gocov/gocov github.com/AlekSi/gocov-xml
+INTEGRATIONS_DIR = /var/db/newrelic-infra/newrelic-integrations/
+CONFIG_DIR       = /etc/newrelic-infra/integrations.d
+GO_FILES        := ./src/
+WORKDIR         := $(shell pwd)
+TARGET          := target
+TARGET_DIR       = $(WORKDIR)/$(TARGET)
 
 all: build
 
-build: check-version clean validate test compile
+build: clean validate compile test
 
 clean:
-	@echo "=== $(INTEGRATION) === [ clean ]: Removing binaries and coverage file..."
-	@rm -rfv bin coverage.xml
+	@echo "=== $(INTEGRATION) === [ clean ]: removing binaries and coverage file..."
+	@rm -rfv bin coverage.xml $(TARGET)
 
-tools: check-version
-	@echo "=== $(INTEGRATION) === [ tools ]: Installing tools required by the project..."
-	@go get $(GOTOOLS)
-	@gometalinter.v2 --install
+validate-deps:
+	@echo "=== $(INTEGRATION) === [ validate-deps ]: installing validation dependencies..."
+	@go get -v $(VALIDATE_DEPS)
 
-tools-update: check-version
-	@echo "=== $(INTEGRATION) === [ tools-update ]: Updating tools required by the project..."
-	@go get -u $(GOTOOLS)
-	@gometalinter.v2 --install
+validate-only:
+	@printf "=== $(INTEGRATION) === [ validate ]: running gofmt... "
+	@OUTPUT="$(shell gofmt -l $(GO_FILES))" ;\
+	if [ -z "$$OUTPUT" ]; then \
+		echo "passed." ;\
+	else \
+		echo "failed. Incorrect syntax in the following files:" ;\
+		echo "$$OUTPUT" ;\
+		exit 1 ;\
+	fi
+	@printf "=== $(INTEGRATION) === [ validate ]: running golint... "
+	@OUTPUT="$(shell golint $(SRC_DIR)...)" ;\
+	if [ -z "$$OUTPUT" ]; then \
+		echo "passed." ;\
+	else \
+		echo "failed. Issues found:" ;\
+		echo "$$OUTPUT" ;\
+		exit 1 ;\
+	fi
+	@printf "=== $(INTEGRATION) === [ validate ]: running go vet... "
+	@OUTPUT="$(shell go vet $(SRC_DIR)...)" ;\
+	if [ -z "$$OUTPUT" ]; then \
+		echo "passed." ;\
+	else \
+		echo "failed. Issues found:" ;\
+		echo "$$OUTPUT" ;\
+		exit 1;\
+	fi
 
-deps: tools deps-only
+validate: validate-deps validate-only
 
-deps-only:
-	@echo "=== $(INTEGRATION) === [ deps ]: Installing package dependencies required by the project..."
-	@govendor sync
+compile-deps:
+	@echo "=== $(INTEGRATION) === [ compile-deps ]: installing build dependencies..."
+	@go get -v -d -t ./...
 
-validate: deps
-	@echo "=== $(INTEGRATION) === [ validate ]: Validating source code running gometalinter..."
-	@gometalinter.v2 --config=.gometalinter.json ./...
+bin/$(BINARY_NAME):
+	@echo "=== $(INTEGRATION) === [ compile ]: building $(BINARY_NAME)..."
+	@go build -v -o bin/$(BINARY_NAME) $(GO_FILES)
 
-validate-all: deps
-	@echo "=== $(INTEGRATION) === [ validate ]: Validating source code running gometalinter..."
-	@gometalinter.v2 --config=.gometalinter.json --enable=interfacer --enable=gosimple ./...
+compile: compile-deps bin/$(BINARY_NAME)
 
-compile: deps
-	@echo "=== $(INTEGRATION) === [ compile ]: Building $(BINARY_NAME)..."
-	@go build -o bin/$(BINARY_NAME) ./src
+test-deps: compile-deps
+	@echo "=== $(INTEGRATION) === [ test-deps ]: installing testing dependencies..."
+	@go get -v $(TEST_DEPS)
 
-compile-only: deps-only
-	@echo "=== $(INTEGRATION) === [ compile ]: Building $(BINARY_NAME)..."
-	@go build -o bin/$(BINARY_NAME) ./src
+test-only:
+	@echo "=== $(INTEGRATION) === [ test ]: running unit tests..."
+	@gocov test $(SRC_DIR)/... | gocov-xml > coverage.xml
 
-test: deps
-	@echo "=== $(INTEGRATION) === [ test ]: Running unit tests..."
-	@gocov test $(GO_PKGS) | gocov-xml > coverage.xml
+test: test-deps test-only
 
-check-version:
-ifdef GOOS
-ifneq "$(GOOS)" "$(NATIVEOS)"
-	$(error GOOS is not $(NATIVEOS). Cross-compiling is only allowed for 'clean', 'deps-only' and 'compile-only' targets)
-endif
-endif
-ifdef GOARCH
-ifneq "$(GOARCH)" "$(NATIVEARCH)"
-	$(error GOARCH variable is not $(NATIVEARCH). Cross-compiling is only allowed for 'clean', 'deps-only' and 'compile-only' targets)
-endif
-endif
+integration-test: test-deps
+	@echo "=== $(INTEGRATION) === [ test ]: running integration tests..."
+	@docker-compose -f tests/integration/docker-compose.yml up -d --build
+	@go test -v -tags=integration ./tests/integration/. || (ret=$$?; docker-compose -f tests/integration/docker-compose.yml down && exit $$ret)
+	@docker-compose -f tests/integration/docker-compose.yml down
 
-.PHONY: all build clean tools tools-update deps deps-only validate validate-all compile compile-only test check-version
+install: bin/$(BINARY_NAME)
+	@echo "=== $(INTEGRATION) === [ install ]: installing bin/$(BINARY_NAME)..."
+	@sudo install -D --mode=755 --owner=root --strip $(ROOT)bin/$(BINARY_NAME) $(INTEGRATIONS_DIR)/bin/$(BINARY_NAME)
+	@sudo install -D --mode=644 --owner=root $(ROOT)$(INTEGRATION)-definition.yml $(INTEGRATIONS_DIR)/$(INTEGRATION)-definition.yml
+	@sudo install -D --mode=644 --owner=root $(ROOT)$(INTEGRATION)-config.yml.sample $(CONFIG_DIR)/$(INTEGRATION)-config.yml.sample
+
+# Include thematic Makefiles
+include Makefile-*.mk
+
+.PHONY: all build clean validate-deps validate-only validate compile-deps compile test-deps test-only test integration-test install

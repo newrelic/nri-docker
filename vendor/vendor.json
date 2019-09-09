@@ -9,6 +9,16 @@
 			"revisionTime": "2018-02-21T22:46:20Z"
 		},
 		{
+			"checksumSHA1": "RV3TjdXHAuXJ4ABHQ+9rTqK7j8Q=",
+			"path": "github.com/docker/docker/client",
+			"revision": "618741ba87e97e72174eea6431a89b78bf829341",
+			"revisionTime": "2018-11-23T10:20:44Z"
+		},
+		{
+			"path": "github.com/newrelic.com/infra-integrations-sdk",
+			"revision": ""
+		},
+		{
 			"checksumSHA1": "XdtijzwGRz6BNBgsd/J+d/fvN9k=",
 			"path": "github.com/newrelic/infra-integrations-sdk/args",
 			"revision": "05f41fe052b3dc8861a75b3bd8b4cef90dcb5dc4",

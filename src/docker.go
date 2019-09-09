@@ -15,7 +15,7 @@ type argumentList struct {
 }
 
 const (
-	integrationName    = "com.newrelic.nri-docker"
+	integrationName    = "com.newrelic.docker"
 	integrationVersion = "0.1.0"
 )
 
