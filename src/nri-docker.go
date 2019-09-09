@@ -1,0 +1,65 @@
+package main
+
+import (
+	"os"
+
+	sdkArgs "github.com/newrelic/infra-integrations-sdk/args"
+	"github.com/newrelic/infra-integrations-sdk/data/event"
+	"github.com/newrelic/infra-integrations-sdk/data/metric"
+	"github.com/newrelic/infra-integrations-sdk/integration"
+	"github.com/newrelic/infra-integrations-sdk/log"
+)
+
+type argumentList struct {
+	sdkArgs.DefaultArgumentList
+}
+
+const (
+	integrationName    = "com.newrelic.nri-docker"
+	integrationVersion = "0.1.0"
+)
+
+var (
+	args argumentList
+)
+
+func main() {
+	// Create Integration
+	i, err := integration.New(integrationName, integrationVersion, integration.Args(&args))
+	if err != nil {
+		log.Error(err.Error())
+		os.Exit(1)
+	}
+
+	entity := i.LocalEntity()
+
+	// Add Event
+	if args.All() || args.Events {
+		err = entity.AddEvent(event.New("restart", "status"))
+		if err != nil {
+			log.Error(err.Error())
+		}
+	}
+
+	// Add Inventory item
+	if args.All() || args.Inventory {
+		err = entity.SetInventoryItem("instance", "version", "3.0.1")
+		if err != nil {
+			log.Error(err.Error())
+		}
+	}
+
+	// Add Metric
+	if args.All() || args.Metrics {
+		m := entity.NewMetricSet("CustomSample")
+
+		err = m.SetMetric("some-data", 4000, metric.GAUGE)
+		if err != nil {
+			log.Error(err.Error())
+		}
+	}
+
+	if err = i.Publish(); err != nil {
+		log.Error(err.Error())
+	}
+}
