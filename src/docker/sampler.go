@@ -235,7 +235,7 @@ func NewContainerSampler() (ContainerSampler, error) {
 	cli.UpdateClientVersion(dockerClientVersion) // TODO: make it configurable
 	return ContainerSampler{
 		docker: cli,
-		stats:  stats.NewAPIProvider(cli),
+		stats:  stats.NewCGroupsProvider(cli),
 	}, err
 }
 
