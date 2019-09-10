@@ -230,12 +230,12 @@ curl --unix-socket /var/run/docker.sock http:/docker/containers/<container_id>/s
    }
 }
 */
-func NewContainerSampler() (ContainerSampler, error) {
+func NewContainerSampler(statsProvider stats.Provider) (ContainerSampler, error) {
 	cli, err := client.NewEnvClient()
 	cli.UpdateClientVersion(dockerClientVersion) // TODO: make it configurable
 	return ContainerSampler{
 		docker: cli,
-		stats:  stats.NewCGroupsProvider(cli),
+		stats:  statsProvider,
 	}, err
 }
 
