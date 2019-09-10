@@ -113,6 +113,7 @@ func (cg *CGroupsProvider) readPidsStats(containerID string, stats *types.PidsSt
 	return nil
 }
 
+// TODO: on int parse error, not return error, just ignore and continue other metrics
 func (cg *CGroupsProvider) readBlkio(path string, ioStat string) ([]types.BlkioStatEntry, error) {
 	entries := []types.BlkioStatEntry{}
 
@@ -167,38 +168,13 @@ func (cg *CGroupsProvider) readBlkio(path string, ioStat string) ([]types.BlkioS
 func (cg *CGroupsProvider) readBlkioStats(containerID string, stats *types.BlkioStats) (err error) {
 	path := path2.Join(cgroupPath, "blkio", "docker", containerID)
 
-	if stats.IoMergedRecursive, err = cg.readBlkio(path, "blkio.io_merged_recursive"); err != nil {
+	if stats.IoServiceBytesRecursive, err = cg.readBlkio(path, "blkio.throttle.io_service_bytes"); err != nil {
 		return err
 	}
 
-	if stats.IoServiceBytesRecursive, err = cg.readBlkio(path, "blkio.io_service_bytes_recursive"); err != nil {
+	if stats.IoServicedRecursive, err = cg.readBlkio(path, "blkio.throttle.io_serviced"); err != nil {
 		return err
 	}
-
-	if stats.IoServicedRecursive, err = cg.readBlkio(path, "blkio.io_serviced_recursive"); err != nil {
-		return err
-	}
-
-	if stats.IoQueuedRecursive, err = cg.readBlkio(path, "blkio.io_queued_recursive"); err != nil {
-		return err
-	}
-
-	if stats.IoServiceTimeRecursive, err = cg.readBlkio(path, "blkio.io_service_time_recursive"); err != nil {
-		return err
-	}
-
-	if stats.IoWaitTimeRecursive, err = cg.readBlkio(path, "blkio.io_wait_time_recursive"); err != nil {
-		return err
-	}
-
-	if stats.IoTimeRecursive, err = cg.readBlkio(path, "blkio.time_recursive"); err != nil {
-		return err
-	}
-
-	if stats.SectorsRecursive, err = cg.readBlkio(path, "blkio.sectors_recursive"); err != nil {
-		return err
-	}
-
 	return nil
 }
 
