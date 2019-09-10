@@ -11,6 +11,8 @@ import (
 	"github.com/newrelic/nri-docker/src/stats"
 )
 
+const dockerClientVersion = "1.24" // todo: make configurable
+
 type ContainerSampler struct {
 	docker *client.Client
 	stats  stats.Provider
@@ -48,9 +50,9 @@ func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
 		return []Metric{}
 	}
 
-	cpu := stats.CPU()
-	mem := stats.Memory()
+	cpu, mem, bio := stats.CPU(), stats.Memory(), stats.BlockingIO()
 	return []Metric{
+		MetricPIDs(float64(stats.PidsStats.Current)),
 		MetricCPUPercent(cpu.CPU),
 		MetricCPUKernelPercent(cpu.Kernel),
 		MetricCPUUserPercent(cpu.User),
@@ -58,6 +60,14 @@ func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
 		MetricMemoryUsageBytes(mem.UsageBytes),
 		MetricMemoryResidentSizeBytes(mem.RSSUsageBytes),
 		MetricMemorySizeLimitBytes(mem.MemLimitBytes),
+		MetricIOTotalReadCount(bio.TotalReadCount),
+		MetricIOTotalWriteCount(bio.TotalWriteCount),
+		MetricIOTotalReadBytes(bio.TotalReadBytes),
+		MetricIOTotalWriteBytes(bio.TotalWriteBytes),
+		MetricIOReadCountPerSecond(bio.TotalReadCount),
+		MetricIOWriteCountPerSecond(bio.TotalWriteCount),
+		MetricIOReadBytesPerSecond(bio.TotalReadBytes),
+		MetricIOWriteBytesPerSecond(bio.TotalWriteBytes),
 	}
 }
 
@@ -222,7 +232,7 @@ curl --unix-socket /var/run/docker.sock http:/docker/containers/<container_id>/s
 */
 func NewContainerSampler() (ContainerSampler, error) {
 	cli, err := client.NewEnvClient()
-	cli.UpdateClientVersion("1.24") // TODO: make it configurable
+	cli.UpdateClientVersion(dockerClientVersion) // TODO: make it configurable
 	return ContainerSampler{
 		docker: cli,
 		stats:  stats.NewAPIProvider(cli),
@@ -236,7 +246,8 @@ func (cs *ContainerSampler) SampleAll(entity *integration.Entity) error {
 		return err
 	}
 	for _, container := range containers {
-		ms := entity.NewMetricSet(ContainerSampleName)
+		ms := entity.NewMetricSet(ContainerSampleName,
+			metric.Attr("removeme", container.ID)) // TODO: provide other unique label
 
 		if err := populate(ms, attributeMetrics(container)); err != nil {
 			return err

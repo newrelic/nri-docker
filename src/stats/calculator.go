@@ -61,3 +61,37 @@ func (c *Cooked) Memory() Memory {
 		MemLimitBytes:   float64(c.MemoryStats.Limit),
 	}
 }
+
+type BlockingIO struct {
+	TotalReadCount  float64
+	TotalWriteCount float64
+	TotalReadBytes  float64
+	TotalWriteBytes float64
+}
+
+func (c *Cooked) BlockingIO() BlockingIO {
+	bio := BlockingIO{}
+	for _, svc := range c.BlkioStats.IoServicedRecursive {
+		if len(svc.Op) == 0 {
+			continue
+		}
+		switch svc.Op[0] {
+		case 'r', 'R':
+			bio.TotalReadCount += float64(svc.Value)
+		case 'w', 'W':
+			bio.TotalWriteCount += float64(svc.Value)
+		}
+	}
+	for _, bytes := range c.BlkioStats.IoServiceBytesRecursive {
+		if len(bytes.Op) == 0 {
+			continue
+		}
+		switch bytes.Op[0] {
+		case 'r', 'R':
+			bio.TotalReadBytes += float64(bytes.Value)
+		case 'w', 'W':
+			bio.TotalWriteBytes += float64(bytes.Value)
+		}
+	}
+	return bio
+}
