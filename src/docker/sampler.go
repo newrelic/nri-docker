@@ -45,15 +45,20 @@ func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
 	stats, err := cs.stats.Fetch(containerID)
 	if err != nil {
 		log.Error("error retrieving stats for container %s: %s", containerID, err.Error())
+		return []Metric{}
 	}
 
-	cpu, system, user := stats.CPU()
+	cpu := stats.CPU()
+	mem := stats.Memory()
 	return []Metric{
-		MetricCPUPercent(cpu),
-		MetricCPUKernelPercent(system),
-		MetricCPUUserPercent(user),
+		MetricCPUPercent(cpu.CPU),
+		MetricCPUKernelPercent(cpu.Kernel),
+		MetricCPUUserPercent(cpu.User),
+		MetricMemoryCacheBytes(mem.CacheUsageBytes),
+		MetricMemoryUsageBytes(mem.UsageBytes),
+		MetricMemoryResidentSizeBytes(mem.RSSUsageBytes),
+		MetricMemorySizeLimitBytes(mem.MemLimitBytes),
 	}
-
 }
 
 /*
@@ -89,6 +94,130 @@ func populateCPUStat(container docker.CgroupDockerStat, ms *metric.Set) error {
 		}
 	}
 	return nil
+}
+
+curl --unix-socket /var/run/docker.sock http:/docker/containers/<container_id>/stats
+{
+   "read":"2019-09-09T07:29:45.836354839Z",
+   "preread":"0001-01-01T00:00:00Z",
+   "pids_stats":{
+      "current":2
+   },
+   "blkio_stats":{
+      "io_service_bytes_recursive":[
+
+      ],
+      "io_serviced_recursive":[
+
+      ],
+      "io_queue_recursive":[
+
+      ],
+      "io_service_time_recursive":[
+
+      ],
+      "io_wait_time_recursive":[
+
+      ],
+      "io_merged_recursive":[
+
+      ],
+      "io_time_recursive":[
+
+      ],
+      "sectors_recursive":[
+
+      ]
+   },
+   "num_procs":0,
+   "storage_stats":{
+
+   },
+   "cpu_stats":{
+      "cpu_usage":{
+         "total_usage":42844380,
+         "percpu_usage":[
+            448537,
+            4291148,
+            5416364,
+            32688331
+         ],
+         "usage_in_kernelmode":10000000,
+         "usage_in_usermode":10000000
+      },
+      "system_cpu_usage":11071940000000,
+      "online_cpus":4,
+      "throttling_data":{
+         "periods":0,
+         "throttled_periods":0,
+         "throttled_time":0
+      }
+   },
+   "precpu_stats":{
+      "cpu_usage":{
+         "total_usage":0,
+         "usage_in_kernelmode":0,
+         "usage_in_usermode":0
+      },
+      "throttling_data":{
+         "periods":0,
+         "throttled_periods":0,
+         "throttled_time":0
+      }
+   },
+   "memory_stats":{
+      "usage":1921024,
+      "max_usage":2633728,
+      "stats":{
+         "active_anon":1449984,
+         "active_file":0,
+         "cache":12288,
+         "dirty":0,
+         "hierarchical_memory_limit":10485760,
+         "hierarchical_memsw_limit":20971520,
+         "inactive_anon":4096,
+         "inactive_file":8192,
+         "mapped_file":4096,
+         "pgfault":1213,
+         "pgmajfault":0,
+         "pgpgin":883,
+         "pgpgout":526,
+         "rss":1449984,
+         "rss_huge":0,
+         "total_active_anon":1449984,
+         "total_active_file":0,
+         "total_cache":12288,
+         "total_dirty":0,
+         "total_inactive_anon":4096,
+         "total_inactive_file":8192,
+         "total_mapped_file":4096,
+         "total_pgfault":1213,
+         "total_pgmajfault":0,
+         "total_pgpgin":883,
+         "total_pgpgout":526,
+         "total_rss":1449984,
+         "total_rss_huge":0,
+         "total_unevictable":0,
+         "total_writeback":0,
+         "unevictable":0,
+         "writeback":0
+      },
+      "limit":10485760
+   },
+   "name":"/nginx",
+   "id":"34923ff833ef87d498d493b54e8e7ae4d45a4ffc195a16b9dcd1a5e996a09639",
+   "networks":{
+      "eth0":{
+         "rx_bytes":1248,
+         "rx_packets":16,
+         "rx_errors":0,
+         "rx_dropped":0,
+         "tx_bytes":0,
+         "tx_packets":0,
+         "tx_errors":0,
+         "tx_dropped":0
+      }
+   }
 }
 */
 func NewContainerSampler() (ContainerSampler, error) {

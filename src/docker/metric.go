@@ -10,6 +10,14 @@ func metricFunc(name string, sType metric.SourceType) func(interface{}) Metric {
 	}
 }
 
+/*
+Metric renames over the original dummy sample:
+cpuSystemPercent -> cpuKernelPercent
+memoryVirtualSizeBytes -> memoryUsageBytes
+
+Nuevas:
+-> memorySizeLimitBytes
+*/
 var (
 	MetricCommandLine             = metricFunc("commandLine", metric.ATTRIBUTE)
 	MetricContainerImage          = metricFunc("image", metric.ATTRIBUTE)
@@ -21,8 +29,10 @@ var (
 	MetricCPUPercent              = metricFunc("cpuPercent", metric.GAUGE)
 	MetricCPUKernelPercent        = metricFunc("cpuKernelPercent", metric.GAUGE)
 	MetricCPUUserPercent          = metricFunc("cpuUserPercent", metric.GAUGE)
-	MetricMemoryVirtualSizeBytes  = metricFunc("memoryVirtualSizeBytes", metric.GAUGE)
+	MetricMemoryUsageBytes        = metricFunc("memoryUsageBytes", metric.GAUGE)
+	MetricMemoryCacheBytes        = metricFunc("memoryCacheBytes", metric.GAUGE)
 	MetricMemoryResidentSizeBytes = metricFunc("memoryResidentSizeBytes", metric.GAUGE)
+	MetricMemorySizeLimitBytes    = metricFunc("memorySizeLimitBytes", metric.GAUGE)
 	MetricIOReadCountPerSecond    = metricFunc("ioReadCountPerSecond", metric.GAUGE)
 	MetricIOWriteCountPerSecond   = metricFunc("ioWriteCountPerSecond", metric.GAUGE)
 	MetricIOReadBytesPerSecond    = metricFunc("ioReadBytesPerSecond", metric.GAUGE)
