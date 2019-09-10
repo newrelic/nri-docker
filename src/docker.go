@@ -7,6 +7,7 @@ import (
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/nri-docker/src/docker"
+	"github.com/newrelic/nri-docker/src/stats"
 )
 
 type argumentList struct {
@@ -31,7 +32,11 @@ func main() {
 	}
 	entity := i.LocalEntity()
 
-	cs, err := docker.NewContainerSampler()
+	provider, err := stats.NewCGroupsProvider()
+	exitOnErr(err)
+	defer provider.PersistStats()
+
+	cs, err := docker.NewContainerSampler(provider)
 	exitOnErr(err)
 
 	exitOnErr(cs.SampleAll(entity))

@@ -3,14 +3,16 @@ package stats
 import (
 	"bufio"
 	"fmt"
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"io/ioutil"
 	"os"
+	path2 "path"
 	"strconv"
 	"strings"
-	"C"
 	"time"
+
+	"github.com/docker/docker/api/types"
+	"github.com/newrelic/infra-integrations-sdk/log"
+	"github.com/newrelic/infra-integrations-sdk/persist"
 )
 
 const (
@@ -18,7 +20,20 @@ const (
 )
 
 type CGroupsProvider struct {
-	docker *client.Client
+	store persist.Storer
+}
+
+func NewCGroupsProvider() (*CGroupsProvider, error) {
+	store, err := persist.NewFileStore( // TODO: make the following options configurable
+		persist.DefaultPath("container_cpus"),
+		log.NewStdErr(true),
+		60*time.Second)
+
+	return &CGroupsProvider{store: store}, err
+}
+
+func (cg *CGroupsProvider) PersistStats() error {
+	return cg.store.Save()
 }
 
 func parseUintFile(file string) (value uint64, err error) {
@@ -37,51 +52,61 @@ func parseUintFile(file string) (value uint64, err error) {
 	return strconv.ParseUint(scanner.Text(), 10, 64)
 }
 
-func NewCGroupsProvider(docker *client.Client) *CGroupsProvider {
-	return &CGroupsProvider{docker: docker}
-}
-
 func (cg *CGroupsProvider) Fetch(containerID string) (Cooked, error) {
 	stats := types.Stats{}
 
+	stats.Read = time.Now()
 	if err := cg.readPidsStats(containerID, &stats.PidsStats); err != nil {
-		return Cooked(stats), err;
+		return Cooked(stats), err
 	}
 
 	if err := cg.readBlkioStats(containerID, &stats.BlkioStats); err != nil {
-		return Cooked(stats), err;
+		return Cooked(stats), err
 	}
 
 	if err := cg.readCPUStats(containerID, &stats.CPUStats); err != nil {
-		return Cooked(stats), err;
+		return Cooked(stats), err
 	}
 
 	if err := cg.readMemoryStats(containerID, &stats.MemoryStats); err != nil {
-		return Cooked(stats), err;
+		return Cooked(stats), err
 	}
+	var preStats struct {
+		UnixTime int64
+		CPUStats types.CPUStats
+	}
+	// Reading previous CPU stats
+	if _, err := cg.store.Get(containerID, &preStats); err == nil {
+		stats.PreRead = time.Unix(preStats.UnixTime, 0)
+		stats.PreCPUStats = preStats.CPUStats
+	}
+	// Storing current CPU stats for the next execution
+	preStats.UnixTime = stats.Read.Unix()
+	preStats.CPUStats = stats.CPUStats
+	_ = cg.store.Set(containerID, preStats)
 
 	return Cooked(stats), nil
 }
 
 func (cg *CGroupsProvider) readPidsStats(containerID string, stats *types.PidsStats) (err error) {
-	path := fmt.Sprintf("%s/%s/%s", cgroupPath, "pids/docker", containerID)
+	path := path2.Join(cgroupPath, "pids", "docker", containerID)
 
-	stats.Current, err = parseUintFile(path + "/pids.current")
+	stats.Current, err = parseUintFile(path2.Join(path, "pids.current"))
 	if err != nil {
-		return err;
+		return err
 	}
 
-	body, err := ioutil.ReadFile(path + "/pids.max")
+	body, err := ioutil.ReadFile(path2.Join(path, "/pids.max"))
 	if err != nil {
-		return err;
+		return err
 	}
 	value := string(body)
 	if value == "max\n" {
-		stats.Limit = 0;
+		stats.Limit = 0
 	} else {
 		stats.Limit, err = strconv.ParseUint(value, 10, 64)
 		if err != nil {
-			return err;
+			return err
 		}
 	}
 
@@ -91,7 +116,7 @@ func (cg *CGroupsProvider) readPidsStats(containerID string, stats *types.PidsSt
 func (cg *CGroupsProvider) readBlkio(path string, ioStat string) ([]types.BlkioStatEntry, error) {
 	entries := []types.BlkioStatEntry{}
 
-	f, err := os.Open(fmt.Sprintf("%s/%s", path, ioStat));
+	f, err := os.Open(path2.Join(path, ioStat))
 	if err != nil {
 		return nil, err
 	}
@@ -99,8 +124,8 @@ func (cg *CGroupsProvider) readBlkio(path string, ioStat string) ([]types.BlkioS
 
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
-		fields :=  strings.FieldsFunc(sc.Text(), func(r rune) bool {
-			return r == ' ' || r == ':';
+		fields := strings.FieldsFunc(sc.Text(), func(r rune) bool {
+			return r == ' ' || r == ':'
 		})
 		if len(fields) < 3 {
 			if len(fields) == 2 && fields[0] == "Total" {
@@ -140,50 +165,51 @@ func (cg *CGroupsProvider) readBlkio(path string, ioStat string) ([]types.BlkioS
 }
 
 func (cg *CGroupsProvider) readBlkioStats(containerID string, stats *types.BlkioStats) (err error) {
-	path := fmt.Sprintf("%s/%s/%s", cgroupPath, "blkio/docker", containerID);
+	path := path2.Join(cgroupPath, "blkio", "docker", containerID)
 
 	if stats.IoMergedRecursive, err = cg.readBlkio(path, "blkio.io_merged_recursive"); err != nil {
-		return err;
+		return err
 	}
 
 	if stats.IoServiceBytesRecursive, err = cg.readBlkio(path, "blkio.io_service_bytes_recursive"); err != nil {
-		return err;
+		return err
 	}
 
 	if stats.IoServicedRecursive, err = cg.readBlkio(path, "blkio.io_serviced_recursive"); err != nil {
-		return err;
+		return err
 	}
 
 	if stats.IoQueuedRecursive, err = cg.readBlkio(path, "blkio.io_queued_recursive"); err != nil {
-		return err;
+		return err
 	}
 
 	if stats.IoServiceTimeRecursive, err = cg.readBlkio(path, "blkio.io_service_time_recursive"); err != nil {
-		return err;
+		return err
 	}
 
 	if stats.IoWaitTimeRecursive, err = cg.readBlkio(path, "blkio.io_wait_time_recursive"); err != nil {
-		return err;
+		return err
 	}
 
 	if stats.IoTimeRecursive, err = cg.readBlkio(path, "blkio.time_recursive"); err != nil {
-		return err;
+		return err
 	}
 
 	if stats.SectorsRecursive, err = cg.readBlkio(path, "blkio.sectors_recursive"); err != nil {
-		return err;
+		return err
 	}
 
 	return nil
 }
 
-func (cg *CGroupsProvider) readCPUUsage(path string, cpu *types.CPUUsage) (err error) {
-	cpu.TotalUsage, err = parseUintFile(path + "/cpuacct.usage")
+func (cg *CGroupsProvider) readCPUUsage(path string, cpu *types.CPUUsage) error {
+	var err error
+	cpu.TotalUsage, err = parseUintFile(path2.Join(path, "cpuacct.usage"))
 	if err != nil {
-		return err;
+		return err
 	}
 
-	f, err := os.Open(path + "/cpuacct.stat");
+	f, err := os.Open(path2.Join(path, "cpuacct.stat"))
 	if err != nil {
 		return err
 	}
@@ -193,29 +219,30 @@ func (cg *CGroupsProvider) readCPUUsage(path string, cpu *types.CPUUsage) (err e
 		fields := strings.Split(sc.Text(), " ")
 		value, err := strconv.ParseUint(fields[1], 10, 64)
 		if err != nil {
-			return err;
+			return err
 		}
 
-		if (fields[0] == "user") {
+		switch fields[0] {
+		case "user":
 			cpu.UsageInUsermode = value * uint64(time.Millisecond)
-		} else if (fields[1] == "system") {
+		case "system":
 			cpu.UsageInKernelmode = value * uint64(time.Millisecond)
 		}
 	}
 
-	body, err := ioutil.ReadFile(path + "/cpuacct.usage_percpu")
+	body, err := ioutil.ReadFile(path2.Join(path, "cpuacct.usage_percpu"))
 	if err != nil {
-		return err;
+		return err
 	}
 	fields := strings.Split(string(body), " ")
-	cpu.PercpuUsage = make([]uint64, len(fields));
+	cpu.PercpuUsage = make([]uint64, len(fields))
 	for i, num := range fields {
 		if num == "\n" {
-			continue;
+			continue
 		}
 		value, err := strconv.ParseUint(num, 10, 64)
 		if err != nil {
-			return err;
+			return err
 		}
 		cpu.PercpuUsage[i] = value
 	}
@@ -224,55 +251,66 @@ func (cg *CGroupsProvider) readCPUUsage(path string, cpu *types.CPUUsage) (err e
 }
 
 func (cg *CGroupsProvider) readCPUStats(containerID string, stats *types.CPUStats) (err error) {
-	path := fmt.Sprintf("%s/%s/%s", cgroupPath, "cpu/docker", containerID);
+	path := path2.Join(cgroupPath, "cpu", "docker", containerID)
 
 	if err := cg.readCPUUsage(path, &stats.CPUUsage); err != nil {
 		return err
 	}
-
-	// TODO: stats.OnlineCPUs
-	// TODO: stats.SystemUsage
-	// TODO: stats.ThrottlingData
-
 	return nil
 }
 
 func (cg *CGroupsProvider) readMemoryStats(containerID string, stats *types.MemoryStats) (err error) {
-	path := fmt.Sprintf("%s/%s/%s", cgroupPath, "memory/docker", containerID);
+	path := path2.Join(cgroupPath, "memory", "docker", containerID)
 
-	if stats.Usage, err = parseUintFile(path + "/memory.usage_in_bytes"); err != nil {
-		return err
-	}
-
-	if stats.MaxUsage, err = parseUintFile(path + "/memory.max_usage_in_bytes"); err != nil {
-		return err
-	}
-
-	if stats.Limit, err = parseUintFile(path + "/memory.limit_in_bytes"); err != nil {
-		return err
-	}
-
-	if stats.Failcnt, err = parseUintFile(path + "/memory.failcnt"); err != nil {
-		return err
+	for _, metric := range []struct {
+		file string
+		dest *uint64
+	}{
+		{"memory.max_usage_in_bytes", &stats.MaxUsage},
+		{"memory.limit_in_bytes", &stats.Limit},
+	} {
+		if *metric.dest, err = parseUintFile(path2.Join(path, metric.file)); err != nil {
+			log.Debug("error reading %s: %s", metric.file, err.Error())
+		}
 	}
 
 	stats.Stats = map[string]uint64{}
 
-	f, err := os.Open(path + "/memory.stat");
+	f, err := os.Open(path2.Join(path, "memory.stat"))
 	if err != nil {
-		return err
+		log.Debug("error reading memory.stat: %s", err.Error())
 	}
+
 	defer f.Close()
 	sc := bufio.NewScanner(f)
 	for sc.Scan() {
 		fields := strings.Split(sc.Text(), " ")
+		if len(fields) < 2 {
+			log.Debug("%q has less than two fields", sc.Text())
+			continue
+		}
 		value, err := strconv.ParseUint(fields[1], 10, 64)
 		if err != nil {
-			return err;
+			log.Debug("error parsing memory.stat %q: %s", fields[0], err.Error())
+			continue
 		}
 
 		stats.Stats[fields[0]] = value
 	}
+
+	/*
+		Calculating usage instead of `memory.usage_in_bytes` file contents.
+		https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
+		For efficiency, as other kernel components, memory cgroup uses some optimization
+		to avoid unnecessary cacheline false sharing. usage_in_bytes is affected by the
+		method and doesn't show 'exact' value of memory (and swap) usage, it's a fuzz
+		value for efficient access. (Of course, when necessary, it's synchronized.)
+		If you want to know more exact memory usage, you should use RSS+CACHE(+SWAP)
+		value in memory.stat(see 5.2).
+		However, as the `docker stats` cli tool does, page cache is intentionally
+		excluded to avoid misinterpretation of the output.
+	*/
+	stats.Usage = stats.Stats["rss"] + stats.Stats["swap"]
 
 	return nil
 }

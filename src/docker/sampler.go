@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"math"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -50,7 +51,13 @@ func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
 		return []Metric{}
 	}
 
+
 	cpu, mem, bio := stats.CPU(), stats.Memory(), stats.BlockingIO()
+	memLimits := mem.MemLimitBytes
+	// negative or ridiculously large memory limits are set to 0 (no limit)
+	if memLimits < 0 || memLimits > float64(math.MaxInt64 / 2) {
+		memLimits = 0
+	}
 	return []Metric{
 		MetricPIDs(float64(stats.PidsStats.Current)),
 		MetricCPUPercent(cpu.CPU),
@@ -59,7 +66,7 @@ func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
 		MetricMemoryCacheBytes(mem.CacheUsageBytes),
 		MetricMemoryUsageBytes(mem.UsageBytes),
 		MetricMemoryResidentSizeBytes(mem.RSSUsageBytes),
-		MetricMemorySizeLimitBytes(mem.MemLimitBytes),
+		MetricMemorySizeLimitBytes(memLimits),
 		MetricIOTotalReadCount(bio.TotalReadCount),
 		MetricIOTotalWriteCount(bio.TotalWriteCount),
 		MetricIOTotalReadBytes(bio.TotalReadBytes),
@@ -71,171 +78,12 @@ func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
 	}
 }
 
-/*
-
-func populateCPUStat(container docker.CgroupDockerStat, ms *metric.Set) error {
-
-
-	rndCpu := 10 + rand.Float64()*10
-	for _, metric := range []Metric{
-		MetricContainerImage("12345"),
-		MetricContainerImageName("alpine:latest"),
-		MetricContainerName("containername"),
-		MetricContainerID("123456"),
-		MetricState("running"),
-		{"label.docker.meta", metric.ATTRIBUTE, "label-value"},
-		MetricCPUPercent(rndCpu),
-		MetricCPUKernelPercent(rndCpu * 0.2),
-		MetricCPUUserPercent(rndCpu * 0.8),
-		MetricMemoryVirtualSizeBytes(10000000),
-		MetricMemoryResidentSizeBytes(8000000),
-		MetricIOReadCountPerSecond(0), // take from blkio_stats
-		MetricIOWriteCountPerSecond(0),
-		MetricIOReadBytesPerSecond(0),
-		MetricIOWriteBytesPerSecond(0),
-		MetricIOTotalReadCount(0),
-		MetricIOTotalWriteCount(0),
-		MetricIOTotalReadBytes(0),
-		MetricIOTotalWriteBytes(0),
-		MetricPIDs(1),
-	} {
-		if err := ms.SetMetric(metric.Name, metric.Value, metric.Type); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-curl --unix-socket /var/run/docker.sock http:/docker/containers/<container_id>/stats
-{
-   "read":"2019-09-09T07:29:45.836354839Z",
-   "preread":"0001-01-01T00:00:00Z",
-   "pids_stats":{
-      "current":2
-   },
-   "blkio_stats":{
-      "io_service_bytes_recursive":[
-
-      ],
-      "io_serviced_recursive":[
-
-      ],
-      "io_queue_recursive":[
-
-      ],
-      "io_service_time_recursive":[
-
-      ],
-      "io_wait_time_recursive":[
-
-      ],
-      "io_merged_recursive":[
-
-      ],
-      "io_time_recursive":[
-
-      ],
-      "sectors_recursive":[
-
-      ]
-   },
-   "num_procs":0,
-   "storage_stats":{
-
-   },
-   "cpu_stats":{
-      "cpu_usage":{
-         "total_usage":42844380,
-         "percpu_usage":[
-            448537,
-            4291148,
-            5416364,
-            32688331
-         ],
-         "usage_in_kernelmode":10000000,
-         "usage_in_usermode":10000000
-      },
-      "system_cpu_usage":11071940000000,
-      "online_cpus":4,
-      "throttling_data":{
-         "periods":0,
-         "throttled_periods":0,
-         "throttled_time":0
-      }
-   },
-   "precpu_stats":{
-      "cpu_usage":{
-         "total_usage":0,
-         "usage_in_kernelmode":0,
-         "usage_in_usermode":0
-      },
-      "throttling_data":{
-         "periods":0,
-         "throttled_periods":0,
-         "throttled_time":0
-      }
-   },
-   "memory_stats":{
-      "usage":1921024,
-      "max_usage":2633728,
-      "stats":{
-         "active_anon":1449984,
-         "active_file":0,
-         "cache":12288,
-         "dirty":0,
-         "hierarchical_memory_limit":10485760,
-         "hierarchical_memsw_limit":20971520,
-         "inactive_anon":4096,
-         "inactive_file":8192,
-         "mapped_file":4096,
-         "pgfault":1213,
-         "pgmajfault":0,
-         "pgpgin":883,
-         "pgpgout":526,
-         "rss":1449984,
-         "rss_huge":0,
-         "total_active_anon":1449984,
-         "total_active_file":0,
-         "total_cache":12288,
-         "total_dirty":0,
-         "total_inactive_anon":4096,
-         "total_inactive_file":8192,
-         "total_mapped_file":4096,
-         "total_pgfault":1213,
-         "total_pgmajfault":0,
-         "total_pgpgin":883,
-         "total_pgpgout":526,
-         "total_rss":1449984,
-         "total_rss_huge":0,
-         "total_unevictable":0,
-         "total_writeback":0,
-         "unevictable":0,
-         "writeback":0
-      },
-      "limit":10485760
-   },
-   "name":"/nginx",
-   "id":"34923ff833ef87d498d493b54e8e7ae4d45a4ffc195a16b9dcd1a5e996a09639",
-   "networks":{
-      "eth0":{
-         "rx_bytes":1248,
-         "rx_packets":16,
-         "rx_errors":0,
-         "rx_dropped":0,
-         "tx_bytes":0,
-         "tx_packets":0,
-         "tx_errors":0,
-         "tx_dropped":0
-      }
-   }
-}
-*/
-func NewContainerSampler() (ContainerSampler, error) {
+func NewContainerSampler(statsProvider stats.Provider) (ContainerSampler, error) {
 	cli, err := client.NewEnvClient()
 	cli.UpdateClientVersion(dockerClientVersion) // TODO: make it configurable
 	return ContainerSampler{
 		docker: cli,
-		stats:  stats.NewCGroupsProvider(cli),
+		stats:  statsProvider,
 	}, err
 }
 
