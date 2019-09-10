@@ -50,7 +50,7 @@ func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
 	cpu, system, user := stats.CPU()
 	return []Metric{
 		MetricCPUPercent(cpu),
-		MetricCPUSystemPercent(system),
+		MetricCPUKernelPercent(system),
 		MetricCPUUserPercent(user),
 	}
 
@@ -70,7 +70,7 @@ func populateCPUStat(container docker.CgroupDockerStat, ms *metric.Set) error {
 		MetricState("running"),
 		{"label.docker.meta", metric.ATTRIBUTE, "label-value"},
 		MetricCPUPercent(rndCpu),
-		MetricCPUSystemPercent(rndCpu * 0.2),
+		MetricCPUKernelPercent(rndCpu * 0.2),
 		MetricCPUUserPercent(rndCpu * 0.8),
 		MetricMemoryVirtualSizeBytes(10000000),
 		MetricMemoryResidentSizeBytes(8000000),
