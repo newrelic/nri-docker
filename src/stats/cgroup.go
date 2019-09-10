@@ -15,7 +15,6 @@ import (
 
 const (
 	cgroupPath = "/sys/fs/cgroup"
-	nanoSecondsPerSecond = 1e9
 )
 
 type CGroupsProvider struct {
@@ -46,22 +45,18 @@ func (cg *CGroupsProvider) Fetch(containerID string) (Cooked, error) {
 	stats := types.Stats{}
 
 	if err := cg.readPidsStats(containerID, &stats.PidsStats); err != nil {
-		fmt.Println("readPidsStats");
 		return Cooked(stats), err;
 	}
 
 	if err := cg.readBlkioStats(containerID, &stats.BlkioStats); err != nil {
-		fmt.Println("readBlkioStats");
 		return Cooked(stats), err;
 	}
 
 	if err := cg.readCPUStats(containerID, &stats.CPUStats); err != nil {
-		fmt.Println("readCPUStats");
 		return Cooked(stats), err;
 	}
 
 	if err := cg.readMemoryStats(containerID, &stats.MemoryStats); err != nil {
-		fmt.Println("readMemoryStats");
 		return Cooked(stats), err;
 	}
 
@@ -182,8 +177,7 @@ func (cg *CGroupsProvider) readBlkioStats(containerID string, stats *types.Blkio
 	return nil
 }
 
-func (cg *CGroupsProvider) readCPUUsage(path string, cpu *types.CPUUsage) error {
-	var err error
+func (cg *CGroupsProvider) readCPUUsage(path string, cpu *types.CPUUsage) (err error) {
 	cpu.TotalUsage, err = parseUintFile(path + "/cpuacct.usage")
 	if err != nil {
 		return err;
