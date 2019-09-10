@@ -22,6 +22,22 @@ type CGroupsProvider struct {
 	docker *client.Client
 }
 
+func parseUintFile(file string) (value uint64, err error) {
+	f, err := os.Open(file)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	scanner.Scan()
+	if err = scanner.Err(); err != nil {
+		return
+	}
+
+	return strconv.ParseUint(scanner.Text(), 10, 64)
+}
+
 func NewCGroupsProvider(docker *client.Client) *CGroupsProvider {
 	return &CGroupsProvider{docker: docker}
 }
@@ -29,42 +45,46 @@ func NewCGroupsProvider(docker *client.Client) *CGroupsProvider {
 func (cg *CGroupsProvider) Fetch(containerID string) (Cooked, error) {
 	stats := types.Stats{}
 
-	if err := cg.readPidsStats(containerID, &stats); err != nil {
+	if err := cg.readPidsStats(containerID, &stats.PidsStats); err != nil {
+		fmt.Println("readPidsStats");
 		return Cooked(stats), err;
 	}
 
-	if err := cg.readBlkioStats(containerID, &stats); err != nil {
+	if err := cg.readBlkioStats(containerID, &stats.BlkioStats); err != nil {
+		fmt.Println("readBlkioStats");
 		return Cooked(stats), err;
 	}
 
-	if err := cg.readCPUStats(containerID, "cpu/docker", &stats.CPUStats); err != nil {
+	if err := cg.readCPUStats(containerID, &stats.CPUStats); err != nil {
+		fmt.Println("readCPUStats");
+		return Cooked(stats), err;
+	}
+
+	if err := cg.readMemoryStats(containerID, &stats.MemoryStats); err != nil {
+		fmt.Println("readMemoryStats");
 		return Cooked(stats), err;
 	}
 
 	return Cooked(stats), nil
 }
 
-func (cg *CGroupsProvider) readPidsStats(containerID string, stats *types.Stats) error {
-	path := fmt.Sprintf("%s/%s/%s", cgroupPath, "pids/docker", containerID);
+func (cg *CGroupsProvider) readPidsStats(containerID string, stats *types.PidsStats) (err error) {
+	path := fmt.Sprintf("%s/%s/%s", cgroupPath, "pids/docker", containerID)
 
-	body, err := ioutil.ReadFile(path + "/pids.current")
-	if err != nil {
-		return err;
-	}
-	stats.PidsStats.Current, err = strconv.ParseUint(string(body), 10, 64)
+	stats.Current, err = parseUintFile(path + "/pids.current")
 	if err != nil {
 		return err;
 	}
 
-	body, err = ioutil.ReadFile(path + "/pids.max")
+	body, err := ioutil.ReadFile(path + "/pids.max")
 	if err != nil {
 		return err;
 	}
 	value := string(body)
-	if value == "max" {
-		stats.PidsStats.Limit = 0;
+	if value == "max\n" {
+		stats.Limit = 0;
 	} else {
-		stats.PidsStats.Limit, err = strconv.ParseUint(value, 10, 64)
+		stats.Limit, err = strconv.ParseUint(value, 10, 64)
 		if err != nil {
 			return err;
 		}
@@ -124,38 +144,38 @@ func (cg *CGroupsProvider) readBlkio(path string, ioStat string) ([]types.BlkioS
 	return entries, nil
 }
 
-func (cg *CGroupsProvider) readBlkioStats(containerID string, stats *types.Stats) (err error) {
+func (cg *CGroupsProvider) readBlkioStats(containerID string, stats *types.BlkioStats) (err error) {
 	path := fmt.Sprintf("%s/%s/%s", cgroupPath, "blkio/docker", containerID);
 
-	if stats.BlkioStats.IoMergedRecursive, err = cg.readBlkio(path, "io_merged_recursive"); err != nil {
+	if stats.IoMergedRecursive, err = cg.readBlkio(path, "blkio.io_merged_recursive"); err != nil {
 		return err;
 	}
 
-	if stats.BlkioStats.IoServiceBytesRecursive, err = cg.readBlkio(path, "io_service_bytes_recursive"); err != nil {
+	if stats.IoServiceBytesRecursive, err = cg.readBlkio(path, "blkio.io_service_bytes_recursive"); err != nil {
 		return err;
 	}
 
-	if stats.BlkioStats.IoServicedRecursive, err = cg.readBlkio(path, "io_serviced_recursive"); err != nil {
+	if stats.IoServicedRecursive, err = cg.readBlkio(path, "blkio.io_serviced_recursive"); err != nil {
 		return err;
 	}
 
-	if stats.BlkioStats.IoQueuedRecursive, err = cg.readBlkio(path, "io_queued_recursive"); err != nil {
+	if stats.IoQueuedRecursive, err = cg.readBlkio(path, "blkio.io_queued_recursive"); err != nil {
 		return err;
 	}
 
-	if stats.BlkioStats.IoServiceTimeRecursive, err = cg.readBlkio(path, "io_service_time_recursive"); err != nil {
+	if stats.IoServiceTimeRecursive, err = cg.readBlkio(path, "blkio.io_service_time_recursive"); err != nil {
 		return err;
 	}
 
-	if stats.BlkioStats.IoWaitTimeRecursive, err = cg.readBlkio(path, "io_wait_time_recursive"); err != nil {
+	if stats.IoWaitTimeRecursive, err = cg.readBlkio(path, "blkio.io_wait_time_recursive"); err != nil {
 		return err;
 	}
 
-	if stats.BlkioStats.IoTimeRecursive, err = cg.readBlkio(path, "time_recursive"); err != nil {
+	if stats.IoTimeRecursive, err = cg.readBlkio(path, "blkio.time_recursive"); err != nil {
 		return err;
 	}
 
-	if stats.BlkioStats.SectorsRecursive, err = cg.readBlkio(path, "sectors_recursive"); err != nil {
+	if stats.SectorsRecursive, err = cg.readBlkio(path, "blkio.sectors_recursive"); err != nil {
 		return err;
 	}
 
@@ -163,12 +183,8 @@ func (cg *CGroupsProvider) readBlkioStats(containerID string, stats *types.Stats
 }
 
 func (cg *CGroupsProvider) readCPUUsage(path string, cpu *types.CPUUsage) error {
-
-	body, err := ioutil.ReadFile(path + "/cpuacct.usage")
-	if err != nil {
-		return err;
-	}
-	cpu.TotalUsage, err = strconv.ParseUint(string(body), 10, 64)
+	var err error
+	cpu.TotalUsage, err = parseUintFile(path + "/cpuacct.usage")
 	if err != nil {
 		return err;
 	}
@@ -193,13 +209,16 @@ func (cg *CGroupsProvider) readCPUUsage(path string, cpu *types.CPUUsage) error 
 		}
 	}
 
-	body, err = ioutil.ReadFile(path + "/cpuacct.usage_percpu")
+	body, err := ioutil.ReadFile(path + "/cpuacct.usage_percpu")
 	if err != nil {
 		return err;
 	}
 	fields := strings.Split(string(body), " ")
 	cpu.PercpuUsage = make([]uint64, len(fields));
 	for i, num := range fields {
+		if num == "\n" {
+			continue;
+		}
 		value, err := strconv.ParseUint(num, 10, 64)
 		if err != nil {
 			return err;
@@ -210,83 +229,56 @@ func (cg *CGroupsProvider) readCPUUsage(path string, cpu *types.CPUUsage) error 
 	return nil
 }
 
-func GetClockTicks() uint64 {
-	return uint64(C.sysconf(C._SC_CLK_TCK))
-}
-
-// getSystemCPUUsage returns the host system's cpu usage in
-// nanoseconds. An error is returned if the format of the underlying
-// file does not match.
-//
-// Uses /proc/stat defined by POSIX. Looks for the cpu
-// statistics line and then sums up the first seven fields
-// provided. See `man 5 proc` for details on specific field
-// information.
-func (cg *CGroupsProvider) getSystemCPUUsage() (uint64, error) {
-	bufReader :=  bufio.NewReaderSize(nil, 128)
-	var line string
-	f, err := os.Open("/proc/stat")
-	if err != nil {
-		return 0, err
-	}
-	defer func() {
-		bufReader.Reset(nil)
-		f.Close()
-	}()
-	bufReader.Reset(f)
-	err = nil
-	for err == nil {
-		line, err = bufReader.ReadString('\n')
-		if err != nil {
-			break
-		}
-		parts := strings.Fields(line)
-		switch parts[0] {
-		case "cpu":
-			if len(parts) < 8 {
-				return 0, fmt.Errorf("Error bad cpu fields")
-			}
-			var totalClockTicks uint64
-			for _, i := range parts[1:8] {
-				v, err := strconv.ParseUint(i, 10, 64)
-				if err != nil {
-					return 0, err
-				}
-				totalClockTicks += v
-			}
-			return (totalClockTicks * nanoSecondsPerSecond) / GetClockTicks(), nil
-		}
-	}
-	return 0, fmt.Errorf("error bad stat format")
-}
-
-func (cg *CGroupsProvider) readCPUStats(containerID string, path string, stats *types.CPUStats) (err error) {
-	path = fmt.Sprintf("%s/%s/%s", cgroupPath, path, containerID);
+func (cg *CGroupsProvider) readCPUStats(containerID string, stats *types.CPUStats) (err error) {
+	path := fmt.Sprintf("%s/%s/%s", cgroupPath, "cpu/docker", containerID);
 
 	if err := cg.readCPUUsage(path, &stats.CPUUsage); err != nil {
 		return err
 	}
 
-	if stats.SystemUsage, err = cg.getSystemCPUUsage(); err != nil {
-		return err
-	}
-
-	stats.OnlineCPUs = uint32(len(stats.CPUUsage.PercpuUsage))
+	// TODO: stats.OnlineCPUs
+	// TODO: stats.SystemUsage
 	// TODO: stats.ThrottlingData
 
 	return nil
 }
 
+func (cg *CGroupsProvider) readMemoryStats(containerID string, stats *types.MemoryStats) (err error) {
+	path := fmt.Sprintf("%s/%s/%s", cgroupPath, "memory/docker", containerID);
 
-/*
-type Stats struct {
-	// Common stats
-	Read    time.Time `json:"read"`
-	PreRead time.Time `json:"preread"`
+	if stats.Usage, err = parseUintFile(path + "/memory.usage_in_bytes"); err != nil {
+		return err
+	}
 
+	if stats.MaxUsage, err = parseUintFile(path + "/memory.max_usage_in_bytes"); err != nil {
+		return err
+	}
 
-	// Shared stats
-	CPUStats    CPUStats    `json:"cpu_stats,omitempty"`
-	PreCPUStats CPUStats    `json:"precpu_stats,omitempty"` // "Pre"="Previous"
-	MemoryStats MemoryStats `json:"memory_stats,omitempty"`
- */
+	if stats.Limit, err = parseUintFile(path + "/memory.limit_in_bytes"); err != nil {
+		return err
+	}
+
+	if stats.Failcnt, err = parseUintFile(path + "/memory.failcnt"); err != nil {
+		return err
+	}
+
+	stats.Stats = map[string]uint64{}
+
+	f, err := os.Open(path + "/memory.stat");
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	sc := bufio.NewScanner(f)
+	for sc.Scan() {
+		fields := strings.Split(sc.Text(), " ")
+		value, err := strconv.ParseUint(fields[1], 10, 64)
+		if err != nil {
+			return err;
+		}
+
+		stats.Stats[fields[0]] = value
+	}
+
+	return nil
+}
