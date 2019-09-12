@@ -12,4 +12,5 @@ COPY --from=builder /go/src/github.com/newrelic/nri-docker/docker-definition.yml
 COPY --from=builder /go/src/github.com/newrelic/nri-docker/docker-config.yml.sample /etc/newrelic-infra/integrations.d/docker-config.yml.sample
 COPY --from=builder /go/src/github.com/newrelic/nri-docker/newrelic-infra.sh /newrelic-infra.sh
 
+ENTRYPOINT ["/bin/sh"]
 CMD ["/newrelic-infra.sh"]
