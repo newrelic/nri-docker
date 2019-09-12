@@ -3,4 +3,4 @@ if [ ! -z "$NRIA_MONITOR_DOCKER" ]; then
     cp /etc/newrelic-infra/integrations.d/docker-config.yml.sample /etc/newrelic-infra/integrations.d/docker-config.yml
 fi
 
-/sbin/tini -- /bin/local/newrelic-infra
+/bin/local/newrelic-infra
