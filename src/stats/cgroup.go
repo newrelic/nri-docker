@@ -201,9 +201,9 @@ func (cg *CGroupsProvider) readCPUUsage(path string, cpu *types.CPUUsage) error 
 
 		switch fields[0] {
 		case "user":
-			cpu.UsageInUsermode = value * uint64(time.Millisecond)
+			cpu.UsageInUsermode = value * (uint64(time.Second) / 100) // uint64(C.sysconf(C._SC_CLK_TCK))
 		case "system":
-			cpu.UsageInKernelmode = value * uint64(time.Millisecond)
+			cpu.UsageInKernelmode = value * (uint64(time.Second) / 100) // uint64(C.sysconf(C._SC_CLK_TCK))
 		}
 	}
 
