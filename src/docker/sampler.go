@@ -90,8 +90,8 @@ func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
 	}
 }
 
-func (cs *ContainerSampler) networkMetrics(containerID string) []Metric {
-	net, err := cs.network.Fetch(containerID)
+func (cs *ContainerSampler) networkMetrics(containerPid int) []Metric {
+	net, err := cs.network.Fetch(containerPid)
 	if err != nil {
 		log.Debug("error retrieving network metrics: %s", err.Error())
 		return []Metric{}
@@ -144,19 +144,32 @@ func (cs *ContainerSampler) SampleAll(entity *integration.Entity) error {
 			metric.Attr(AttrContainerID, container.ID)) // TODO: provide other unique label
 
 		if err := populate(ms, attributes(container)); err != nil {
-			return err
+			log.Debug("error populating container %v attributes: %s", container.ID, err)
+			continue
 		}
 
 		if err := populate(ms, cs.statsMetrics(container.ID)); err != nil {
-			return err
+			log.Debug("error populating container %v stats metrics: %s", container.ID, err)
+			continue
 		}
 
-		if err := populate(ms, cs.networkMetrics(container.ID)); err != nil {
-			return err
+		cjson, err := cs.docker.ContainerInspect(context.Background(), container.ID)
+		if err != nil {
+			log.Debug("error inspecting container %v: %s", container.ID, err)
+			continue
+		}
+		if cjson.State == nil {
+			log.Debug("error: container %v has no state: %s", container.ID, err)
+			continue
+		}
+		if err := populate(ms, cs.networkMetrics(cjson.State.Pid)); err != nil {
+			log.Debug("error populating container %v network metrics: %s", container.ID, err)
+			continue
 		}
 
 		if err := populate(ms, labels(container)); err != nil {
-			return err
+			log.Debug("error populating container %v labels: %s", container.ID, err)
+			continue
 		}
 
 	}

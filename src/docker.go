@@ -30,6 +30,9 @@ func main() {
 		log.Error(err.Error())
 		os.Exit(1)
 	}
+
+	log.SetupLogging(args.Verbose)
+
 	entity := i.LocalEntity()
 
 	provider, err := stats.NewCGroupsProvider()
