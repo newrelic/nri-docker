@@ -10,10 +10,6 @@ import (
 // without so many white gaps
 type Cooked types.Stats
 
-func Cook(t types.Stats) Cooked {
-	return Cooked(t)
-}
-
 type CPU struct {
 	CPU    float64
 	Kernel float64

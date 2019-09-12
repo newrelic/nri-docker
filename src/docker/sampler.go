@@ -16,8 +16,9 @@ const labelPrefix = "label."
 const dockerClientVersion = "1.24" // todo: make configurable
 
 type ContainerSampler struct {
-	docker *client.Client
-	stats  stats.Provider
+	docker  *client.Client
+	stats   stats.Provider
+	network stats.NetworkFetcher
 }
 
 func populate(ms *metric.Set, metrics []Metric) error {
@@ -89,13 +90,47 @@ func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
 	}
 }
 
+func (cs *ContainerSampler) networkMetrics(containerID string) []Metric {
+	net, err := cs.network.Fetch(containerID)
+	if err != nil {
+		log.Debug("error retrieving network metrics: %s", err.Error())
+		return []Metric{}
+	}
+	return []Metric{
+		MetricRxBytes(net.RxBytes),
+		MetricRxErrors(net.RxErrors),
+		MetricRxDropped(net.RxDropped),
+		MetricRxPackets(net.RxPackets),
+		MetricTxBytes(net.TxBytes),
+		MetricTxErrors(net.TxErrors),
+		MetricTxDropped(net.TxDropped),
+		MetricTxPackets(net.TxPackets),
+		MetricRxBytesPerSecond(net.RxBytes),
+		MetricRxErrorsPerSecond(net.RxErrors),
+		MetricRxDroppedPerSecond(net.RxDropped),
+		MetricRxPacketsPerSecond(net.RxPackets),
+		MetricTxBytesPerSecond(net.TxBytes),
+		MetricTxErrorsPerSecond(net.TxErrors),
+		MetricTxDroppedPerSecond(net.TxDropped),
+		MetricTxPacketsPerSecond(net.TxPackets),
+	}
+}
+
 func NewContainerSampler(statsProvider stats.Provider) (ContainerSampler, error) {
 	cli, err := client.NewEnvClient()
+	if err != nil {
+		return ContainerSampler{}, err
+	}
 	cli.UpdateClientVersion(dockerClientVersion) // TODO: make it configurable
+	net, err := stats.NewNetworkFetcher()
+	if err != nil {
+		return ContainerSampler{}, err
+	}
 	return ContainerSampler{
-		docker: cli,
-		stats:  statsProvider,
-	}, err
+		docker:  cli,
+		stats:   statsProvider,
+		network: net,
+	}, nil
 }
 
 func (cs *ContainerSampler) SampleAll(entity *integration.Entity) error {
@@ -116,9 +151,14 @@ func (cs *ContainerSampler) SampleAll(entity *integration.Entity) error {
 			return err
 		}
 
-		if err := populate(ms, labels(container)) ; err != nil {
+		if err := populate(ms, cs.networkMetrics(container.ID)); err != nil {
 			return err
 		}
+
+		if err := populate(ms, labels(container)); err != nil {
+			return err
+		}
+
 	}
 	return nil
 }

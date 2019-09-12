@@ -71,6 +71,7 @@ func (cg *CGroupsProvider) Fetch(containerID string) (Cooked, error) {
 	if err := cg.readMemoryStats(containerID, &stats.MemoryStats); err != nil {
 		return Cooked(stats), err
 	}
+
 	var preStats struct {
 		UnixTime int64
 		CPUStats types.CPUStats
@@ -226,7 +227,7 @@ func (cg *CGroupsProvider) readCPUUsage(path string, cpu *types.CPUUsage) error 
 	return nil
 }
 
-func (cg *CGroupsProvider) readCPUStats(containerID string, stats *types.CPUStats) (err error) {
+func (cg *CGroupsProvider) readCPUStats(containerID string, stats *types.CPUStats) error {
 	path := path2.Join(cgroupPath, "cpu", "docker", containerID)
 
 	if err := cg.readCPUUsage(path, &stats.CPUUsage); err != nil {
@@ -235,7 +236,7 @@ func (cg *CGroupsProvider) readCPUStats(containerID string, stats *types.CPUStat
 	return nil
 }
 
-func (cg *CGroupsProvider) readMemoryStats(containerID string, stats *types.MemoryStats) (err error) {
+func (cg *CGroupsProvider) readMemoryStats(containerID string, stats *types.MemoryStats) error {
 	path := path2.Join(cgroupPath, "memory", "docker", containerID)
 
 	for _, metric := range []struct {
@@ -245,6 +246,7 @@ func (cg *CGroupsProvider) readMemoryStats(containerID string, stats *types.Memo
 		{"memory.max_usage_in_bytes", &stats.MaxUsage},
 		{"memory.limit_in_bytes", &stats.Limit},
 	} {
+		var err error
 		if *metric.dest, err = parseUintFile(path2.Join(path, metric.file)); err != nil {
 			log.Debug("error reading %s: %s", metric.file, err.Error())
 		}
