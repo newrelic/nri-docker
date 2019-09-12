@@ -12,6 +12,7 @@ import (
 	"github.com/newrelic/nri-docker/src/stats"
 )
 
+const labelPrefix = "label."
 const dockerClientVersion = "1.24" // todo: make configurable
 
 type ContainerSampler struct {
@@ -28,20 +29,31 @@ func populate(ms *metric.Set, metrics []Metric) error {
 	return nil
 }
 
-func attributeMetrics(container types.Container) []Metric {
+func attributes(container types.Container) []Metric {
 	var cname string
 	if len(container.Names) > 0 {
 		cname = container.Names[0]
 	}
 	return []Metric{
 		MetricCommandLine(container.Command),
-		MetricContainerID(container.ID),
 		MetricContainerName(cname),
 		MetricContainerImage(container.ImageID),
 		MetricContainerImageName(container.Image),
 		MetricState(container.State),
 		MetricStatus(container.Status),
 	}
+}
+
+func labels(container types.Container) []Metric {
+	metrics := make([]Metric, 0, len(container.Labels))
+	for key, val := range container.Labels {
+		metrics = append(metrics, Metric{
+			Name:  labelPrefix + key,
+			Value: val,
+			Type:  metric.ATTRIBUTE,
+		})
+	}
+	return metrics
 }
 
 func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
@@ -51,11 +63,10 @@ func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
 		return []Metric{}
 	}
 
-
 	cpu, mem, bio := stats.CPU(), stats.Memory(), stats.BlockingIO()
 	memLimits := mem.MemLimitBytes
 	// negative or ridiculously large memory limits are set to 0 (no limit)
-	if memLimits < 0 || memLimits > float64(math.MaxInt64 / 2) {
+	if memLimits < 0 || memLimits > float64(math.MaxInt64/2) {
 		memLimits = 0
 	}
 	return []Metric{
@@ -95,9 +106,9 @@ func (cs *ContainerSampler) SampleAll(entity *integration.Entity) error {
 	}
 	for _, container := range containers {
 		ms := entity.NewMetricSet(ContainerSampleName,
-			metric.Attr("removeme", container.ID)) // TODO: provide other unique label
+			metric.Attr(AttrContainerID, container.ID)) // TODO: provide other unique label
 
-		if err := populate(ms, attributeMetrics(container)); err != nil {
+		if err := populate(ms, attributes(container)); err != nil {
 			return err
 		}
 
@@ -105,7 +116,9 @@ func (cs *ContainerSampler) SampleAll(entity *integration.Entity) error {
 			return err
 		}
 
-		cs.statsMetrics(container.ID)
+		if err := populate(ms, labels(container)) ; err != nil {
+			return err
+		}
 	}
 	return nil
 }

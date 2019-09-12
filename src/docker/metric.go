@@ -10,20 +10,13 @@ func metricFunc(name string, sType metric.SourceType) func(interface{}) Metric {
 	}
 }
 
-/*
-Metric renames over the original dummy sample:
-cpuSystemPercent -> cpuKernelPercent
-memoryVirtualSizeBytes -> memoryUsageBytes
+const AttrContainerID = "containerId"
 
-Nuevas:
--> memorySizeLimitBytes
-*/
 var (
 	MetricCommandLine             = metricFunc("commandLine", metric.ATTRIBUTE)
 	MetricContainerImage          = metricFunc("image", metric.ATTRIBUTE)
 	MetricContainerImageName      = metricFunc("imageName", metric.ATTRIBUTE)
 	MetricContainerName           = metricFunc("name", metric.ATTRIBUTE)
-	MetricContainerID             = metricFunc("containerId", metric.ATTRIBUTE)
 	MetricState                   = metricFunc("state", metric.ATTRIBUTE)
 	MetricStatus                  = metricFunc("status", metric.ATTRIBUTE)
 	MetricCPUPercent              = metricFunc("cpuPercent", metric.GAUGE)
