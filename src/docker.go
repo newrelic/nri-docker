@@ -33,8 +33,6 @@ func main() {
 
 	log.SetupLogging(args.Verbose)
 
-	entity := i.LocalEntity()
-
 	provider, err := stats.NewCGroupsProvider()
 	exitOnErr(err)
 	defer provider.PersistStats()
@@ -42,7 +40,7 @@ func main() {
 	cs, err := docker.NewContainerSampler(provider)
 	exitOnErr(err)
 
-	exitOnErr(cs.SampleAll(entity))
+	exitOnErr(cs.SampleAll(i))
 
 	exitOnErr(i.Publish())
 }

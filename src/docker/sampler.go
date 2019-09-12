@@ -133,13 +133,19 @@ func NewContainerSampler(statsProvider stats.Provider) (ContainerSampler, error)
 	}, nil
 }
 
-func (cs *ContainerSampler) SampleAll(entity *integration.Entity) error {
+func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 	// TODO: filter by state == running?
 	containers, err := cs.docker.ContainerList(context.Background(), types.ContainerListOptions{})
 	if err != nil {
 		return err
 	}
 	for _, container := range containers {
+
+		entity, err := i.Entity("localhost:container:"+container.ID, "docker")
+		if err != nil {
+			return err
+		}
+
 		ms := entity.NewMetricSet(ContainerSampleName,
 			metric.Attr(AttrContainerID, container.ID)) // TODO: provide other unique label
 
