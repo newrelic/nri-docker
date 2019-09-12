@@ -5,4 +5,4 @@ if [ ! -z "$NRIA_MONITOR_DOCKER" ]; then
     cp /etc/newrelic-infra/integrations.d/docker-config.yml.sample /etc/newrelic-infra/integrations.d/docker-config.yml
 fi
 
-/usr/bin/newrelic-infra
+tini -- /usr/bin/newrelic-infra
