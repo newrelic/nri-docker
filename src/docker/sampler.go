@@ -141,7 +141,7 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 	}
 	for _, container := range containers {
 
-		entity, err := i.Entity("localhost:container:"+container.ID, "docker")
+		entity, err := i.Entity(container.ID, "docker", integration.NewIDAttribute(integration.AttrReportingEntity, "localhost"))
 		if err != nil {
 			return err
 		}

@@ -10,27 +10,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-// SourceType defines the kind of data source. Based on this SourceType, metric
-// package performs some calculations with it. Check below the description for
-// each one.
-type SourceType int
-
-// Attribute represents an attribute metric in key-value pair format.
+// Attribute represents a metric attribute key-value pair.
 type Attribute struct {
 	Key   string
 	Value string
 }
-
-const (
-	// GAUGE is a value that may increase and decrease. It is stored as-is.
-	GAUGE SourceType = iota
-	// RATE is an ever-growing value which might be reset. The package calculates the change rate.
-	RATE SourceType = iota
-	// DELTA is an ever-growing value which might be reset. The package calculates the difference between samples.
-	DELTA SourceType = iota
-	// ATTRIBUTE is any string value
-	ATTRIBUTE SourceType = iota
-)
 
 const (
 	// nsSeparator is the metric namespace separator
@@ -44,6 +28,7 @@ var (
 	ErrNonNumeric        = errors.New("non-numeric value for rate/delta")
 	ErrNoStoreToCalcDiff = errors.New("cannot use deltas nor rates without persistent store")
 	ErrTooCloseSamples   = errors.New("samples too close in time, skipping")
+	ErrNegativeDiff      = errors.New("source was reset, skipping")
 	ErrOverrideSetAttrs  = errors.New("cannot overwrite metric-set attributes")
 	ErrDeltaWithNoAttrs  = errors.New("delta/rate metrics should be attached to an attribute identified metric-set")
 )
@@ -73,6 +58,13 @@ func NewSet(eventType string, storer persist.Storer, attributes ...Attribute) (s
 	return
 }
 
+// AddCustomAttributes add customAttributes to MetricSet
+func AddCustomAttributes(metricSet *Set, customAttributes []Attribute) {
+	for _, attr := range customAttributes {
+		metricSet.setSetAttribute(attr.Key, attr.Value)
+	}
+}
+
 // Attr creates an attribute aimed to namespace a metric-set.
 func Attr(key string, value string) Attribute {
 	return Attribute{
@@ -89,7 +81,7 @@ func (ms *Set) SetMetric(name string, value interface{}, sourceType SourceType) 
 
 	// Only sample metrics of numeric type
 	switch sourceType {
-	case RATE, DELTA:
+	case RATE, DELTA, PRATE, PDELTA:
 		if len(ms.nsAttributes) == 0 {
 			err = ErrDeltaWithNoAttrs
 			return
@@ -127,6 +119,13 @@ func (ms *Set) setSetAttribute(name string, value string) {
 }
 
 func castToFloat(value interface{}) (float64, error) {
+	if b, ok := value.(bool); ok {
+		if b {
+			return 1, nil
+		}
+		return 0, nil
+	}
+
 	return strconv.ParseFloat(fmt.Sprintf("%v", value), 64)
 }
 
@@ -165,6 +164,12 @@ func (ms *Set) elapsedDifference(name string, absolute interface{}, sourceType S
 	}
 
 	elapsed = newValue - oldValue
+
+	if elapsed < 0 && sourceType.IsPositive() {
+		err = ErrNegativeDiff
+		return
+	}
+
 	if sourceType == RATE {
 		elapsed = elapsed / float64(duration)
 	}
@@ -194,8 +199,13 @@ func (a *Attribute) Namespace() string {
 }
 
 // MarshalJSON adapts the internal structure of the metrics Set to the payload that is compliant with the protocol
-func (ms Set) MarshalJSON() ([]byte, error) {
+func (ms *Set) MarshalJSON() ([]byte, error) {
 	return json.Marshal(ms.Metrics)
+}
+
+// UnmarshalJSON unserializes protocol compliant JSON metrics into the metric set.
+func (ms *Set) UnmarshalJSON(data []byte) error {
+	return json.Unmarshal(data, &ms.Metrics)
 }
 
 // Required for Go < v.18, as these do not include sort.Slice
