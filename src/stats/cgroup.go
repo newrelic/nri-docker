@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	path2 "path"
+	"path"
 	"strconv"
 	"strings"
 	"time"
@@ -36,6 +36,19 @@ func (cg *CGroupsProvider) PersistStats() error {
 	return cg.store.Save()
 }
 
+// returns a path that is located on the root folder of the host and the `/host` folder
+// on the integrations. If they existed in both root and /host, returns the /host path,
+// assuming the integration is running in a container
+func hostFolder(folders ...string) string {
+	insideHostFile := path.Join(folders...)
+	insideContainerFile := path.Join("/host", insideHostFile) // TODO: make the /host configurable
+	var err error
+	if _, err = os.Stat(insideContainerFile); err == nil {
+		return insideContainerFile
+	}
+	return insideHostFile
+}
+
 func parseUintFile(file string) (value uint64, err error) {
 	f, err := os.Open(file)
 	if err != nil {
@@ -56,19 +69,19 @@ func (cg *CGroupsProvider) Fetch(containerID string) (Cooked, error) {
 	stats := types.Stats{}
 
 	stats.Read = time.Now()
-	if err := cg.readPidsStats(containerID, &stats.PidsStats); err != nil {
+	if err := readPidsStats(containerID, &stats.PidsStats); err != nil {
 		return Cooked(stats), err
 	}
 
-	if err := cg.readBlkioStats(containerID, &stats.BlkioStats); err != nil {
+	if err := readBlkioStats(containerID, &stats.BlkioStats); err != nil {
 		return Cooked(stats), err
 	}
 
-	if err := cg.readCPUStats(containerID, &stats.CPUStats); err != nil {
+	if err := readCPUStats(containerID, &stats.CPUStats); err != nil {
 		return Cooked(stats), err
 	}
 
-	if err := cg.readMemoryStats(containerID, &stats.MemoryStats); err != nil {
+	if err := readMemoryStats(containerID, &stats.MemoryStats); err != nil {
 		return Cooked(stats), err
 	}
 
@@ -89,15 +102,15 @@ func (cg *CGroupsProvider) Fetch(containerID string) (Cooked, error) {
 	return Cooked(stats), nil
 }
 
-func (cg *CGroupsProvider) readPidsStats(containerID string, stats *types.PidsStats) (err error) {
-	path := path2.Join(cgroupPath, "pids", "docker", containerID)
+func readPidsStats(containerID string, stats *types.PidsStats) (err error) {
+	cpath := hostFolder(cgroupPath, "pids", "docker", containerID)
 
-	stats.Current, err = parseUintFile(path2.Join(path, "pids.current"))
+	stats.Current, err = parseUintFile(path.Join(cpath, "pids.current"))
 	if err != nil {
 		return err
 	}
 
-	body, err := ioutil.ReadFile(path2.Join(path, "/pids.max"))
+	body, err := ioutil.ReadFile(path.Join(cpath, "/pids.max"))
 	if err != nil {
 		return err
 	}
@@ -115,10 +128,10 @@ func (cg *CGroupsProvider) readPidsStats(containerID string, stats *types.PidsSt
 }
 
 // TODO: on int parse error, not return error, just ignore and continue other metrics
-func (cg *CGroupsProvider) readBlkio(path string, ioStat string) ([]types.BlkioStatEntry, error) {
+func readBlkio(blkioPath string, ioStat string) ([]types.BlkioStatEntry, error) {
 	entries := []types.BlkioStatEntry{}
 
-	f, err := os.Open(path2.Join(path, ioStat))
+	f, err := os.Open(path.Join(blkioPath, ioStat))
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +147,7 @@ func (cg *CGroupsProvider) readBlkio(path string, ioStat string) ([]types.BlkioS
 				// skip total line
 				continue
 			} else {
-				return nil, fmt.Errorf("Invalid line found while parsing %s: %s", path, sc.Text())
+				return nil, fmt.Errorf("invalid line found while parsing %s: %s", blkioPath, sc.Text())
 			}
 		}
 
@@ -166,27 +179,27 @@ func (cg *CGroupsProvider) readBlkio(path string, ioStat string) ([]types.BlkioS
 	return entries, nil
 }
 
-func (cg *CGroupsProvider) readBlkioStats(containerID string, stats *types.BlkioStats) (err error) {
-	path := path2.Join(cgroupPath, "blkio", "docker", containerID)
+func readBlkioStats(containerID string, stats *types.BlkioStats) (err error) {
+	cpath := hostFolder(cgroupPath, "blkio", "docker", containerID)
 
-	if stats.IoServiceBytesRecursive, err = cg.readBlkio(path, "blkio.throttle.io_service_bytes"); err != nil {
+	if stats.IoServiceBytesRecursive, err = readBlkio(cpath, "blkio.throttle.io_service_bytes"); err != nil {
 		return err
 	}
 
-	if stats.IoServicedRecursive, err = cg.readBlkio(path, "blkio.throttle.io_serviced"); err != nil {
+	if stats.IoServicedRecursive, err = readBlkio(cpath, "blkio.throttle.io_serviced"); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (cg *CGroupsProvider) readCPUUsage(path string, cpu *types.CPUUsage) error {
+func readCPUUsage(cpath string, cpu *types.CPUUsage) error {
 	var err error
-	cpu.TotalUsage, err = parseUintFile(path2.Join(path, "cpuacct.usage"))
+	cpu.TotalUsage, err = parseUintFile(path.Join(cpath, "cpuacct.usage"))
 	if err != nil {
 		return err
 	}
 
-	f, err := os.Open(path2.Join(path, "cpuacct.stat"))
+	f, err := os.Open(path.Join(cpath, "cpuacct.stat"))
 	if err != nil {
 		return err
 	}
@@ -207,7 +220,7 @@ func (cg *CGroupsProvider) readCPUUsage(path string, cpu *types.CPUUsage) error 
 		}
 	}
 
-	body, err := ioutil.ReadFile(path2.Join(path, "cpuacct.usage_percpu"))
+	body, err := ioutil.ReadFile(path.Join(cpath, "cpuacct.usage_percpu"))
 	if err != nil {
 		return err
 	}
@@ -237,7 +250,7 @@ const nanoSecondsPerSecond = 1e9
 // statistics line and then sums up the first seven fields
 // provided. See `man 5 proc` for details on specific field
 // information.
-func (cg *CGroupsProvider) getSystemCPUUsage() (uint64, error) {
+func getSystemCPUUsage() (uint64, error) {
 	f, err := os.Open("/proc/stat")
 	if err != nil {
 		return 0, err
@@ -275,23 +288,23 @@ func (cg *CGroupsProvider) getSystemCPUUsage() (uint64, error) {
 	return 0, fmt.Errorf("invalid stat format. Error trying to parse the '/proc/stat' file")
 }
 
-func (cg *CGroupsProvider) readCPUStats(containerID string, stats *types.CPUStats) error {
-	path := path2.Join(cgroupPath, "cpu", "docker", containerID)
+func readCPUStats(containerID string, stats *types.CPUStats) error {
+	cpath := hostFolder(cgroupPath, "cpu", "docker", containerID)
 
-	if err := cg.readCPUUsage(path, &stats.CPUUsage); err != nil {
+	if err := readCPUUsage(cpath, &stats.CPUUsage); err != nil {
 		return err
 	}
 
 	var err error
-	if stats.SystemUsage, err = cg.getSystemCPUUsage(); err != nil {
+	if stats.SystemUsage, err = getSystemCPUUsage(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (cg *CGroupsProvider) readMemoryStats(containerID string, stats *types.MemoryStats) error {
-	path := path2.Join(cgroupPath, "memory", "docker", containerID)
+func readMemoryStats(containerID string, stats *types.MemoryStats) error {
+	cpath := hostFolder(cgroupPath, "memory", "docker", containerID)
 
 	for _, metric := range []struct {
 		file string
@@ -301,14 +314,14 @@ func (cg *CGroupsProvider) readMemoryStats(containerID string, stats *types.Memo
 		{"memory.limit_in_bytes", &stats.Limit},
 	} {
 		var err error
-		if *metric.dest, err = parseUintFile(path2.Join(path, metric.file)); err != nil {
+		if *metric.dest, err = parseUintFile(path.Join(cpath, metric.file)); err != nil {
 			log.Debug("error reading %s: %s", metric.file, err.Error())
 		}
 	}
 
 	stats.Stats = map[string]uint64{}
 
-	f, err := os.Open(path2.Join(path, "memory.stat"))
+	f, err := os.Open(path.Join(cpath, "memory.stat"))
 	if err != nil {
 		log.Debug("error reading memory.stat: %s", err.Error())
 	}
