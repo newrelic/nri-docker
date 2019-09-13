@@ -16,6 +16,25 @@ type CPU struct {
 	User   float64
 }
 
+func calculateCPUPercentUnix(previousCPU, previousSystem uint64, v *types.CPUStats) float64 {
+	var (
+		cpuPercent = 0.0
+		// calculate the change for the cpu usage of the container in between readings
+		cpuDelta = float64(v.CPUUsage.TotalUsage) - float64(previousCPU)
+		// calculate the change for the entire system between readings
+		systemDelta = float64(v.SystemUsage) - float64(previousSystem)
+		onlineCPUs  = float64(v.OnlineCPUs)
+	)
+
+	if onlineCPUs == 0.0 {
+		onlineCPUs = float64(len(v.CPUUsage.PercpuUsage))
+	}
+	if systemDelta > 0.0 && cpuDelta > 0.0 {
+		cpuPercent = (cpuDelta / systemDelta) * onlineCPUs * 100.0
+	}
+	return cpuPercent
+}
+
 // this formula is only valid for Linux. TODO: provide windows version
 func (c *Cooked) CPU() CPU {
 	cpu := CPU{}
@@ -31,8 +50,11 @@ func (c *Cooked) CPU() CPU {
 
 	maxVal := float64(len(c.CPUStats.CPUUsage.PercpuUsage) * 100)
 
+	cpu.CPU = calculateCPUPercentUnix(c.PreCPUStats.CPUUsage.TotalUsage, c.PreCPUStats.SystemUsage, &c.CPUStats)
+	/*
 	cpuDelta := float64(c.CPUStats.CPUUsage.TotalUsage - c.PreCPUStats.CPUUsage.TotalUsage)
 	cpu.CPU = math.Min(maxVal, cpuDelta*100/duration)
+	 */
 
 	userDelta := float64(c.CPUStats.CPUUsage.UsageInUsermode - c.PreCPUStats.CPUUsage.UsageInUsermode)
 	cpu.User = math.Min(maxVal, userDelta*100/duration)

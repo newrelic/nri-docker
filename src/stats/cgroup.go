@@ -212,8 +212,8 @@ func (cg *CGroupsProvider) readCPUUsage(path string, cpu *types.CPUUsage) error 
 		return err
 	}
 	fields := strings.Split(string(body), " ")
-	cpu.PercpuUsage = make([]uint64, len(fields))
-	for i, num := range fields {
+	cpu.PercpuUsage = []uint64{}
+	for _, num := range fields {
 		if num == "\n" {
 			continue
 		}
@@ -221,10 +221,58 @@ func (cg *CGroupsProvider) readCPUUsage(path string, cpu *types.CPUUsage) error 
 		if err != nil {
 			return err
 		}
-		cpu.PercpuUsage[i] = value
+		cpu.PercpuUsage = append(cpu.PercpuUsage, value)
 	}
 
 	return nil
+}
+
+const nanoSecondsPerSecond = 1e9
+
+// getSystemCPUUsage returns the host system's cpu usage in
+// nanoseconds. An error is returned if the format of the underlying
+// file does not match.
+//
+// Uses /proc/stat defined by POSIX. Looks for the cpu
+// statistics line and then sums up the first seven fields
+// provided. See `man 5 proc` for details on specific field
+// information.
+func (cg *CGroupsProvider) getSystemCPUUsage() (uint64, error) {
+	f, err := os.Open("/proc/stat")
+	if err != nil {
+		return 0, err
+	}
+
+	bufReader := bufio.NewReaderSize(nil, 128)
+	defer func() {
+		bufReader.Reset(nil)
+		f.Close()
+	}()
+	bufReader.Reset(f)
+
+	for {
+		line, err := bufReader.ReadString('\n')
+		if err != nil {
+			break
+		}
+		parts := strings.Fields(line)
+		switch parts[0] {
+		case "cpu":
+			if len(parts) < 8 {
+				return 0, fmt.Errorf("invalid number of cpu fields")
+			}
+			var totalClockTicks uint64
+			for _, i := range parts[1:8] {
+				v, err := strconv.ParseUint(i, 10, 64)
+				if err != nil {
+					return 0, fmt.Errorf("Unable to convert value %s to int: %s", i, err)
+				}
+				totalClockTicks += v
+			}
+			return (totalClockTicks * nanoSecondsPerSecond) / 100, nil
+		}
+	}
+	return 0, fmt.Errorf("invalid stat format. Error trying to parse the '/proc/stat' file")
 }
 
 func (cg *CGroupsProvider) readCPUStats(containerID string, stats *types.CPUStats) error {
@@ -233,6 +281,13 @@ func (cg *CGroupsProvider) readCPUStats(containerID string, stats *types.CPUStat
 	if err := cg.readCPUUsage(path, &stats.CPUUsage); err != nil {
 		return err
 	}
+
+	var err error
+	if stats.SystemUsage, err = cg.getSystemCPUUsage(); err != nil {
+		return err
+	}
+	fmt.Println("SystemUsage: ", stats.SystemUsage)
+
 	return nil
 }
 
