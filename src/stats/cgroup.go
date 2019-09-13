@@ -286,7 +286,6 @@ func (cg *CGroupsProvider) readCPUStats(containerID string, stats *types.CPUStat
 	if stats.SystemUsage, err = cg.getSystemCPUUsage(); err != nil {
 		return err
 	}
-	fmt.Println("SystemUsage: ", stats.SystemUsage)
 
 	return nil
 }
