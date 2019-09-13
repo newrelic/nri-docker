@@ -57,19 +57,19 @@ func (cg *CGroupsProvider) Fetch(containerID string) (Cooked, error) {
 
 	stats.Read = time.Now()
 	if err := cg.readPidsStats(containerID, &stats.PidsStats); err != nil {
-		return Cooked(stats), err
+		log.Error("couldn't read pids stats: %v", err)
 	}
 
 	if err := cg.readBlkioStats(containerID, &stats.BlkioStats); err != nil {
-		return Cooked(stats), err
+		log.Error("couldn't read blkio stats: %v", err)
 	}
 
 	if err := cg.readCPUStats(containerID, &stats.CPUStats); err != nil {
-		return Cooked(stats), err
+		log.Error("couldn't read cpu stats: %v", err)
 	}
 
 	if err := cg.readMemoryStats(containerID, &stats.MemoryStats); err != nil {
-		return Cooked(stats), err
+		log.Error("couldn't read memory stats: %v", err)
 	}
 
 	var preStats struct {
