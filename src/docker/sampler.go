@@ -145,9 +145,9 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 		if err != nil {
 			return err
 		}
-		entity.AddHostname = true // the agent will add its own hostname to the entity
 
 		ms := entity.NewMetricSet(ContainerSampleName,
+			metric.Attr("hostname", "localhost"),
 			metric.Attr(AttrContainerID, container.ID)) // TODO: provide other unique label
 
 		if err := populate(ms, attributes(container)); err != nil {
