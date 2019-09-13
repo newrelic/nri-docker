@@ -134,17 +134,17 @@ func NewContainerSampler(statsProvider stats.Provider) (ContainerSampler, error)
 }
 
 func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
-	// TODO: filter by state == running?
 	containers, err := cs.docker.ContainerList(context.Background(), types.ContainerListOptions{})
 	if err != nil {
 		return err
 	}
 	for _, container := range containers {
 
-		entity, err := i.Entity("localhost:container:"+container.ID, "docker")
+		entity, err := i.Entity(container.ID, "docker")
 		if err != nil {
 			return err
 		}
+		entity.AddHostname = true // the agent will add its own hostname to the entity
 
 		ms := entity.NewMetricSet(ContainerSampleName,
 			metric.Attr(AttrContainerID, container.ID)) // TODO: provide other unique label
