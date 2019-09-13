@@ -83,6 +83,7 @@ func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
 		MetricIOTotalWriteCount(bio.TotalWriteCount),
 		MetricIOTotalReadBytes(bio.TotalReadBytes),
 		MetricIOTotalWriteBytes(bio.TotalWriteBytes),
+		MetricIOTotalBytes(bio.TotalReadBytes + bio.TotalWriteBytes),
 		MetricIOReadCountPerSecond(bio.TotalReadCount),
 		MetricIOWriteCountPerSecond(bio.TotalWriteCount),
 		MetricIOReadBytesPerSecond(bio.TotalReadBytes),

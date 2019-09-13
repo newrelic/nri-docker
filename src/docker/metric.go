@@ -35,6 +35,7 @@ var (
 	MetricIOTotalWriteCount       = metricFunc("ioTotalWriteCount", metric.GAUGE)
 	MetricIOTotalReadBytes        = metricFunc("ioTotalReadBytes", metric.GAUGE)
 	MetricIOTotalWriteBytes       = metricFunc("ioTotalWriteBytes", metric.GAUGE)
+	MetricIOTotalBytes            = metricFunc("ioTotalBytes", metric.GAUGE)
 	MetricPIDs                    = metricFunc("pidsNumber", metric.GAUGE)
 	MetricRxBytes                 = metricFunc("networkRxBytes", metric.GAUGE)
 	MetricRxDropped               = metricFunc("networkRxDropped", metric.GAUGE)
