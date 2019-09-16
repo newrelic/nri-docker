@@ -71,7 +71,8 @@ func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
 		memLimits = 0
 	}
 	return []Metric{
-		MetricPIDs(float64(stats.PidsStats.Current)),
+		MetricProcessCount(float64(stats.PidsStats.Current)),
+		MetricProcessCountLimit(float64(stats.PidsStats.Limit)),
 		MetricCPUPercent(cpu.CPU),
 		MetricCPUKernelPercent(cpu.Kernel),
 		MetricCPUUserPercent(cpu.User),

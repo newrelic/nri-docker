@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/containerd/cgroups"
 	"github.com/docker/docker/api/types"
 	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/infra-integrations-sdk/persist"
@@ -70,7 +71,12 @@ func (cg *CGroupsProvider) Fetch(containerID string) (Cooked, error) {
 
 	stats.Read = time.Now()
 
-	if err := readPidsStats(containerID, &stats.PidsStats); err != nil {
+	control, err := cgroups.Load(cgroups.V1, cgroups.StaticPath(path.Join("docker", containerID)))
+	if err != nil {
+		return Cooked{}, err
+	}
+
+	if err := readPidsStats(control, containerID, &stats.PidsStats); err != nil {
 		log.Error("couldn't read pids stats: %v", err)
 	}
 
@@ -103,7 +109,13 @@ func (cg *CGroupsProvider) Fetch(containerID string) (Cooked, error) {
 	return Cooked(stats), nil
 }
 
-func readPidsStats(containerID string, stats *types.PidsStats) (err error) {
+func readPidsStats(cg cgroups.Cgroup, containerID string, stats *types.PidsStats) (err error) {
+	metrics, err := cg.Stat()
+	if err != nil {
+		return err
+	}
+	stats.Current = metrics.Pids.Current
+	stats.Limit = metrics.Pids.Limit
 	cpath := hostFolder(cgroupPath, "pids", "docker", containerID)
 
 	stats.Current, err = parseUintFile(path.Join(cpath, "pids.current"))
