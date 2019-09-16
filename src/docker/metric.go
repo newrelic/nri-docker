@@ -2,7 +2,7 @@ package docker
 
 import "github.com/newrelic/infra-integrations-sdk/data/metric"
 
-const ContainerSampleName = "DockerContainerSample"
+const ContainerSampleName = "ContainerSample"
 
 func metricFunc(name string, sType metric.SourceType) func(interface{}) Metric {
 	return func(value interface{}) Metric {
@@ -36,7 +36,7 @@ var (
 	MetricIOTotalReadBytes        = metricFunc("ioTotalReadBytes", metric.GAUGE)
 	MetricIOTotalWriteBytes       = metricFunc("ioTotalWriteBytes", metric.GAUGE)
 	MetricIOTotalBytes            = metricFunc("ioTotalBytes", metric.GAUGE)
-	MetricPIDs                    = metricFunc("pidsNumber", metric.GAUGE)
+	MetricPIDs                    = metricFunc("processCount", metric.GAUGE)
 	MetricRxBytes                 = metricFunc("networkRxBytes", metric.GAUGE)
 	MetricRxDropped               = metricFunc("networkRxDropped", metric.GAUGE)
 	MetricRxErrors                = metricFunc("networkRxErrors", metric.GAUGE)
