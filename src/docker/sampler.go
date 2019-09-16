@@ -210,11 +210,11 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 			fake("fullHostname", fqdn),
 			fake("kernelVersion", "9.9.99"),
 			fake("processorCount", "99"),
-			fake("warningViolationCount", 0),
+			{Name: "warningViolationCount", Type: metric.GAUGE, Value: 0},
 			fake("agentName", "Infrastructure"),
 			fake("agentVersion", "1.0.999"),
 			fake("operatingSystem", "linux"),
-			fake("criticalViolationCount", 0),
+			{Name: "criticalViolationCount", Type: metric.GAUGE, Value: 0},
 			fake("instanceType", "fake metadata on real container"),
 		})
 
