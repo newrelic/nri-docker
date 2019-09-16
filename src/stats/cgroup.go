@@ -75,8 +75,12 @@ func (cg *CGroupsProvider) Fetch(containerID string) (Cooked, error) {
 	if err != nil {
 		return Cooked{}, err
 	}
+	metrics, err := control.Stat()
+	if err != nil {
+		return Cooked{}, err
+	}
 
-	if err := readPidsStats(control, containerID, &stats.PidsStats); err != nil {
+	if err := pidStats(metrics, containerID, &stats.PidsStats); err != nil {
 		log.Error("couldn't read pids stats: %v", err)
 	}
 
@@ -84,7 +88,7 @@ func (cg *CGroupsProvider) Fetch(containerID string) (Cooked, error) {
 		log.Error("couldn't read blkio stats: %v", err)
 	}
 
-	if err := readCPUStats(containerID, &stats.CPUStats); err != nil {
+	if err := cpuStats(metrics, &stats.CPUStats); err != nil {
 		log.Error("couldn't read cpu stats: %v", err)
 	}
 
@@ -109,11 +113,7 @@ func (cg *CGroupsProvider) Fetch(containerID string) (Cooked, error) {
 	return Cooked(stats), nil
 }
 
-func readPidsStats(cg cgroups.Cgroup, containerID string, stats *types.PidsStats) (err error) {
-	metrics, err := cg.Stat()
-	if err != nil {
-		return err
-	}
+func pidStats(metrics *cgroups.Metrics, containerID string, stats *types.PidsStats) (err error) {
 	stats.Current = metrics.Pids.Current
 	stats.Limit = metrics.Pids.Limit
 	cpath := hostFolder(cgroupPath, "pids", "docker", containerID)
@@ -140,7 +140,7 @@ func readPidsStats(cg cgroups.Cgroup, containerID string, stats *types.PidsStats
 	return nil
 }
 
-// TODO: on int parse error, not return error, just ignore and continue other metrics
+// TODO: use cgroups library (as for readPidStats)
 func readBlkio(blkioPath string, ioStat string) ([]types.BlkioStatEntry, error) {
 	entries := []types.BlkioStatEntry{}
 
@@ -192,6 +192,7 @@ func readBlkio(blkioPath string, ioStat string) ([]types.BlkioStatEntry, error) 
 	return entries, nil
 }
 
+// TODO: use cgroups library (as for readPidStats)
 func readBlkioStats(containerID string, stats *types.BlkioStats) (err error) {
 	cpath := hostFolder(cgroupPath, "blkio", "docker", containerID)
 
@@ -205,57 +206,9 @@ func readBlkioStats(containerID string, stats *types.BlkioStats) (err error) {
 	return nil
 }
 
-func readCPUUsage(cpath string, cpu *types.CPUUsage) error {
-	var err error
-	cpu.TotalUsage, err = parseUintFile(path.Join(cpath, "cpuacct.usage"))
-	if err != nil {
-		return err
-	}
-
-	f, err := os.Open(path.Join(cpath, "cpuacct.stat"))
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	sc := bufio.NewScanner(f)
-	for sc.Scan() {
-		fields := strings.Split(sc.Text(), " ")
-		value, err := strconv.ParseUint(fields[1], 10, 64)
-		if err != nil {
-			return err
-		}
-
-		switch fields[0] {
-		case "user":
-			cpu.UsageInUsermode = value * (uint64(time.Second) / 100) // uint64(C.sysconf(C._SC_CLK_TCK))
-		case "system":
-			cpu.UsageInKernelmode = value * (uint64(time.Second) / 100) // uint64(C.sysconf(C._SC_CLK_TCK))
-		}
-	}
-
-	body, err := ioutil.ReadFile(path.Join(cpath, "cpuacct.usage_percpu"))
-	if err != nil {
-		return err
-	}
-	fields := strings.Split(string(body), " ")
-	cpu.PercpuUsage = []uint64{}
-	for _, num := range fields {
-		if num == "\n" {
-			continue
-		}
-		value, err := strconv.ParseUint(num, 10, 64)
-		if err != nil {
-			return err
-		}
-		cpu.PercpuUsage = append(cpu.PercpuUsage, value)
-	}
-
-	return nil
-}
-
 const nanoSecondsPerSecond = 1e9
 
-// getSystemCPUUsage returns the host system's cpu usage in
+// readSystemCPUUsage returns the host system's cpu usage in
 // nanoseconds. An error is returned if the format of the underlying
 // file does not match.
 //
@@ -263,7 +216,7 @@ const nanoSecondsPerSecond = 1e9
 // statistics line and then sums up the first seven fields
 // provided. See `man 5 proc` for details on specific field
 // information.
-func getSystemCPUUsage() (uint64, error) {
+func readSystemCPUUsage() (uint64, error) {
 	f, err := os.Open("/proc/stat")
 	if err != nil {
 		return 0, err
@@ -301,21 +254,21 @@ func getSystemCPUUsage() (uint64, error) {
 	return 0, fmt.Errorf("invalid stat format. Error trying to parse the '/proc/stat' file")
 }
 
-func readCPUStats(containerID string, stats *types.CPUStats) error {
-	cpath := hostFolder(cgroupPath, "cpu", "docker", containerID)
-
-	if err := readCPUUsage(cpath, &stats.CPUUsage); err != nil {
-		return err
-	}
+func cpuStats(metric *cgroups.Metrics, stats *types.CPUStats) error {
+	stats.CPUUsage.TotalUsage = metric.CPU.Usage.Total
+	stats.CPUUsage.UsageInUsermode = metric.CPU.Usage.User
+	stats.CPUUsage.UsageInKernelmode = metric.CPU.Usage.Kernel
+	stats.CPUUsage.PercpuUsage = metric.CPU.Usage.PerCPU
 
 	var err error
-	if stats.SystemUsage, err = getSystemCPUUsage(); err != nil {
+	if stats.SystemUsage, err = readSystemCPUUsage(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
+// TODO: use cgroups library (as for readPidStats)
 func readMemoryStats(containerID string, stats *types.MemoryStats) error {
 	cpath := hostFolder(cgroupPath, "memory", "docker", containerID)
 
