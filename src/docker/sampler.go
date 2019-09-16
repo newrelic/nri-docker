@@ -36,6 +36,9 @@ func attributes(container types.Container) []Metric {
 	var cname string
 	if len(container.Names) > 0 {
 		cname = container.Names[0]
+		if len(cname) > 0 && cname[0] == '/' {
+			cname = cname[1:]
+		}
 	}
 	return []Metric{
 		MetricCommandLine(container.Command),
