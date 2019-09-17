@@ -123,6 +123,12 @@ func (cs *ContainerSampler) networkMetrics(containerPid int) []Metric {
 	}
 }
 
+func inspectData(json types.ContainerJSON) []Metric {
+	return []Metric{
+		MetricRestartCount(json.RestartCount),
+	}
+}
+
 func NewContainerSampler(statsProvider stats.Provider) (ContainerSampler, error) {
 	cli, err := client.NewEnvClient()
 	if err != nil {
@@ -175,6 +181,12 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 			log.Debug("error: container %v has no state: %s", container.ID, err)
 			continue
 		}
+
+		if err := populate(ms, inspectData(cjson)) ; err != nil {
+			log.Debug("error populating container %v inspect data: %s", container.ID, err)
+			continue
+		}
+
 		if err := populate(ms, cs.networkMetrics(cjson.State.Pid)); err != nil {
 			log.Debug("error populating container %v network metrics: %s", container.ID, err)
 			continue

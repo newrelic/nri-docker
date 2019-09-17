@@ -20,6 +20,7 @@ var (
 	MetricState                   = metricFunc("state", metric.ATTRIBUTE)
 	MetricStatus                  = metricFunc("status", metric.ATTRIBUTE)
 	MetricNetworkIface            = metricFunc("networkIface", metric.ATTRIBUTE)
+	MetricRestartCount			  = metricFunc("restartCount", metric.GAUGE)
 	MetricCPUPercent              = metricFunc("cpuPercent", metric.GAUGE)
 	MetricCPUKernelPercent        = metricFunc("cpuKernelPercent", metric.GAUGE)
 	MetricCPUUserPercent          = metricFunc("cpuUserPercent", metric.GAUGE)
