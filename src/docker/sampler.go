@@ -147,7 +147,7 @@ func NewContainerSampler(statsProvider stats.Provider) (ContainerSampler, error)
 }
 
 func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
-	containers, err := cs.docker.ContainerList(context.Background(), types.ContainerListOptions{})
+	containers, err := cs.docker.ContainerList(context.Background(), types.ContainerListOptions{All:true})
 	if err != nil {
 		return err
 	}
@@ -159,11 +159,18 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 		}
 
 		ms := entity.NewMetricSet(ContainerSampleName,
-			metric.Attr("hostname", "localhost"),
-			metric.Attr(AttrContainerID, container.ID)) // TODO: provide other unique label
+			metric.Attr("hostname", "localhost"), // will be replaced by the agent
+			metric.Attr(AttrContainerID, container.ID))
+
+		_ = populate(ms, fakeMetrics()) // TODO: remove
 
 		if err := populate(ms, attributes(container)); err != nil {
 			log.Debug("error populating container %v attributes: %s", container.ID, err)
+			continue
+		}
+
+		if err := populate(ms, labels(container)); err != nil {
+			log.Debug("error populating container %v labels: %s", container.ID, err)
 			continue
 		}
 
@@ -177,12 +184,8 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 			log.Debug("error inspecting container %v: %s", container.ID, err)
 			continue
 		}
-		if cjson.State == nil {
-			log.Debug("error: container %v has no state: %s", container.ID, err)
-			continue
-		}
 
-		if err := populate(ms, inspectData(cjson)) ; err != nil {
+		if err := populate(ms, inspectData(cjson)); err != nil {
 			log.Debug("error populating container %v inspect data: %s", container.ID, err)
 			continue
 		}
@@ -192,32 +195,27 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 			continue
 		}
 
-		if err := populate(ms, labels(container)); err != nil {
-			log.Debug("error populating container %v labels: %s", container.ID, err)
-			continue
-		}
-
-		var fake = func(name string, value interface{}) Metric {
-			return Metric{Name: name, Type: metric.ATTRIBUTE, Value: value}
-		}
-
-		// FAKE DATA STARTS HERE
-		// populate fake metrics
-		populate(ms, []Metric{
-			fake("linuxDistribution", "CentOS Linux 7 (Core)"),
-			fake("agentVersion", "1.5.37"),
-			fake("systemMemoryBytes", "1927303168"),
-			fake("coreCount", "2"),
-			fake("fullHostname", "ohai1.new-domain.com"),
-			fake("kernelVersion", "3.10.0-957.27.2.el7.x86_64"),
-			fake("processorCount", "2"),
-			{Name: "warningViolationCount", Type: metric.GAUGE, Value: 0},
-			fake("agentName", "Infrastructure"),
-			fake("operatingSystem", "linux"),
-			{Name: "criticalViolationCount", Type: metric.GAUGE, Value: 0},
-			fake("instanceType", "unknown"),
-		})
-
 	}
 	return nil
+}
+
+// TODO: remove
+func fakeMetrics() []Metric {
+	var fake = func(name string, value interface{}) Metric {
+		return Metric{Name: name, Type: metric.ATTRIBUTE, Value: value}
+	}
+	return []Metric{
+		fake("linuxDistribution", "CentOS Linux 7 (Core)"),
+		fake("agentVersion", "1.5.37"),
+		fake("systemMemoryBytes", "1927303168"),
+		fake("coreCount", "2"),
+		fake("fullHostname", "ohai1.new-domain.com"),
+		fake("kernelVersion", "3.10.0-957.27.2.el7.x86_64"),
+		fake("processorCount", "2"),
+		{Name: "warningViolationCount", Type: metric.GAUGE, Value: 0},
+		fake("agentName", "Infrastructure"),
+		fake("operatingSystem", "linux"),
+		{Name: "criticalViolationCount", Type: metric.GAUGE, Value: 0},
+		fake("instanceType", "unknown"),
+	}
 }
