@@ -6,7 +6,8 @@ COPY . .
 RUN make compile && \
     strip ./bin/nr-docker
 
-FROM newrelic/infrastructure:latest
+ARG infra_image
+FROM $infra_image
 COPY --from=builder /go/src/github.com/newrelic/nri-docker/bin/nr-docker /var/db/newrelic-infra/newrelic-integrations/bin/nr-docker
 COPY --from=builder /go/src/github.com/newrelic/nri-docker/docker-definition.yml /var/db/newrelic-infra/newrelic-integrations/docker-definition.yml
 COPY --from=builder /go/src/github.com/newrelic/nri-docker/docker-config.yml.sample /etc/newrelic-infra/integrations.d/docker-config.yml.sample
