@@ -1,3 +1,5 @@
+ARG infra_image=newrelic/infrastructure:latest
+
 FROM golang:1.10 as builder
 
 WORKDIR /go/src/github.com/newrelic/nri-docker
@@ -6,7 +8,6 @@ COPY . .
 RUN make compile && \
     strip ./bin/nr-docker
 
-ARG infra_image
 FROM $infra_image
 COPY --from=builder /go/src/github.com/newrelic/nri-docker/bin/nr-docker /var/db/newrelic-infra/newrelic-integrations/bin/nr-docker
 COPY --from=builder /go/src/github.com/newrelic/nri-docker/docker-definition.yml /var/db/newrelic-infra/newrelic-integrations/docker-definition.yml
