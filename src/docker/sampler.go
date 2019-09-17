@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"math"
+	"runtime"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -60,27 +61,17 @@ func labels(container types.Container) []Metric {
 	return metrics
 }
 
-func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
-	stats, err := cs.stats.Fetch(containerID)
-	if err != nil {
-		log.Error("error retrieving stats for container %s: %s", containerID, err.Error())
-		return []Metric{}
-	}
-
-	cpu, mem, bio := stats.CPU(), stats.Memory(), stats.BlockingIO()
+func statsMetrics(stats stats.Cooked) []Metric {
+	mem, bio := stats.Memory(), stats.BlockingIO()
 	memLimits := mem.MemLimitBytes
 	// negative or ridiculously large memory limits are set to 0 (no limit)
 	if memLimits < 0 || memLimits > float64(math.MaxInt64/2) {
 		memLimits = 0
 	}
+
 	return []Metric{
 		MetricProcessCount(stats.PidsStats.Current),
 		MetricProcessCountLimit(stats.PidsStats.Limit),
-		MetricCPUPercent(cpu.CPU),
-		MetricCPUKernelPercent(cpu.Kernel),
-		MetricCPUUserPercent(cpu.User),
-		MetricCPUThrottlePeriods(cpu.ThrottlePeriods),
-		MetricCPUThrottleTimeMS(cpu.ThrottledTimeMS),
 		MetricMemoryCacheBytes(mem.CacheUsageBytes),
 		MetricMemoryUsageBytes(mem.UsageBytes),
 		MetricMemoryResidentSizeBytes(mem.RSSUsageBytes),
@@ -123,6 +114,28 @@ func (cs *ContainerSampler) networkMetrics(containerPid int) []Metric {
 	}
 }
 
+func cpuCores(stats stats.Cooked, json types.ContainerJSON) []Metric {
+	cpu := stats.CPU()
+
+	// TODO: if newrelic-infra is in a limited cpus container, this may report the number of cpus of the
+	// newrelic-infra container if the container has no CPU quota
+	cpuLimitCores := float64(runtime.NumCPU())
+	if json.HostConfig != nil && json.HostConfig.NanoCPUs != 0 {
+		cpuLimitCores = float64(json.HostConfig.NanoCPUs) / 1e9
+	}
+	coresPercent := 100 * cpu.UsedCores / cpuLimitCores
+	return []Metric{
+		MetricCPUUsedCores(cpu.UsedCores),
+		MetricCPUUsedCoresPercent(coresPercent),
+		MetricCPULimitCores(cpuLimitCores),
+		MetricCPUPercent(cpu.CPU),
+		MetricCPUKernelPercent(cpu.Kernel),
+		MetricCPUUserPercent(cpu.User),
+		MetricCPUThrottlePeriods(cpu.ThrottlePeriods),
+		MetricCPUThrottleTimeMS(cpu.ThrottledTimeMS),
+	}
+}
+
 func inspectData(json types.ContainerJSON) []Metric {
 	return []Metric{
 		MetricRestartCount(json.RestartCount),
@@ -147,7 +160,7 @@ func NewContainerSampler(statsProvider stats.Provider) (ContainerSampler, error)
 }
 
 func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
-	containers, err := cs.docker.ContainerList(context.Background(), types.ContainerListOptions{All:true})
+	containers, err := cs.docker.ContainerList(context.Background(), types.ContainerListOptions{All: true})
 	if err != nil {
 		return err
 	}
@@ -174,11 +187,6 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 			continue
 		}
 
-		if err := populate(ms, cs.statsMetrics(container.ID)); err != nil {
-			log.Debug("error populating container %v stats metrics: %s", container.ID, err)
-			continue
-		}
-
 		cjson, err := cs.docker.ContainerInspect(context.Background(), container.ID)
 		if err != nil {
 			log.Debug("error inspecting container %v: %s", container.ID, err)
@@ -190,6 +198,19 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 			continue
 		}
 
+		stats, err := cs.stats.Fetch(container.ID)
+		if err != nil {
+			log.Error("error retrieving stats for container %s: %s", container.ID, err.Error())
+			continue
+		}
+		if err := populate(ms, statsMetrics(stats)); err != nil {
+			log.Debug("error populating container %v stats metrics: %s", container.ID, err)
+			continue
+		}
+		if err := populate(ms, cpuCores(stats, cjson)); err != nil {
+			log.Debug("error populating container %v CPU core metrics: %s", container.ID, err)
+			continue
+		}
 		if err := populate(ms, cs.networkMetrics(cjson.State.Pid)); err != nil {
 			log.Debug("error populating container %v network metrics: %s", container.ID, err)
 			continue

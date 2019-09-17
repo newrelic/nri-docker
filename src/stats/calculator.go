@@ -14,6 +14,7 @@ type CPU struct {
 	CPU             float64
 	Kernel          float64
 	User            float64
+	UsedCores       float64
 	ThrottlePeriods uint64
 	ThrottledTimeMS float64
 }
@@ -62,6 +63,7 @@ func (c *Cooked) CPU() CPU {
 
 	cpu.ThrottlePeriods = c.CPUStats.ThrottlingData.ThrottledPeriods
 	cpu.ThrottledTimeMS = float64(c.CPUStats.ThrottlingData.ThrottledTime) / nanoSecondsPerSecond
+	cpu.UsedCores = float64(c.CPUStats.CPUUsage.TotalUsage-c.PreCPUStats.CPUUsage.TotalUsage) / duration
 
 	return cpu
 }

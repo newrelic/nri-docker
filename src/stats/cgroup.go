@@ -55,37 +55,10 @@ func hostFolder(folders ...string) string {
 	return insideHostFile
 }
 
-func parseUintFile(file string) (value uint64, err error) {
-	f, err := os.Open(file)
-	if err != nil {
-		return
-	}
-	defer f.Close()
-
-	scanner := bufio.NewScanner(f)
-	scanner.Scan()
-	if err = scanner.Err(); err != nil {
-		return
-	}
-
-	return strconv.ParseUint(scanner.Text(), 10, 64)
-}
-
 func (cg *CGroupsProvider) Fetch(containerID string) (Cooked, error) {
 	stats := types.Stats{}
 
 	stats.Read = time.Now()
-
-	//ss, err := cg.subsystems()
-	//fmt.Println("err", err)
-	//for _, s := range ss {
-	//	fmt.Println(s.Name())
-	//	if pather, ok := s.(interface{
-	//		Path(path string) string
-	//	}) ; ok {
-	//		fmt.Println(pather.Path(""))
-	//	}
-	//}
 
 	control, err := cgroups.Load(cg.subsystems, cgroups.StaticPath(path.Join("docker", containerID)))
 	if err != nil {
@@ -262,6 +235,7 @@ func cpuStats(metric *cgroups.Metrics, stats *types.CPUStats) error {
 	stats.CPUUsage.UsageInUsermode = metric.CPU.Usage.User
 	stats.CPUUsage.UsageInKernelmode = metric.CPU.Usage.Kernel
 	stats.CPUUsage.PercpuUsage = metric.CPU.Usage.PerCPU
+	stats.CPUUsage.TotalUsage = metric.CPU.Usage.Total
 
 	if metric.CPU.Throttling != nil {
 		stats.ThrottlingData.ThrottledPeriods = metric.CPU.Throttling.ThrottledPeriods
