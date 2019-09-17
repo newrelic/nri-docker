@@ -1,10 +1,8 @@
 package docker
 
 import (
-	"bytes"
 	"context"
 	"math"
-	"os/exec"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -76,11 +74,13 @@ func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
 		memLimits = 0
 	}
 	return []Metric{
-		MetricProcessCount(float64(stats.PidsStats.Current)),
-		MetricProcessCountLimit(float64(stats.PidsStats.Limit)),
+		MetricProcessCount(stats.PidsStats.Current),
+		MetricProcessCountLimit(stats.PidsStats.Limit),
 		MetricCPUPercent(cpu.CPU),
 		MetricCPUKernelPercent(cpu.Kernel),
 		MetricCPUUserPercent(cpu.User),
+		MetricCPUThrottlePeriods(cpu.ThrottlePeriods),
+		MetricCPUThrottleTimeMS(cpu.ThrottledTimeMS),
 		MetricMemoryCacheBytes(mem.CacheUsageBytes),
 		MetricMemoryUsageBytes(mem.UsageBytes),
 		MetricMemoryResidentSizeBytes(mem.RSSUsageBytes),

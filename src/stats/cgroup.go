@@ -263,6 +263,11 @@ func cpuStats(metric *cgroups.Metrics, stats *types.CPUStats) error {
 	stats.CPUUsage.UsageInKernelmode = metric.CPU.Usage.Kernel
 	stats.CPUUsage.PercpuUsage = metric.CPU.Usage.PerCPU
 
+	if metric.CPU.Throttling != nil {
+		stats.ThrottlingData.ThrottledPeriods = metric.CPU.Throttling.ThrottledPeriods
+		stats.ThrottlingData.ThrottledTime = metric.CPU.Throttling.ThrottledTime
+	}
+
 	var err error
 	if stats.SystemUsage, err = readSystemCPUUsage(); err != nil {
 		return err

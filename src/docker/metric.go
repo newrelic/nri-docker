@@ -23,6 +23,8 @@ var (
 	MetricCPUPercent              = metricFunc("cpuPercent", metric.GAUGE)
 	MetricCPUKernelPercent        = metricFunc("cpuKernelPercent", metric.GAUGE)
 	MetricCPUUserPercent          = metricFunc("cpuUserPercent", metric.GAUGE)
+	MetricCPUThrottleTimeMS       = metricFunc("cpuThrottleTimeMs", metric.GAUGE)
+	MetricCPUThrottlePeriods      = metricFunc("cpuThrottlePeriods", metric.GAUGE)
 	MetricMemoryUsageBytes        = metricFunc("memoryUsageBytes", metric.GAUGE)
 	MetricMemoryCacheBytes        = metricFunc("memoryCacheBytes", metric.GAUGE)
 	MetricMemoryResidentSizeBytes = metricFunc("memoryResidentSizeBytes", metric.GAUGE)
