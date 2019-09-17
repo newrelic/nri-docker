@@ -11,9 +11,11 @@ import (
 type Cooked types.Stats
 
 type CPU struct {
-	CPU    float64
-	Kernel float64
-	User   float64
+	CPU             float64
+	Kernel          float64
+	User            float64
+	ThrottlePeriods uint64
+	ThrottledTimeMS float64
 }
 
 func calculateCPUPercentUnix(previousCPU, previousSystem uint64, v *types.CPUStats) float64 {
@@ -51,16 +53,15 @@ func (c *Cooked) CPU() CPU {
 	maxVal := float64(len(c.CPUStats.CPUUsage.PercpuUsage) * 100)
 
 	cpu.CPU = calculateCPUPercentUnix(c.PreCPUStats.CPUUsage.TotalUsage, c.PreCPUStats.SystemUsage, &c.CPUStats)
-	/*
-	cpuDelta := float64(c.CPUStats.CPUUsage.TotalUsage - c.PreCPUStats.CPUUsage.TotalUsage)
-	cpu.CPU = math.Min(maxVal, cpuDelta*100/duration)
-	 */
 
 	userDelta := float64(c.CPUStats.CPUUsage.UsageInUsermode - c.PreCPUStats.CPUUsage.UsageInUsermode)
 	cpu.User = math.Min(maxVal, userDelta*100/duration)
 
 	kernelDelta := float64(c.CPUStats.CPUUsage.UsageInKernelmode - c.PreCPUStats.CPUUsage.UsageInKernelmode)
 	cpu.Kernel = math.Min(maxVal, kernelDelta*100/duration)
+
+	cpu.ThrottlePeriods = c.CPUStats.ThrottlingData.ThrottledPeriods
+	cpu.ThrottledTimeMS = float64(c.CPUStats.ThrottlingData.ThrottledTime) / nanoSecondsPerSecond
 
 	return cpu
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/newrelic/infra-integrations-sdk/log"
 )
 
+// TODO: use cgroups library
 type NetworkFetcher struct {
 }
 
@@ -30,7 +31,7 @@ func NewNetworkFetcher() (NetworkFetcher, error) {
 
 func getProcFolder(pid int) (string, error) {
 	insideHostFile := path.Join("/proc", strconv.Itoa(pid), "net", "dev")
-	insideContainerFile := path.Join("/host", insideHostFile) // TODO: make the /host configurable
+	insideContainerFile := path.Join(hostContainerPath, insideHostFile)
 	var err error
 	if _, err = os.Stat(insideContainerFile); err == nil {
 		return insideContainerFile, nil

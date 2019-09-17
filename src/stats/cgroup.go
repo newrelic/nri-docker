@@ -2,8 +2,8 @@ package stats
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
@@ -17,11 +17,13 @@ import (
 )
 
 const (
-	cgroupPath = "/sys/fs/cgroup"
+	cgroupPath        = "/sys/fs/cgroup"
+	hostContainerPath = "/host" // TODO: makeconfigurable
 )
 
 type CGroupsProvider struct {
-	store persist.Storer
+	store      persist.Storer
+	subsystems cgroups.Hierarchy
 }
 
 func NewCGroupsProvider() (*CGroupsProvider, error) {
@@ -30,7 +32,10 @@ func NewCGroupsProvider() (*CGroupsProvider, error) {
 		log.NewStdErr(true),
 		60*time.Second)
 
-	return &CGroupsProvider{store: store}, err
+	return &CGroupsProvider{
+		store:      store,
+		subsystems: subsystems(hostFolder(cgroupPath)),
+	}, err
 }
 
 func (cg *CGroupsProvider) PersistStats() error {
@@ -42,7 +47,7 @@ func (cg *CGroupsProvider) PersistStats() error {
 // assuming the integration is running in a container
 func hostFolder(folders ...string) string {
 	insideHostFile := path.Join(folders...)
-	insideContainerFile := path.Join("/host", insideHostFile) // TODO: make the /host configurable
+	insideContainerFile := path.Join(hostContainerPath, insideHostFile)
 	var err error
 	if _, err = os.Stat(insideContainerFile); err == nil {
 		return insideContainerFile
@@ -71,7 +76,18 @@ func (cg *CGroupsProvider) Fetch(containerID string) (Cooked, error) {
 
 	stats.Read = time.Now()
 
-	control, err := cgroups.Load(cgroups.V1, cgroups.StaticPath(path.Join("docker", containerID)))
+	//ss, err := cg.subsystems()
+	//fmt.Println("err", err)
+	//for _, s := range ss {
+	//	fmt.Println(s.Name())
+	//	if pather, ok := s.(interface{
+	//		Path(path string) string
+	//	}) ; ok {
+	//		fmt.Println(pather.Path(""))
+	//	}
+	//}
+
+	control, err := cgroups.Load(cg.subsystems, cgroups.StaticPath(path.Join("docker", containerID)))
 	if err != nil {
 		return Cooked{}, err
 	}
@@ -80,11 +96,11 @@ func (cg *CGroupsProvider) Fetch(containerID string) (Cooked, error) {
 		return Cooked{}, err
 	}
 
-	if err := pidStats(metrics, containerID, &stats.PidsStats); err != nil {
+	if err := pidStats(metrics, &stats.PidsStats); err != nil {
 		log.Error("couldn't read pids stats: %v", err)
 	}
 
-	if err := readBlkioStats(containerID, &stats.BlkioStats); err != nil {
+	if err := blkioStats(containerID, &stats.BlkioStats); err != nil {
 		log.Error("couldn't read blkio stats: %v", err)
 	}
 
@@ -113,35 +129,18 @@ func (cg *CGroupsProvider) Fetch(containerID string) (Cooked, error) {
 	return Cooked(stats), nil
 }
 
-func pidStats(metrics *cgroups.Metrics, containerID string, stats *types.PidsStats) (err error) {
+func pidStats(metrics *cgroups.Metrics, stats *types.PidsStats) (err error) {
+	if metrics.Pids == nil {
+		return errors.New("no PIDs information")
+	}
 	stats.Current = metrics.Pids.Current
 	stats.Limit = metrics.Pids.Limit
-	cpath := hostFolder(cgroupPath, "pids", "docker", containerID)
-
-	stats.Current, err = parseUintFile(path.Join(cpath, "pids.current"))
-	if err != nil {
-		return err
-	}
-
-	body, err := ioutil.ReadFile(path.Join(cpath, "/pids.max"))
-	if err != nil {
-		return err
-	}
-	value := string(body)
-	if value == "max\n" {
-		stats.Limit = 0
-	} else {
-		stats.Limit, err = strconv.ParseUint(value, 10, 64)
-		if err != nil {
-			return err
-		}
-	}
 
 	return nil
 }
 
 // TODO: use cgroups library (as for readPidStats)
-func readBlkio(blkioPath string, ioStat string) ([]types.BlkioStatEntry, error) {
+func blkio(blkioPath string, ioStat string) ([]types.BlkioStatEntry, error) {
 	entries := []types.BlkioStatEntry{}
 
 	f, err := os.Open(path.Join(blkioPath, ioStat))
@@ -193,14 +192,15 @@ func readBlkio(blkioPath string, ioStat string) ([]types.BlkioStatEntry, error) 
 }
 
 // TODO: use cgroups library (as for readPidStats)
-func readBlkioStats(containerID string, stats *types.BlkioStats) (err error) {
+// cgroups library currently don't seem to work for blkio. We can fix it and submit a patch
+func blkioStats(containerID string, stats *types.BlkioStats) (err error) {
 	cpath := hostFolder(cgroupPath, "blkio", "docker", containerID)
 
-	if stats.IoServiceBytesRecursive, err = readBlkio(cpath, "blkio.throttle.io_service_bytes"); err != nil {
+	if stats.IoServiceBytesRecursive, err = blkio(cpath, "blkio.throttle.io_service_bytes"); err != nil {
 		return err
 	}
 
-	if stats.IoServicedRecursive, err = readBlkio(cpath, "blkio.throttle.io_serviced"); err != nil {
+	if stats.IoServicedRecursive, err = blkio(cpath, "blkio.throttle.io_serviced"); err != nil {
 		return err
 	}
 	return nil
@@ -255,10 +255,18 @@ func readSystemCPUUsage() (uint64, error) {
 }
 
 func cpuStats(metric *cgroups.Metrics, stats *types.CPUStats) error {
+	if metric.CPU == nil || metric.CPU.Usage == nil {
+		return errors.New("no CPU metrics information")
+	}
 	stats.CPUUsage.TotalUsage = metric.CPU.Usage.Total
 	stats.CPUUsage.UsageInUsermode = metric.CPU.Usage.User
 	stats.CPUUsage.UsageInKernelmode = metric.CPU.Usage.Kernel
 	stats.CPUUsage.PercpuUsage = metric.CPU.Usage.PerCPU
+
+	if metric.CPU.Throttling != nil {
+		stats.ThrottlingData.ThrottledPeriods = metric.CPU.Throttling.ThrottledPeriods
+		stats.ThrottlingData.ThrottledTime = metric.CPU.Throttling.ThrottledTime
+	}
 
 	var err error
 	if stats.SystemUsage, err = readSystemCPUUsage(); err != nil {
@@ -269,7 +277,9 @@ func cpuStats(metric *cgroups.Metrics, stats *types.CPUStats) error {
 }
 
 func memoryStats(metric *cgroups.Metrics, stats *types.MemoryStats) error {
-
+	if metric.Memory == nil {
+		return errors.New("no memory metrics information")
+	}
 	stats.MaxUsage = metric.Memory.Usage.Max
 	stats.Limit = metric.Memory.Usage.Limit
 	stats.Stats = map[string]uint64{
@@ -295,4 +305,26 @@ func memoryStats(metric *cgroups.Metrics, stats *types.MemoryStats) error {
 	stats.Usage = metric.Memory.RSS + metric.Memory.Swap.Usage - metric.Memory.Usage.Usage
 
 	return nil
+}
+
+// returns the subsystems where cgroups library has to look for, attaching the
+// hostContainerPath prefix to the folder if the integration is running inside a container
+func subsystems(rootPath string) cgroups.Hierarchy {
+	return func() ([]cgroups.Subsystem, error) {
+		// TODO: these are copied from cgroups.V1. Cleanup for the subsystems we really need
+		return []cgroups.Subsystem{
+			cgroups.NewNamed(rootPath, "systemd"),
+			cgroups.NewFreezer(rootPath),
+			cgroups.NewPids(rootPath),
+			cgroups.NewNetCls(rootPath),
+			cgroups.NewNetPrio(rootPath),
+			cgroups.NewPerfEvent(rootPath),
+			cgroups.NewCputset(rootPath),
+			cgroups.NewCpu(rootPath),
+			cgroups.NewCpuacct(rootPath),
+			cgroups.NewMemory(rootPath),
+			cgroups.NewBlkio(rootPath),
+			cgroups.NewRdma(rootPath),
+		}, nil
+	}
 }

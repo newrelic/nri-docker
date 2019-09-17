@@ -1,10 +1,8 @@
 package docker
 
 import (
-	"bytes"
 	"context"
 	"math"
-	"os/exec"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
@@ -76,11 +74,13 @@ func (cs *ContainerSampler) statsMetrics(containerID string) []Metric {
 		memLimits = 0
 	}
 	return []Metric{
-		MetricProcessCount(float64(stats.PidsStats.Current)),
-		MetricProcessCountLimit(float64(stats.PidsStats.Limit)),
+		MetricProcessCount(stats.PidsStats.Current),
+		MetricProcessCountLimit(stats.PidsStats.Limit),
 		MetricCPUPercent(cpu.CPU),
 		MetricCPUKernelPercent(cpu.Kernel),
 		MetricCPUUserPercent(cpu.User),
+		MetricCPUThrottlePeriods(cpu.ThrottlePeriods),
+		MetricCPUThrottleTimeMS(cpu.ThrottledTimeMS),
 		MetricMemoryCacheBytes(mem.CacheUsageBytes),
 		MetricMemoryUsageBytes(mem.UsageBytes),
 		MetricMemoryResidentSizeBytes(mem.RSSUsageBytes),
@@ -190,32 +190,20 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 		}
 
 		// FAKE DATA STARTS HERE
-		cmd := exec.Command("/bin/hostname", "-f")
-		var out bytes.Buffer
-		cmd.Stdout = &out
-		err = cmd.Run()
-		var fqdn string
-		if err == nil {
-			fqdn = out.String()
-			fqdn = fqdn[:len(fqdn)-1] // removing EOL
-		} else {
-			fqdn = "error_parsing_fqdn"
-		}
-
 		// populate fake metrics
 		populate(ms, []Metric{
-			fake("linuxDistribution", "Super Linux Distro"),
-			fake("systemMemoryBytes", "99999999999"),
-			fake("coreCount", "9"),
-			fake("fullHostname", fqdn),
-			fake("kernelVersion", "9.9.99"),
-			fake("processorCount", "99"),
+			fake("linuxDistribution", "CentOS Linux 7 (Core)"),
+			fake("agentVersion", "1.5.37"),
+			fake("systemMemoryBytes", "1927303168"),
+			fake("coreCount", "2"),
+			fake("fullHostname", "ohai1.new-domain.com"),
+			fake("kernelVersion", "3.10.0-957.27.2.el7.x86_64"),
+			fake("processorCount", "2"),
 			{Name: "warningViolationCount", Type: metric.GAUGE, Value: 0},
 			fake("agentName", "Infrastructure"),
-			fake("agentVersion", "1.0.999"),
 			fake("operatingSystem", "linux"),
 			{Name: "criticalViolationCount", Type: metric.GAUGE, Value: 0},
-			fake("instanceType", "fake metadata on real container"),
+			fake("instanceType", "unknown"),
 		})
 
 	}

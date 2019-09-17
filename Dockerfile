@@ -1,11 +1,11 @@
-ARG infra_image
+ARG infra_image=newrelic/infrastructure:latest
 
 FROM golang:1.10 as builder
-ARG gh_token
-RUN git config --global url."https://$gh_token:x-oauth-basic@github.com/".insteadOf "https://github.com/"
-RUN go get -d github.com/newrelic/nri-docker/... && \
-    cd /go/src/github.com/newrelic/nri-docker && \
-    make compile && \
+
+WORKDIR /go/src/github.com/newrelic/nri-docker
+COPY . .
+
+RUN make compile && \
     strip ./bin/nr-docker
 
 FROM $infra_image
