@@ -32,7 +32,6 @@ func main() {
 	}
 
 	log.SetupLogging(args.Verbose)
-
 	provider, err := stats.NewCGroupsProvider()
 	exitOnErr(err)
 	defer provider.PersistStats()
