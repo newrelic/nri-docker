@@ -1,4 +1,4 @@
-package system
+package raw
 
 import (
 	"bufio"
@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/newrelic/infra-integrations-sdk/log"
-	"github.com/newrelic/nri-docker/src/paths"
 )
 
 // NetworkFetcher fetches the network metrics from the /proc file system
@@ -23,7 +22,7 @@ func newNetworkFetcher(hostRoot string) *networkFetcher {
 
 func (f *networkFetcher) Fetch(containerPid int) (Network, error) {
 	var network Network
-	filePath := paths.ContainerToHost(f.hostRoot, path.Join("/proc", strconv.Itoa(containerPid), "net", "dev"))
+	filePath := containerToHost(f.hostRoot, path.Join("/proc", strconv.Itoa(containerPid), "net", "dev"))
 	file, err := os.Open(filePath)
 	if err != nil {
 		return network, err

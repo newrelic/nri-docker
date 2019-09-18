@@ -1,5 +1,5 @@
-// Package system fetches raw system-level metrics as they are presented by the operating system
-package system
+// Package raw fetches raw system-level metrics as they are presented by the operating system
+package raw
 
 import (
 	"bufio"
@@ -12,9 +12,7 @@ import (
 	"time"
 
 	"github.com/containerd/cgroups"
-	"github.com/docker/docker/api/types"
 	"github.com/newrelic/infra-integrations-sdk/log"
-	"github.com/newrelic/nri-docker/src/paths"
 )
 
 const (
@@ -29,7 +27,7 @@ type cgroupsFetcher struct {
 func newCGroupsFetcher(hostRoot string) *cgroupsFetcher {
 	return &cgroupsFetcher{
 		hostRoot:   hostRoot,
-		subsystems: subsystems(paths.ContainerToHost(hostRoot, cgroupPath)),
+		subsystems: subsystems(containerToHost(hostRoot, cgroupPath)),
 	}
 }
 
@@ -132,7 +130,7 @@ func blkioEntries(blkioPath string, ioStat string) ([]BlkioEntries, error) {
 // TODO: use cgroups library (as for readPidStats)
 // cgroups library currently don't seem to work for blkio. We can fix it and submit a patch
 func blkio(containerID string) (Blkio, error) {
-	cpath := paths.ContainerToHost(cgroupPath, path.Join("blkio", "docker", containerID))
+	cpath := containerToHost(cgroupPath, path.Join("blkio", "docker", containerID))
 
 	stats := Blkio{}
 	var err error

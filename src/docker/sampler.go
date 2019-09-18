@@ -2,14 +2,13 @@ package docker
 
 import (
 	"context"
-	"math"
-	"runtime"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/data/metric"
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/newrelic/infra-integrations-sdk/log"
+	"github.com/newrelic/nri-docker/src/biz"
 	"github.com/newrelic/nri-docker/src/stats"
 )
 
@@ -61,21 +60,24 @@ func labels(container types.Container) []Metric {
 	return metrics
 }
 
-func statsMetrics(stats stats.Cooked) []Metric {
-	mem, bio := stats.Memory(), stats.BlockingIO()
-	memLimits := mem.MemLimitBytes
-	// negative or ridiculously large memory limits are set to 0 (no limit)
-	if memLimits < 0 || memLimits > float64(math.MaxInt64/2) {
-		memLimits = 0
-	}
-
+func memory(mem biz.Memory) []Metric {
 	return []Metric{
-		MetricProcessCount(stats.PidsStats.Current),
-		MetricProcessCountLimit(stats.PidsStats.Limit),
 		MetricMemoryCacheBytes(mem.CacheUsageBytes),
 		MetricMemoryUsageBytes(mem.UsageBytes),
 		MetricMemoryResidentSizeBytes(mem.RSSUsageBytes),
-		MetricMemorySizeLimitBytes(memLimits),
+		MetricMemorySizeLimitBytes(mem.MemLimitBytes),
+	}
+}
+
+func pids(pids biz.Pids) []Metric {
+	return []Metric{
+		MetricProcessCount(pids.Current),
+		MetricProcessCountLimit(pids.Limit),
+	}
+}
+
+func blkio(bio biz.BlkIO) []Metric {
+	return []Metric{
 		MetricIOTotalReadCount(bio.TotalReadCount),
 		MetricIOTotalWriteCount(bio.TotalWriteCount),
 		MetricIOTotalReadBytes(bio.TotalReadBytes),
@@ -88,12 +90,7 @@ func statsMetrics(stats stats.Cooked) []Metric {
 	}
 }
 
-func (cs *ContainerSampler) networkMetrics(containerPid int) []Metric {
-	net, err := cs.network.Fetch(containerPid)
-	if err != nil {
-		log.Debug("error retrieving network metrics: %s", err.Error())
-		return []Metric{}
-	}
+func (cs *ContainerSampler) networkMetrics(net biz.Network) []Metric {
 	return []Metric{
 		MetricRxBytes(net.RxBytes),
 		MetricRxErrors(net.RxErrors),
@@ -114,20 +111,11 @@ func (cs *ContainerSampler) networkMetrics(containerPid int) []Metric {
 	}
 }
 
-func cpuCores(stats stats.Cooked, json types.ContainerJSON) []Metric {
-	cpu := stats.CPU()
-
-	// TODO: if newrelic-infra is in a limited cpus container, this may report the number of cpus of the
-	// newrelic-infra container if the container has no CPU quota
-	cpuLimitCores := float64(runtime.NumCPU())
-	if json.HostConfig != nil && json.HostConfig.NanoCPUs != 0 {
-		cpuLimitCores = float64(json.HostConfig.NanoCPUs) / 1e9
-	}
-	coresPercent := 100 * cpu.UsedCores / cpuLimitCores
+func cpu(cpu biz.CPU) []Metric {
 	return []Metric{
 		MetricCPUUsedCores(cpu.UsedCores),
-		MetricCPUUsedCoresPercent(coresPercent),
-		MetricCPULimitCores(cpuLimitCores),
+		MetricCPUUsedCoresPercent(cpu.UsedCoresPercent),
+		MetricCPULimitCores(cpu.LimitCores),
 		MetricCPUPercent(cpu.CPUPercent),
 		MetricCPUKernelPercent(cpu.KernelPercent),
 		MetricCPUUserPercent(cpu.UserPercent),
@@ -207,7 +195,7 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 			log.Debug("error populating container %v stats metrics: %s", container.ID, err)
 			continue
 		}
-		if err := populate(ms, cpuCores(stats, cjson)); err != nil {
+		if err := populate(ms, cpu(stats, cjson)); err != nil {
 			log.Debug("error populating container %v CPU core metrics: %s", container.ID, err)
 			continue
 		}
