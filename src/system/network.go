@@ -1,4 +1,4 @@
-package stats
+package system
 
 import (
 	"bufio"
@@ -8,50 +8,22 @@ import (
 	"strings"
 
 	"github.com/newrelic/infra-integrations-sdk/log"
+	"github.com/newrelic/nri-docker/src/paths"
 )
 
+// NetworkFetcher fetches the network metrics from the /proc file system
 // TODO: use cgroups library
-type NetworkFetcher struct {
+type networkFetcher struct {
+	hostRoot string
 }
 
-type Network struct {
-	RxBytes   int64
-	RxDropped int64
-	RxErrors  int64
-	RxPackets int64
-	TxBytes   int64
-	TxDropped int64
-	TxErrors  int64
-	TxPackets int64
+func newNetworkFetcher(hostRoot string) *networkFetcher {
+	return &networkFetcher{hostRoot: hostRoot}
 }
 
-func NewNetworkFetcher() (NetworkFetcher, error) {
-	return NetworkFetcher{}, nil
-}
-
-func getProcFolder(pid int) (string, error) {
-	insideHostFile := path.Join("/proc", strconv.Itoa(pid), "net", "dev")
-	insideContainerFile := path.Join(hostContainerPath, insideHostFile)
-	var err error
-	if _, err = os.Stat(insideContainerFile); err == nil {
-		return insideContainerFile, nil
-	}
-	if !os.IsNotExist(err) {
-		return "", err
-	}
-
-	if _, err := os.Stat(insideHostFile); err != nil {
-		return "", err
-	}
-	return insideHostFile, nil
-}
-
-func (f *NetworkFetcher) Fetch(containerPid int) (Network, error) {
+func (f *networkFetcher) Fetch(containerPid int) (Network, error) {
 	var network Network
-	filePath, err := getProcFolder(containerPid)
-	if err != nil {
-		return network, err
-	}
+	filePath := paths.ContainerToHost(f.hostRoot, path.Join("/proc", strconv.Itoa(containerPid), "net", "dev"))
 	file, err := os.Open(filePath)
 	if err != nil {
 		return network, err

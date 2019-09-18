@@ -128,9 +128,9 @@ func cpuCores(stats stats.Cooked, json types.ContainerJSON) []Metric {
 		MetricCPUUsedCores(cpu.UsedCores),
 		MetricCPUUsedCoresPercent(coresPercent),
 		MetricCPULimitCores(cpuLimitCores),
-		MetricCPUPercent(cpu.CPU),
-		MetricCPUKernelPercent(cpu.Kernel),
-		MetricCPUUserPercent(cpu.User),
+		MetricCPUPercent(cpu.CPUPercent),
+		MetricCPUKernelPercent(cpu.KernelPercent),
+		MetricCPUUserPercent(cpu.UserPercent),
 		MetricCPUThrottlePeriods(cpu.ThrottlePeriods),
 		MetricCPUThrottleTimeMS(cpu.ThrottledTimeMS),
 	}
