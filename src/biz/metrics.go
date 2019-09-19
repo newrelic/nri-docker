@@ -1,6 +1,7 @@
 package biz
 
 import (
+	"context"
 	"fmt"
 	"math"
 	"runtime"
@@ -13,11 +14,12 @@ import (
 )
 
 type Metrics struct {
-	Pids       Pids
-	Network    Network
-	BlockingIO BlkIO
-	CPU        CPU
-	Memory     Memory
+	Pids         Pids
+	Network      Network
+	BlkIO        BlkIO
+	CPU          CPU
+	Memory       Memory
+	RestartCount int
 }
 
 type Pids raw.Pids
@@ -49,25 +51,33 @@ type Memory struct {
 	MemLimitBytes   uint64
 }
 
+type Processer interface {
+	Fetch(containerID string) (Metrics, error)
+}
+
 type MetricsProcesser struct {
-	store persist.Storer
-	fetcher raw.Fetcher
+	store     persist.Storer
+	fetcher   raw.Fetcher
+	inspector Inspector
 }
 
-func NewProcesser(rawFetcher raw.Fetcher) (*MetricsProcesser, error) {
-	store, err := persist.NewFileStore( // TODO: make the following options configurable
-		persist.DefaultPath("container_cpus"),
-		log.NewStdErr(true),
-		60*time.Second)
+// abstraction of the only method we require from the docker go client
+type Inspector interface {
+	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
+}
 
-	if err != nil {
-		return nil, err
+func NewMetricsProcesser(store persist.Storer, fetcher raw.Fetcher, inspector Inspector) *MetricsProcesser {
+	return &MetricsProcesser{
+		store:     store,
+		fetcher:   fetcher,
+		inspector: inspector,
 	}
-	return &MetricsProcesser{store: store, fetcher:rawFetcher}, nil
 }
 
-func (mc *MetricsProcesser) Fetch(json types.ContainerJSON) (Metrics, error) {
+func (mc *MetricsProcesser) Fetch(containerID string) (Metrics, error) {
 	metrics := Metrics{}
+
+	json, err := mc.inspector.ContainerInspect(context.Background(), containerID)
 	if json.State == nil {
 		return metrics, fmt.Errorf("invalid container %v JSON: missing State", json.ID)
 	}
@@ -76,12 +86,16 @@ func (mc *MetricsProcesser) Fetch(json types.ContainerJSON) (Metrics, error) {
 		return metrics, err
 	}
 	metrics.Network = Network(rawMetrics.Network)
-	metrics.BlockingIO = mc.blkIO(&rawMetrics)
+	metrics.BlkIO = mc.blkIO(rawMetrics.Blkio)
+	metrics.CPU = mc.cpu(rawMetrics, &json)
+	metrics.Pids = Pids(rawMetrics.Pids)
+	metrics.Memory = mc.memory(rawMetrics.Memory)
+	metrics.RestartCount = json.RestartCount
 
-
+	return metrics, nil
 }
 
-func (mc *MetricsProcesser) cpu(metrics raw.Metrics, json types.ContainerJSON) CPU {
+func (mc *MetricsProcesser) cpu(metrics raw.Metrics, json *types.ContainerJSON) CPU {
 	var previous struct {
 		Time int64
 		CPU  raw.CPU

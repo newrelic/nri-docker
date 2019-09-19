@@ -68,8 +68,8 @@ type Fetcher interface {
 	Fetch(containerID string, containerPID int) (Metrics, error)
 }
 
-func NewFetcher(hostRoot string) MetricsFetcher {
-	return MetricsFetcher{
+func NewFetcher(hostRoot string) *MetricsFetcher {
+	return &MetricsFetcher{
 		cgroups: newCGroupsFetcher(hostRoot),
 		network: newNetworkFetcher(hostRoot),
 	}

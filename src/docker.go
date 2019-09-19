@@ -6,17 +6,17 @@ import (
 	sdkArgs "github.com/newrelic/infra-integrations-sdk/args"
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/newrelic/infra-integrations-sdk/log"
-	"github.com/newrelic/nri-docker/src/docker"
-	"github.com/newrelic/nri-docker/src/stats"
+	"github.com/newrelic/nri-docker/src/nri"
 )
 
 type argumentList struct {
 	sdkArgs.DefaultArgumentList
+	HostRoot string `default:"/host" help:"If the integration is running from a container, the mounted folder pointing to the host root folder"`
 }
 
 const (
 	integrationName    = "com.newrelic.docker"
-	integrationVersion = "0.1.0"
+	integrationVersion = "1.0.0"
 )
 
 var (
@@ -32,11 +32,8 @@ func main() {
 	}
 
 	log.SetupLogging(args.Verbose)
-	provider, err := stats.NewCGroupsProvider()
-	exitOnErr(err)
-	defer provider.PersistStats()
 
-	cs, err := docker.NewContainerSampler(provider)
+	cs, err := nri.NewContainerSampler(args.HostRoot)
 	exitOnErr(err)
 
 	exitOnErr(cs.SampleAll(i))
