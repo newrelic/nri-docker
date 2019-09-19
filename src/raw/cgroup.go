@@ -19,6 +19,7 @@ const (
 	cgroupPath = "/sys/fs/cgroup"
 )
 
+// cgroupsFetcher fetches the metrics that can be found in cgroups file system
 type cgroupsFetcher struct {
 	hostRoot   string
 	subsystems cgroups.Hierarchy
@@ -75,9 +76,11 @@ func pids(metrics *cgroups.Metrics) (Pids, error) {
 	}, nil
 }
 
+// at the moment we don't use cgroups library because it doesn't seem to properly
+// parse this data when you run the integration inside a container
 // TODO: use cgroups library (as for readPidStats)
-func blkioEntries(blkioPath string, ioStat string) ([]BlkioEntries, error) {
-	entries := make([]BlkioEntries, 0)
+func blkioEntries(blkioPath string, ioStat string) ([]BlkioEntry, error) {
+	entries := make([]BlkioEntry, 0)
 
 	f, err := os.Open(path.Join(blkioPath, ioStat))
 	if err != nil {
@@ -121,7 +124,7 @@ func blkioEntries(blkioPath string, ioStat string) ([]BlkioEntries, error) {
 		if err != nil {
 			return nil, err
 		}
-		entries = append(entries, BlkioEntries{Op: op, Value: val})
+		entries = append(entries, BlkioEntry{Op: op, Value: val})
 	}
 
 	return entries, nil

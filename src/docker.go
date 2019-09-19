@@ -3,15 +3,16 @@ package main
 import (
 	"os"
 
-	sdkArgs "github.com/newrelic/infra-integrations-sdk/args"
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/nri-docker/src/nri"
 )
 
 type argumentList struct {
-	sdkArgs.DefaultArgumentList
-	HostRoot string `default:"/host" help:"If the integration is running from a container, the mounted folder pointing to the host root folder"`
+	Verbose    bool   `default:"false" help:"Print more information to logs."`
+	Pretty     bool   `default:"false" help:"Print pretty formatted JSON."`
+	NriCluster string `default:"" help:"Optional. Cluster name"`
+	HostRoot   string `default:"/host" help:"If the integration is running from a container, the mounted folder pointing to the host root folder"`
 }
 
 const (
@@ -33,7 +34,7 @@ func main() {
 
 	log.SetupLogging(args.Verbose)
 
-	cs, err := nri.NewContainerSampler(args.HostRoot)
+	cs, err := nri.NewSampler(args.HostRoot)
 	exitOnErr(err)
 
 	exitOnErr(cs.SampleAll(i))

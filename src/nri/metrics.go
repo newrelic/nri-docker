@@ -1,3 +1,5 @@
+// Package nri uses Docker API information and sampled containers and presents it in a format that is accepted
+// by the New Relic Infrastructure Agent
 package nri
 
 import "github.com/newrelic/infra-integrations-sdk/data/metric"

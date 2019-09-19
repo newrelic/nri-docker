@@ -1,3 +1,4 @@
+// Package biz provides business-value metrics from system raw metrics
 package biz
 
 import (
@@ -13,7 +14,8 @@ import (
 	"github.com/newrelic/nri-docker/src/raw"
 )
 
-type Metrics struct {
+// Sample exports the valuable metrics from a container
+type Sample struct {
 	Pids         Pids
 	Network      Network
 	BlkIO        BlkIO
@@ -22,10 +24,13 @@ type Metrics struct {
 	RestartCount int
 }
 
+// Pids section of a container sample
 type Pids raw.Pids
 
+// Network section of a container sample
 type Network raw.Network
 
+// BlkIO stands for Block I/O stats
 type BlkIO struct {
 	TotalReadCount  float64
 	TotalWriteCount float64
@@ -33,6 +38,7 @@ type BlkIO struct {
 	TotalWriteBytes float64
 }
 
+// CPU metrics
 type CPU struct {
 	CPUPercent       float64
 	KernelPercent    float64
@@ -44,6 +50,7 @@ type CPU struct {
 	ThrottledTimeMS  float64
 }
 
+// Memory metrics
 type Memory struct {
 	UsageBytes      uint64
 	CacheUsageBytes uint64
@@ -51,31 +58,36 @@ type Memory struct {
 	MemLimitBytes   uint64
 }
 
+// Processer defines the most essential interface of an exportable container Processer
 type Processer interface {
-	Fetch(containerID string) (Metrics, error)
+	Process(containerID string) (Sample, error)
 }
 
-type MetricsProcesser struct {
+// MetricsFetcher fetches the container system-level metrics from different sources and processes it to export
+// metrics with business-value
+type MetricsFetcher struct {
 	store     persist.Storer
 	fetcher   raw.Fetcher
 	inspector Inspector
 }
 
-// abstraction of the only method we require from the docker go client
+// Inspector is the abstraction of the only method that we require from the docker go client
 type Inspector interface {
 	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
 }
 
-func NewMetricsProcesser(store persist.Storer, fetcher raw.Fetcher, inspector Inspector) *MetricsProcesser {
-	return &MetricsProcesser{
+// NewProcessor creates a MetricsFetcher from implementations of its required components
+func NewProcessor(store persist.Storer, fetcher raw.Fetcher, inspector Inspector) *MetricsFetcher {
+	return &MetricsFetcher{
 		store:     store,
 		fetcher:   fetcher,
 		inspector: inspector,
 	}
 }
 
-func (mc *MetricsProcesser) Fetch(containerID string) (Metrics, error) {
-	metrics := Metrics{}
+// Process returns a metrics Sample of the container with the given ID
+func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
+	metrics := Sample{}
 
 	json, err := mc.inspector.ContainerInspect(context.Background(), containerID)
 	if json.State == nil {
@@ -95,7 +107,7 @@ func (mc *MetricsProcesser) Fetch(containerID string) (Metrics, error) {
 	return metrics, nil
 }
 
-func (mc *MetricsProcesser) cpu(metrics raw.Metrics, json *types.ContainerJSON) CPU {
+func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CPU {
 	var previous struct {
 		Time int64
 		CPU  raw.CPU
@@ -146,7 +158,7 @@ func (mc *MetricsProcesser) cpu(metrics raw.Metrics, json *types.ContainerJSON) 
 	return cpu
 }
 
-func (mc *MetricsProcesser) memory(mem raw.Memory) Memory {
+func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 	memLimits := mem.UsageLimit
 	// negative or ridiculously large memory limits are set to 0 (no limit)
 	if memLimits < 0 || memLimits > math.MaxInt64/2 {
@@ -176,7 +188,7 @@ func (mc *MetricsProcesser) memory(mem raw.Memory) Memory {
 	}
 }
 
-func (mc *MetricsProcesser) blkIO(blkio raw.Blkio) BlkIO {
+func (mc *MetricsFetcher) blkIO(blkio raw.Blkio) BlkIO {
 	bio := BlkIO{}
 	for _, svc := range blkio.IoServicedRecursive {
 		if len(svc.Op) == 0 {

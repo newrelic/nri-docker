@@ -21,6 +21,8 @@ const (
 	attrContainerID     = "containerId"
 )
 
+// ContainerSampler invokes the metrics sampling and processing for all the existing containers, and populates the
+// integration execution information with the exported metrics
 type ContainerSampler struct {
 	metrics biz.Processer
 	store   persist.Storer
@@ -33,7 +35,10 @@ type dockerClient interface {
 	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
 }
 
-func NewContainerSampler(hostRoot string) (ContainerSampler, error) {
+// NewSampler returns a ContainerSampler instance. The hostRoot argument is used only if the integration is
+// executed inside a container, and must point to the shared folder that allows accessing to the host root
+// folder (usually /host)
+func NewSampler(hostRoot string) (ContainerSampler, error) {
 	// instantiating internal components
 	// docker client to list and inspect containers
 	docker, err := client.NewEnvClient()
@@ -56,13 +61,16 @@ func NewContainerSampler(hostRoot string) (ContainerSampler, error) {
 	rawFetcher := raw.NewFetcher(hostRoot)
 
 	return ContainerSampler{
-		metrics: biz.NewMetricsProcesser(store, rawFetcher, docker),
+		metrics: biz.NewProcessor(store, rawFetcher, docker),
 		docker:  docker,
 		store:   store,
 	}, nil
 }
 
+// SampleAll populates the integration of the argument with metrics and labels from all the containers in the system
+// running and non-running
 func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
+	// todo: configure to retrieve only the running containers
 	containers, err := cs.docker.ContainerList(context.Background(), types.ContainerListOptions{All: true})
 	if err != nil {
 		return err
@@ -91,7 +99,7 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 		}
 
 		// populating metrics that only apply to running containers
-		metrics, err := cs.metrics.Fetch(container.ID)
+		metrics, err := cs.metrics.Process(container.ID)
 		if err != nil {
 			log.Error("error fetching metrics for container %v: %v", container.ID, err)
 			continue
@@ -209,7 +217,7 @@ func cpu(cpu *biz.CPU) []entry {
 	}
 }
 
-func misc(m *biz.Metrics) []entry {
+func misc(m *biz.Sample) []entry {
 	return []entry{
 		metricRestartCount(m.RestartCount),
 	}
