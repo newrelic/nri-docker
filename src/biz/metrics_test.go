@@ -25,18 +25,9 @@ const (
 	mem                     = 1e8 // 100 MB of memory
 )
 
-func TestAll(t *testing.T) {
-	// setup
-	//docker := newDocker(t)
-	//defer docker.Close()
-	buildTestImage(t)
-
-	t.Run("cpu tests", testCPU)
-}
-
-func testCPU(t *testing.T) {
+func TestHighCPU(t *testing.T) {
 	// GIVEN a container consuming a lot of CPU
-	containerID, dockerRM := stress(t, "-c", "2", "-t", "5m")
+	containerID, dockerRM := stress(t, "-c", "2", "-l 100", "-t", "5m")
 	defer dockerRM()
 
 	// WHEN its metrics are sampled and processed
@@ -50,11 +41,11 @@ func testCPU(t *testing.T) {
 	require.NoError(t, err)
 
 	// THEN the CPU static metrics belong to the container
-	//assert.InDelta(t, cpus, sample.CPU.LimitCores, 0.01)
+	assert.InDelta(t, cpus, sample.CPU.LimitCores, 0.01)
 	assert.True(t, sample.Pids.Current > 0, "pids can't be 0")
 
 	test.Eventually(t, 15*time.Second, func(t require.TestingT) {
-		time.Sleep(400 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		sample, err := metrics.Process(containerID)
 		require.NoError(t, err)
 
@@ -73,6 +64,39 @@ func testCPU(t *testing.T) {
 		assert.Truef(t, cpu.UserPercent+cpu.KernelPercent <= cpu.CPUPercent,
 			"user %v%% + kernel %v%% is not < total %v%%",
 			cpu.UserPercent, cpu.KernelPercent, cpu.CPUPercent)
+	})
+}
+
+func TestLowCPU(t *testing.T) {
+	// GIVEN a container consuming almost no CPU
+	containerID, dockerRM := stress(t, "-c", "0", "-l", "0")
+	defer dockerRM()
+
+	// WHEN its metrics are sampled and processed
+	docker := newDocker(t)
+	defer docker.Close()
+	metrics := NewProcessor(
+		persist.NewInMemoryStore(),
+		raw.NewFetcher("/"),
+		docker)
+	sample, err := metrics.Process(containerID)
+	require.NoError(t, err)
+
+	// THEN the CPU static metrics belong to the container
+	assert.InDelta(t, cpus, sample.CPU.LimitCores, 0.01)
+	assert.True(t, sample.Pids.Current > 0, "pids can't be 0")
+
+	test.Eventually(t, 15*time.Second, func(t require.TestingT) {
+		time.Sleep(100 * time.Millisecond)
+		sample, err := metrics.Process(containerID)
+		require.NoError(t, err)
+
+		cpu := sample.CPU
+
+		// AND the samples tend to show CPU metrics near zero
+		assert.InDelta(t, 0, cpu.CPUPercent, 5)
+		assert.InDelta(t, 0, cpu.UsedCoresPercent, 5)
+		assert.InDelta(t, 0, cpu.UsedCores, 0.1)
 	})
 }
 

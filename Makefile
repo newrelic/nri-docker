@@ -66,6 +66,7 @@ compile: compile-deps bin/$(BINARY_NAME)
 test-deps: compile-deps
 	@echo "=== $(INTEGRATION) === [ test-deps ]: installing testing dependencies..."
 	@go get -v $(TEST_DEPS)
+	@docker build -t stress:latest src/biz/
 
 test-only:
 	@echo "=== $(INTEGRATION) === [ test ]: running unit tests..."

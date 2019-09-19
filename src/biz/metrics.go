@@ -123,17 +123,17 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CP
 	}()
 
 	cpu := CPU{}
-	// Reading previous CPU stats
-	if _, err := mc.store.Get(metrics.ContainerID, &previous); err != nil {
-		log.Debug("could not retrieve previous CPU stats for container %v: %v", metrics.ContainerID, err.Error())
-		return cpu
-	}
-
 	// TODO: if newrelic-infra is in a limited cpus container, this may report the number of cpus of the
 	// newrelic-infra container if the container has no CPU quota
 	cpu.LimitCores = float64(runtime.NumCPU())
 	if json.HostConfig != nil && json.HostConfig.NanoCPUs != 0 {
 		cpu.LimitCores = float64(json.HostConfig.NanoCPUs) / 1e9
+	}
+
+	// Reading previous CPU stats
+	if _, err := mc.store.Get(metrics.ContainerID, &previous); err != nil {
+		log.Debug("could not retrieve previous CPU stats for container %v: %v", metrics.ContainerID, err.Error())
+		return cpu
 	}
 
 	// calculate the change for the cpu usage of the container in between readings
