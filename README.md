@@ -1,31 +1,17 @@
-# New Relic Infrastructure Integration for nri-docker
+# New Relic Infrastructure Integration for Docker
 
-Reports status and metrics for nri-docker service
+Reports status and metrics of Docker containers running into a host.
 
 ## Requirements
 
-Document if the Integration has some special requirement. Ex: Installing an
-extra module, permissions to execute a binary, etc.
+* Linux (Windows support TBD)
+* New Relic Infrastructure Agent > 1.5.XX (version to be released)
+* Docker
 
 ## Configuration
 
-Document if the Integration needs some configuration for running. Ex: Set
-up permissions, add a special user, etc.
+TBD
 
 ## Installation
 
-Describe the installation process for the Integration.
-
-## Usage
-
-Document mandatory and optional arguments for running the Integration, and how to execute it.
-
-## Compatibility
-
-* Supported OS:
-* nri-docker versions:
-* Edition:
-
-## Integration Development usage
-
-Describe the development workflow for this Integration.
+TBD
