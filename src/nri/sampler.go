@@ -46,7 +46,7 @@ func NewSampler(hostRoot string) (ContainerSampler, error) {
 		return ContainerSampler{}, err
 	}
 	defer docker.Close()
-	docker.UpdateClientVersion(dockerClientVersion) // TODO: make it configurable
+	docker.UpdateClientVersion(dockerClientVersion)
 
 	// SDK Storer to keep metric values between executions (e.g. for rates and deltas)
 	store, err := persist.NewFileStore( // TODO: make the following options configurable
