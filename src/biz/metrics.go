@@ -1,6 +1,7 @@
 package biz
 
 import (
+	"fmt"
 	"math"
 	"runtime"
 	"time"
@@ -50,6 +51,7 @@ type Memory struct {
 
 type MetricsProcesser struct {
 	store persist.Storer
+	fetcher raw.Fetcher
 }
 
 func NewProcesser(rawFetcher raw.Fetcher) (*MetricsProcesser, error) {
@@ -61,10 +63,21 @@ func NewProcesser(rawFetcher raw.Fetcher) (*MetricsProcesser, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &MetricsProcesser{store: store}, nil
+	return &MetricsProcesser{store: store, fetcher:rawFetcher}, nil
 }
 
-func (mc *MetricsProcesser) Fetch(container types.Container) (Metrics, error) {
+func (mc *MetricsProcesser) Fetch(json types.ContainerJSON) (Metrics, error) {
+	metrics := Metrics{}
+	if json.State == nil {
+		return metrics, fmt.Errorf("invalid container %v JSON: missing State", json.ID)
+	}
+	rawMetrics, err := mc.fetcher.Fetch(json.ID, json.State.Pid)
+	if err != nil {
+		return metrics, err
+	}
+	metrics.Network = Network(rawMetrics.Network)
+	metrics.BlockingIO = mc.blkIO(&rawMetrics)
+
 
 }
 
@@ -119,8 +132,8 @@ func (mc *MetricsProcesser) cpu(metrics raw.Metrics, json types.ContainerJSON) C
 	return cpu
 }
 
-func (mc *MetricsProcesser) memory(metric *raw.Metrics) Memory {
-	memLimits := metric.Memory.UsageLimit
+func (mc *MetricsProcesser) memory(mem raw.Memory) Memory {
+	memLimits := mem.UsageLimit
 	// negative or ridiculously large memory limits are set to 0 (no limit)
 	if memLimits < 0 || memLimits > math.MaxInt64/2 {
 		memLimits = 0
@@ -128,8 +141,8 @@ func (mc *MetricsProcesser) memory(metric *raw.Metrics) Memory {
 
 	return Memory{
 		MemLimitBytes:   memLimits,
-		CacheUsageBytes: metric.Memory.Cache,
-		RSSUsageBytes:   metric.Memory.RSS,
+		CacheUsageBytes: mem.Cache,
+		RSSUsageBytes:   mem.RSS,
 		/* Calculating usage instead of `memory.usage_in_bytes` file contents.
 		https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
 		For efficiency, as other kernel components, memory cgroup uses some optimization
@@ -145,13 +158,13 @@ func (mc *MetricsProcesser) memory(metric *raw.Metrics) Memory {
 		plus swap space used by processes in the cgroup (in bytes). That's why
 		Usage is subtracted from the Swap: to get the actual swap.
 		*/
-		UsageBytes: metric.Memory.RSS + metric.Memory.SwapUsage - metric.Memory.FuzzUsage,
+		UsageBytes: mem.RSS + mem.SwapUsage - mem.FuzzUsage,
 	}
 }
 
-func (mc *MetricsProcesser) blockingIO(metric *raw.Metrics) BlkIO {
+func (mc *MetricsProcesser) blkIO(blkio raw.Blkio) BlkIO {
 	bio := BlkIO{}
-	for _, svc := range metric.Blkio.IoServicedRecursive {
+	for _, svc := range blkio.IoServicedRecursive {
 		if len(svc.Op) == 0 {
 			continue
 		}
@@ -162,7 +175,7 @@ func (mc *MetricsProcesser) blockingIO(metric *raw.Metrics) BlkIO {
 			bio.TotalWriteCount += float64(svc.Value)
 		}
 	}
-	for _, bytes := range metric.Blkio.IoServiceBytesRecursive {
+	for _, bytes := range blkio.IoServiceBytesRecursive {
 		if len(bytes.Op) == 0 {
 			continue
 		}
