@@ -90,6 +90,9 @@ func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 	metrics := Sample{}
 
 	json, err := mc.inspector.ContainerInspect(context.Background(), containerID)
+	if err != nil {
+		return metrics, err
+	}
 	if json.State == nil {
 		return metrics, fmt.Errorf("invalid container %v JSON: missing State", json.ID)
 	}
@@ -126,6 +129,13 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CP
 		return cpu
 	}
 
+	// TODO: if newrelic-infra is in a limited cpus container, this may report the number of cpus of the
+	// newrelic-infra container if the container has no CPU quota
+	cpu.LimitCores = float64(runtime.NumCPU())
+	if json.HostConfig != nil && json.HostConfig.NanoCPUs != 0 {
+		cpu.LimitCores = float64(json.HostConfig.NanoCPUs) / 1e9
+	}
+
 	// calculate the change for the cpu usage of the container in between readings
 	durationNS := float64(metrics.Time.Sub(time.Unix(previous.Time, 0)).Nanoseconds())
 	if durationNS <= 0 {
@@ -147,12 +157,6 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CP
 	cpu.ThrottlePeriods = metrics.CPU.ThrottledPeriods
 	cpu.ThrottledTimeMS = float64(metrics.CPU.ThrottledTimeNS) / 1e9 // nanoseconds to second
 
-	// TODO: if newrelic-infra is in a limited cpus container, this may report the number of cpus of the
-	// newrelic-infra container if the container has no CPU quota
-	cpu.LimitCores = float64(runtime.NumCPU())
-	if json.HostConfig != nil && json.HostConfig.NanoCPUs != 0 {
-		cpu.LimitCores = float64(json.HostConfig.NanoCPUs) / 1e9
-	}
 	cpu.UsedCoresPercent = 100 * cpu.UsedCores / cpu.LimitCores
 
 	return cpu
