@@ -16,16 +16,13 @@ import (
 
 // Sample exports the valuable metrics from a container
 type Sample struct {
-	Pids         Pids
 	Network      Network
 	BlkIO        BlkIO
 	CPU          CPU
 	Memory       Memory
+	ProcessCount uint
 	RestartCount int
 }
-
-// Pids section of a container sample
-type Pids raw.Pids
 
 // Network section of a container sample
 type Network raw.Network
@@ -103,9 +100,9 @@ func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 	metrics.Network = Network(rawMetrics.Network)
 	metrics.BlkIO = mc.blkIO(rawMetrics.Blkio)
 	metrics.CPU = mc.cpu(rawMetrics, &json)
-	metrics.Pids = Pids(rawMetrics.Pids)
 	metrics.Memory = mc.memory(rawMetrics.Memory)
 	metrics.RestartCount = json.RestartCount
+	metrics.ProcessCount = rawMetrics.ProcessCount
 
 	return metrics, nil
 }

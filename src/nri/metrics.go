@@ -35,7 +35,6 @@ var (
 	metricIOTotalWriteBytes       = metricFunc("ioTotalWriteBytes", metric.GAUGE)
 	metricIOTotalBytes            = metricFunc("ioTotalBytes", metric.GAUGE)
 	metricProcessCount            = metricFunc("processCount", metric.GAUGE)
-	metricProcessCountLimit       = metricFunc("processCountLimit", metric.GAUGE)
 	metricRxBytes                 = metricFunc("networkRxBytes", metric.GAUGE)
 	metricRxDropped               = metricFunc("networkRxDropped", metric.GAUGE)
 	metricRxErrors                = metricFunc("networkRxErrors", metric.GAUGE)

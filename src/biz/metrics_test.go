@@ -44,7 +44,7 @@ func TestHighCPU(t *testing.T) {
 
 	// THEN the CPU static metrics belong to the container
 	assert.InDelta(t, cpus, sample.CPU.LimitCores, 0.01)
-	assert.True(t, sample.Pids.Current >= 4, "pids need to be >= 4") // because we invoked stress-ng -c 4
+	assert.True(t, sample.ProcessCount >= 4, "ProcessCount need to be >= 4") // because we invoked stress-ng -c 4
 
 	test.Eventually(t, eventuallyTimeout, func(t require.TestingT) {
 		time.Sleep(100 * time.Millisecond)
@@ -86,7 +86,7 @@ func TestLowCPU(t *testing.T) {
 
 	// THEN the CPU static metrics belong to the container
 	assert.InDelta(t, cpus, sample.CPU.LimitCores, 0.01)
-	assert.True(t, sample.Pids.Current > 0, "pids can't be 0")
+	assert.True(t, sample.ProcessCount > 0, "ProcessCount can't be 0")
 
 	test.Eventually(t, eventuallyTimeout, func(t require.TestingT) {
 		time.Sleep(100 * time.Millisecond)

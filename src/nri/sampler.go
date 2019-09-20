@@ -107,7 +107,6 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 		populate(ms, misc(&metrics))
 		populate(ms, cpu(&metrics.CPU))
 		populate(ms, memory(&metrics.Memory))
-		populate(ms, pids(&metrics.Pids))
 		populate(ms, blkio(&metrics.BlkIO))
 		populate(ms, cpu(&metrics.CPU))
 		populate(ms, cs.networkMetrics(&metrics.Network))
@@ -162,13 +161,6 @@ func memory(mem *biz.Memory) []entry {
 	}
 }
 
-func pids(pids *biz.Pids) []entry {
-	return []entry{
-		metricProcessCount(pids.Current),
-		metricProcessCountLimit(pids.Limit),
-	}
-}
-
 func blkio(bio *biz.BlkIO) []entry {
 	return []entry{
 		metricIOTotalReadCount(bio.TotalReadCount),
@@ -219,6 +211,7 @@ func cpu(cpu *biz.CPU) []entry {
 
 func misc(m *biz.Sample) []entry {
 	return []entry{
+		metricProcessCount(m.ProcessCount),
 		metricRestartCount(m.RestartCount),
 	}
 }
