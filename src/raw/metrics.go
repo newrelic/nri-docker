@@ -6,13 +6,13 @@ import (
 
 // Metrics holds containers raw metric values as they are extracted from the system
 type Metrics struct {
-	Time         time.Time
-	ContainerID  string
-	Memory       Memory
-	Network      Network
-	CPU          CPU
-	Blkio        Blkio
-	ProcessCount uint
+	Time        time.Time
+	ContainerID string
+	Memory      Memory
+	Network     Network
+	CPU         CPU
+	Pids        Pids
+	Blkio       Blkio
 }
 
 // Memory usage snapshot
@@ -34,6 +34,12 @@ type CPU struct {
 	ThrottledTimeNS   uint64
 	SystemUsage       uint64
 	OnlineCPUs        uint
+}
+
+// Pids inside the container
+type Pids struct {
+	Current uint64
+	Limit   uint64
 }
 
 // Blkio stores multiple entries of the Block I/O stats

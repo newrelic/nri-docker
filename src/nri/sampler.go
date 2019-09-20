@@ -107,6 +107,7 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 		populate(ms, misc(&metrics))
 		populate(ms, cpu(&metrics.CPU))
 		populate(ms, memory(&metrics.Memory))
+		populate(ms, pids(&metrics.Pids))
 		populate(ms, blkio(&metrics.BlkIO))
 		populate(ms, cpu(&metrics.CPU))
 		populate(ms, cs.networkMetrics(&metrics.Network))
@@ -115,9 +116,9 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 }
 
 func populate(ms *metric.Set, metrics []entry) {
-	for _, metric := range metrics {
-		if err := ms.SetMetric(metric.Name, metric.Value, metric.Type); err != nil {
-			log.Warn("Unexpected error setting metric %#v: %v", metric, err)
+	for _, m := range metrics {
+		if err := ms.SetMetric(m.Name, m.Value, m.Type); err != nil {
+			log.Warn("Unexpected error setting metric %#v: %v", m, err)
 		}
 	}
 }
@@ -158,6 +159,13 @@ func memory(mem *biz.Memory) []entry {
 		metricMemoryUsageBytes(mem.UsageBytes),
 		metricMemoryResidentSizeBytes(mem.RSSUsageBytes),
 		metricMemorySizeLimitBytes(mem.MemLimitBytes),
+	}
+}
+
+func pids(pids *biz.Pids) []entry {
+	return []entry{
+		metricProcessCount(pids.Current),
+		metricProcessCountLimit(pids.Limit),
 	}
 }
 
@@ -211,7 +219,6 @@ func cpu(cpu *biz.CPU) []entry {
 
 func misc(m *biz.Sample) []entry {
 	return []entry{
-		metricProcessCount(m.ProcessCount),
 		metricRestartCount(m.RestartCount),
 	}
 }

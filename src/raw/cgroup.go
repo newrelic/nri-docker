@@ -16,20 +16,19 @@ import (
 )
 
 const (
-	localCgroupPath = "/sys/fs/cgroup"
+	cgroupPath = "/sys/fs/cgroup"
 )
 
 // cgroupsFetcher fetches the metrics that can be found in cgroups file system
 type cgroupsFetcher struct {
-	cgroupPath string
+	hostRoot   string
 	subsystems cgroups.Hierarchy
 }
 
 func newCGroupsFetcher(hostRoot string) *cgroupsFetcher {
-	cgroupPath := containerToHost(hostRoot, localCgroupPath)
 	return &cgroupsFetcher{
-		cgroupPath: cgroupPath,
-		subsystems: subsystems(cgroupPath),
+		hostRoot:   hostRoot,
+		subsystems: subsystems(containerToHost(hostRoot, cgroupPath)),
 	}
 }
 
@@ -48,11 +47,11 @@ func (cg *cgroupsFetcher) fetch(containerID string) (Metrics, error) {
 
 	stats.Time = time.Now()
 
-	if stats.ProcessCount, err = cg.processCount(containerID); err != nil {
-		log.Error("couldn't read processes stats: %v", err)
+	if stats.Pids, err = pids(metrics); err != nil {
+		log.Error("couldn't read pids stats: %v", err)
 	}
 
-	if stats.Blkio, err = cg.blkio(containerID); err != nil {
+	if stats.Blkio, err = blkio(containerID); err != nil {
 		log.Error("couldn't read blkio stats: %v", err)
 	}
 
@@ -67,20 +66,14 @@ func (cg *cgroupsFetcher) fetch(containerID string) (Metrics, error) {
 	return stats, nil
 }
 
-func (cg *cgroupsFetcher) processCount(containerID string) (uint, error) {
-	// we don't use metrics.Pids, as it shows the processes and threads, and we only want to get the number
-	// of processes
-	// each line of cgroup.procs is a PID. The number of lines is the number of processes
-	f, err := os.Open(path.Join(cg.cgroupPath, "pids", "docker", containerID, "cgroup.procs"))
-	if err != nil {
-		return 0, err
+func pids(metrics *cgroups.Metrics) (Pids, error) {
+	if metrics.Pids == nil {
+		return Pids{}, errors.New("no PIDs information")
 	}
-	scanner := bufio.NewScanner(f)
-	count := uint(0)
-	for scanner.Scan() {
-		count++
-	}
-	return count, nil
+	return Pids{
+		Current: metrics.Pids.Current,
+		Limit:   metrics.Pids.Limit,
+	}, nil
 }
 
 // at the moment we don't use cgroups library because it doesn't seem to properly
@@ -139,8 +132,8 @@ func blkioEntries(blkioPath string, ioStat string) ([]BlkioEntry, error) {
 
 // TODO: use cgroups library (as for readPidStats)
 // cgroups library currently don't seem to work for blkio. We can fix it and submit a patch
-func (cg *cgroupsFetcher) blkio(containerID string) (Blkio, error) {
-	cpath := path.Join(cg.cgroupPath, "blkio", "docker", containerID)
+func blkio(containerID string) (Blkio, error) {
+	cpath := containerToHost(cgroupPath, path.Join("blkio", "docker", containerID))
 
 	stats := Blkio{}
 	var err error
