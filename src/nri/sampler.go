@@ -116,9 +116,9 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 }
 
 func populate(ms *metric.Set, metrics []entry) {
-	for _, m := range metrics {
-		if err := ms.SetMetric(m.Name, m.Value, m.Type); err != nil {
-			log.Warn("Unexpected error setting metric %#v: %v", m, err)
+	for _, metric := range metrics {
+		if err := ms.SetMetric(metric.Name, metric.Value, metric.Type); err != nil {
+			log.Warn("Unexpected error setting metric %#v: %v", metric, err)
 		}
 	}
 }

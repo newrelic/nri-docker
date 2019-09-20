@@ -16,19 +16,20 @@ import (
 )
 
 const (
-	cgroupPath = "/sys/fs/cgroup"
+	localCgroupPath = "/sys/fs/cgroup"
 )
 
 // cgroupsFetcher fetches the metrics that can be found in cgroups file system
 type cgroupsFetcher struct {
-	hostRoot   string
+	cgroupPath string
 	subsystems cgroups.Hierarchy
 }
 
 func newCGroupsFetcher(hostRoot string) *cgroupsFetcher {
+	cgroupPath := containerToHost(hostRoot, localCgroupPath)
 	return &cgroupsFetcher{
-		hostRoot:   hostRoot,
-		subsystems: subsystems(containerToHost(hostRoot, cgroupPath)),
+		cgroupPath: cgroupPath,
+		subsystems: subsystems(cgroupPath),
 	}
 }
 
@@ -51,7 +52,7 @@ func (cg *cgroupsFetcher) fetch(containerID string) (Metrics, error) {
 		log.Error("couldn't read pids stats: %v", err)
 	}
 
-	if stats.Blkio, err = blkio(containerID); err != nil {
+	if stats.Blkio, err = cg.blkio(containerID); err != nil {
 		log.Error("couldn't read blkio stats: %v", err)
 	}
 
@@ -132,8 +133,8 @@ func blkioEntries(blkioPath string, ioStat string) ([]BlkioEntry, error) {
 
 // TODO: use cgroups library (as for readPidStats)
 // cgroups library currently don't seem to work for blkio. We can fix it and submit a patch
-func blkio(containerID string) (Blkio, error) {
-	cpath := containerToHost(cgroupPath, path.Join("blkio", "docker", containerID))
+func (cg *cgroupsFetcher) blkio(containerID string) (Blkio, error) {
+	cpath := path.Join(cg.cgroupPath, "blkio", "docker", containerID)
 
 	stats := Blkio{}
 	var err error
