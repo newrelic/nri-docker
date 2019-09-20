@@ -26,10 +26,10 @@ type cgroupsFetcher struct {
 }
 
 func newCGroupsFetcher(hostRoot string) *cgroupsFetcher {
-	cgroupPath := containerToHost(hostRoot, localCgroupPath)
+	path := containerToHost(hostRoot, localCgroupPath)
 	return &cgroupsFetcher{
-		cgroupPath: cgroupPath,
-		subsystems: subsystems(cgroupPath),
+		cgroupPath: path,
+		subsystems: subsystems(path),
 	}
 }
 
