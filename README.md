@@ -18,7 +18,7 @@ the `NRIA_LICENSE_KEY` property.
 ```
 docker run -d --name newrelic-infra --network=host --cap-add=SYS_PTRACE \
 -v "/:/host:ro" -v "/var/run/docker.sock:/var/run/docker.sock" \
--e NRIA_MONITOR_DOCKER="true" -e NRIA_CONNECT_ENABLED="true" \
+-e NRIA_DOCKER_ENABLED="true" -e NRIA_CONNECT_ENABLED="true" \
 -e NRIA_LICENSE_KEY="<your new relic license key>" \
 xxxx:xxxx
 ```
