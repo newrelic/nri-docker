@@ -41,7 +41,7 @@ func (cg *cgroupsFetcher) fetch(containerID string) (Metrics, error) {
 	if err != nil {
 		return stats, err
 	}
-	metrics, err := control.Stat()
+	metrics, err := control.Stat(cgroups.IgnoreNotExist)
 	if err != nil {
 		return stats, err
 	}
@@ -238,18 +238,12 @@ func subsystems(rootPath string) cgroups.Hierarchy {
 	return func() ([]cgroups.Subsystem, error) {
 		// TODO: these are copied from cgroups.V1. Cleanup for the subsystems we really need
 		return []cgroups.Subsystem{
-			cgroups.NewNamed(rootPath, "systemd"),
-			cgroups.NewFreezer(rootPath),
 			cgroups.NewPids(rootPath),
-			cgroups.NewNetCls(rootPath),
-			cgroups.NewNetPrio(rootPath),
-			cgroups.NewPerfEvent(rootPath),
 			cgroups.NewCputset(rootPath),
 			cgroups.NewCpu(rootPath),
 			cgroups.NewCpuacct(rootPath),
 			cgroups.NewMemory(rootPath),
 			cgroups.NewBlkio(rootPath),
-			cgroups.NewRdma(rootPath),
 		}, nil
 	}
 }
