@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	localCgroupPath = "/sys/fs/cgroup"
+	localCgroupPath = "/sys/fs/cgroup" // todo: make it configurable
 )
 
 // cgroupsFetcher fetches the metrics that can be found in cgroups file system

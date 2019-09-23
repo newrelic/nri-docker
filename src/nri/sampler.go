@@ -87,7 +87,6 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 			return err
 		}
 		ms := entity.NewMetricSet(containerSampleName,
-			metric.Attr("hostname", "localhost"), // will be replaced by the agent
 			metric.Attr(attrContainerID, container.ID))
 
 		// populating metrics that are common to running and stopped containers
