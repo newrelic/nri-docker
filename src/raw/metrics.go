@@ -2,6 +2,8 @@ package raw
 
 import (
 	"time"
+
+	"github.com/docker/docker/api/types"
 )
 
 // Metrics holds containers raw metric values as they are extracted from the system
@@ -74,7 +76,7 @@ type MetricsFetcher struct {
 
 // Fetcher is the minimal abstraction of any raw metrics fetcher implementation
 type Fetcher interface {
-	Fetch(containerID string, containerPID int) (Metrics, error)
+	Fetch(types.ContainerJSON) (Metrics, error)
 }
 
 // NewFetcher returns a raw MetricsFetcher
@@ -86,12 +88,12 @@ func NewFetcher(hostRoot string) *MetricsFetcher {
 }
 
 // Fetch returns a raw Metrics snapshot of a container, given its ID and its PID
-func (mf *MetricsFetcher) Fetch(containerID string, containerPID int) (Metrics, error) {
-	metrics, err := mf.cgroups.fetch(containerID)
+func (mf *MetricsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
+	metrics, err := mf.cgroups.fetch(c)
 	if err != nil {
 		return metrics, err
 	}
-	metrics.ContainerID = containerID
-	metrics.Network, err = mf.network.Fetch(containerPID)
+	metrics.ContainerID = c.ID
+	metrics.Network, err = mf.network.Fetch(c.State.Pid)
 	return metrics, err
 }

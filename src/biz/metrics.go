@@ -96,7 +96,7 @@ func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 	if json.State == nil {
 		return metrics, fmt.Errorf("invalid container %v JSON: missing State", json.ID)
 	}
-	rawMetrics, err := mc.fetcher.Fetch(json.ID, json.State.Pid)
+	rawMetrics, err := mc.fetcher.Fetch(json)
 	if err != nil {
 		return metrics, err
 	}

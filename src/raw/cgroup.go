@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/containerd/cgroups"
+	"github.com/docker/docker/api/types"
 	"github.com/newrelic/infra-integrations-sdk/log"
 )
 
@@ -33,11 +34,22 @@ func newCGroupsFetcher(hostRoot string) *cgroupsFetcher {
 	}
 }
 
+// gets the relative path to a cgroup container based on the container metadata
+func staticPath(c types.ContainerJSON) cgroups.Path {
+	var parent string
+	if c.HostConfig == nil || c.HostConfig.CgroupParent == "" {
+		parent = "docker"
+	} else {
+		parent = c.HostConfig.CgroupParent
+	}
+	return cgroups.StaticPath(path.Join(parent, c.ID))
+}
+
 // returns a Metrics without the network: TODO: populate also network from libcgroups
-func (cg *cgroupsFetcher) fetch(containerID string) (Metrics, error) {
+func (cg *cgroupsFetcher) fetch(c types.ContainerJSON) (Metrics, error) {
 	stats := Metrics{}
 
-	control, err := cgroups.Load(cg.subsystems, cgroups.StaticPath(path.Join("docker", containerID)))
+	control, err := cgroups.Load(cg.subsystems, staticPath(c))
 	if err != nil {
 		return stats, err
 	}
@@ -52,7 +64,7 @@ func (cg *cgroupsFetcher) fetch(containerID string) (Metrics, error) {
 		log.Error("couldn't read pids stats: %v", err)
 	}
 
-	if stats.Blkio, err = cg.blkio(containerID); err != nil {
+	if stats.Blkio, err = cg.blkio(c.ID); err != nil {
 		log.Error("couldn't read blkio stats: %v", err)
 	}
 
