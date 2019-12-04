@@ -5,4 +5,4 @@ if [ "$NRIA_DOCKER_ENABLED" = "true" ]; then
     cp /etc/newrelic-infra/integrations.d/docker-config.yml.sample /etc/newrelic-infra/integrations.d/docker-config.yml
 fi
 
-tini -- /usr/bin/newrelic-infra
+tini -- /usr/bin/newrelic-infra-service
