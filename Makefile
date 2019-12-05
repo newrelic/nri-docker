@@ -17,7 +17,7 @@ all: build
 
 build: clean validate compile test
 
-clean:
+clean: compile-deps
 	@echo "=== $(INTEGRATION) === [ clean ]: removing binaries and coverage file..."
 	@rm -rfv bin coverage.xml $(TARGET)
 
