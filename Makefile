@@ -9,6 +9,7 @@ GO_FILES        := ./src/
 WORKDIR         := $(shell pwd)
 TARGET          := target
 TARGET_DIR       = $(WORKDIR)/$(TARGET)
+GO               = GOOS=linux go
 
 all: build
 
@@ -20,7 +21,7 @@ clean:
 
 validate-deps:
 	@echo "=== $(INTEGRATION) === [ validate-deps ]: installing validation dependencies..."
-	@go get -v $(VALIDATE_DEPS)
+	@$(GO) get -v $(VALIDATE_DEPS)
 
 validate-only:
 	@printf "=== $(INTEGRATION) === [ validate ]: running gofmt... "
@@ -42,7 +43,7 @@ validate-only:
 		exit 1 ;\
 	fi
 	@printf "=== $(INTEGRATION) === [ validate ]: running go vet... "
-	@OUTPUT="$(shell go vet $(SRC_DIR)...)" ;\
+	@OUTPUT="$(shell $(GO) vet $(SRC_DIR)...)" ;\
 	if [ -z "$$OUTPUT" ]; then \
 		echo "passed." ;\
 	else \
@@ -55,17 +56,17 @@ validate: validate-deps validate-only
 
 compile-deps:
 	@echo "=== $(INTEGRATION) === [ compile-deps ]: installing build dependencies..."
-	@go get -v -d -t ./...
+	@$(GO) get -v -d -t ./...
 
 bin/$(BINARY_NAME):
 	@echo "=== $(INTEGRATION) === [ compile ]: building $(BINARY_NAME)..."
-	@go build -v -o bin/$(BINARY_NAME) $(GO_FILES)
+	@$(GO) build -v -o bin/$(BINARY_NAME) $(GO_FILES)
 
 compile: compile-deps bin/$(BINARY_NAME)
 
 test-deps: compile-deps
 	@echo "=== $(INTEGRATION) === [ test-deps ]: installing testing dependencies..."
-	@go get -v $(TEST_DEPS)
+	@$(GO) get -v $(TEST_DEPS)
 	@docker build -t stress:latest src/biz/
 
 test-only:
@@ -77,7 +78,7 @@ test: test-deps test-only
 integration-test: test-deps
 	@echo "=== $(INTEGRATION) === [ test ]: running integration tests..."
 	@docker-compose -f tests/integration/docker-compose.yml up -d --build
-	@go test -v -tags=integration ./tests/integration/. || (ret=$$?; docker-compose -f tests/integration/docker-compose.yml down && exit $$ret)
+	@$(GO) test -v -tags=integration ./tests/integration/. || (ret=$$?; docker-compose -f tests/integration/docker-compose.yml down && exit $$ret)
 	@docker-compose -f tests/integration/docker-compose.yml down
 
 install: bin/$(BINARY_NAME)
