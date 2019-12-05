@@ -9,7 +9,9 @@ GO_FILES        := ./src/
 WORKDIR         := $(shell pwd)
 TARGET          := target
 TARGET_DIR       = $(WORKDIR)/$(TARGET)
-GO               = GOOS=linux go
+GOOS             = GOOS=linux
+GO               = $(GOOS) go
+GOCOV            = $(GOOS) gocov
 
 all: build
 
@@ -71,7 +73,7 @@ test-deps: compile-deps
 
 test-only:
 	@echo "=== $(INTEGRATION) === [ test ]: running unit tests..."
-	@gocov test $(SRC_DIR)/... | gocov-xml > coverage.xml
+	@$(GOCOV) test $(SRC_DIR)/... | gocov-xml > coverage.xml
 
 test: test-deps test-only
 
