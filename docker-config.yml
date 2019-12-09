@@ -1,4 +1,4 @@
 integrations:
   - name: nri-docker
-    feature_flag: docker_enabled
+    feature: docker_enabled
     interval: 15s
