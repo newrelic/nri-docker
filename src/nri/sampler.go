@@ -108,7 +108,6 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 		populate(ms, memory(&metrics.Memory))
 		populate(ms, pids(&metrics.Pids))
 		populate(ms, blkio(&metrics.BlkIO))
-		populate(ms, cpu(&metrics.CPU))
 		populate(ms, cs.networkMetrics(&metrics.Network))
 	}
 	return nil
