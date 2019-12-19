@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## 1.0.0 (2019-12-19)
+## 1.0.0 (2019-12-09)
 ### Changed
 Updated agent dependency to newrelic-infra >= 1.8.0
 Updated config files to agent integrations format v4.
