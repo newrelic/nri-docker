@@ -17,21 +17,6 @@ guarantee you get the full functionality in the New Relic site.
 
 ## Configuration and running
 
-At the current stage of development, the recommended way to run this
-integration is inside a containerized agent:
-
-```
-docker run -d --name newrelic-infra --network=host --cap-add=SYS_PTRACE \
-    -v "/:/host:ro" -v "/var/run/docker.sock:/var/run/docker.sock" \
-    -e NRIA_DOCKER_ENABLED="true" -e NRIA_CONNECT_ENABLED="true" \
-    -e NRIA_LICENSE_KEY="<your new relic license key>" \
-    xxxx:xxxx
-```
-
-The next configuration options need to be passed to the environment of the Agent:
-
-* `NRIA_LICENSE_KEY`: your New Relic Infrastructure license key.
-* `NRIA_DOCKER_ENABLED="true"`: this will automatically execute the bundled
-  `nri-docker` integration, without extra installation steps. 
-* `NRIA_CONNECT_ENABLED="true"`: required for the proper identification of
-  your containers as entities.
+ℹ️ Since version 1.8.32, the New Relic Infrastructure agent bundles
+the Docker integration, so there is no need to do anything to monitor
+your containers.
