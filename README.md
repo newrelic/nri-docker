@@ -10,7 +10,7 @@ guarantee you get the full functionality in the New Relic site.
 ## Requirements
 
 * Linux (Windows support TBD)
-* New Relic Infrastructure Agent **1.5.42**
+* New Relic Infrastructure Agent **1.5.42** or higher
     - ⚠️ prior versions won't provide the data that is required for
       full functionality in the New Relic Site.
 * Docker
