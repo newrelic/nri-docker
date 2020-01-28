@@ -1,0 +1,6 @@
+  docker-config.yml: |
+    ---
+    integrations:
+      - name: nri-docker
+        feature: docker_enabled
+        interval: 15s
