@@ -31,12 +31,14 @@ type cgroupsFetcher struct {
 
 func newCGroupsFetcher(hostRoot, cgroup string) *cgroupsFetcher {
 	if cgroup != "" {
+		// Prepend cgroup to have higher priority than the predefined paths.
 		localCgroupPaths = append([]string{cgroup}, localCgroupPaths...)
 	}
 
 	cgroupPath, err := detectCgroupPath(localCgroupPaths)
 	if err != nil {
-		log.Error("couldn't detect cgroup path: %v, use -cgroup_path to set the correct cgroup path", err)
+		log.Error("couldn't detect cgroup path, error: %v, "+
+			"use cgroup_path config option to set the correct cgroup path", err)
 	}
 
 	cgroupPath = containerToHost(hostRoot, cgroupPath)
