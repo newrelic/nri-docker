@@ -36,10 +36,11 @@ func newCGroupsFetcher(hostRoot, cgroup string) *cgroupsFetcher {
 
 	cgroupPath, err := detectCgroupPath(localCgroupPaths)
 	if err != nil {
-		log.Error("couldn't detect cgroup path: %v", err)
+		log.Error("couldn't detect cgroup path: %v, use -cgroup_path to set the correct cgroup path", err)
 	}
 
 	cgroupPath = containerToHost(hostRoot, cgroupPath)
+
 	return &cgroupsFetcher{
 		cgroupPath: cgroupPath,
 		subsystems: subsystems(cgroupPath),
@@ -51,7 +52,7 @@ func newCGroupsFetcher(hostRoot, cgroup string) *cgroupsFetcher {
 // 2. predefined list of usual cgroup paths
 // 3. parsing the mounts file.
 func detectCgroupPath(cgroupPaths []string) (string, error) {
-	path, found := getFirstExistingPath(cgroupPaths)
+	path, found := getFirstExistingNonEmptyPath(cgroupPaths)
 	if found {
 		return path, nil
 	}

@@ -41,16 +41,33 @@ func getEnv(name, defaultValue string, combineWith ...string) string {
 	return value
 }
 
-// getFirstExistingPath will return the first path in the array that can be accessed.
-func getFirstExistingPath(paths []string) (result string, found bool) {
+// getFirstExistingNonEmptyPath will return the first path in the array that can be accessed.
+func getFirstExistingNonEmptyPath(paths []string) (result string, found bool) {
 	for _, path := range paths {
-		if _, err := os.Stat(path); err == nil {
-			result = path
-			found = true
-			break
+		isEmpty, err := isDirEmpty(path)
+		if err != nil || isEmpty {
+			continue
 		}
+
+		result = path
+		found = true
+		break
 	}
 	return
+}
+func isDirEmpty(path string) (bool, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return false, err
+	}
+	defer f.Close()
+
+	maxResults := 1
+	_, err = f.Readdirnames(maxResults)
+	if err == io.EOF {
+		return true, nil
+	}
+	return false, err
 }
 
 type mount struct {
