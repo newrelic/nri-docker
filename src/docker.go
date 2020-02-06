@@ -13,6 +13,7 @@ type argumentList struct {
 	Pretty     bool   `default:"false" help:"Print pretty formatted JSON."`
 	NriCluster string `default:"" help:"Optional. Cluster name"`
 	HostRoot   string `default:"/host" help:"If the integration is running from a container, the mounted folder pointing to the host root folder"`
+	CgroupPath string `default:"" help:"Optional. The path where cgroup is mounted."`
 }
 
 const (
@@ -34,7 +35,7 @@ func main() {
 
 	log.SetupLogging(args.Verbose)
 
-	cs, err := nri.NewSampler(args.HostRoot)
+	cs, err := nri.NewSampler(args.HostRoot, args.CgroupPath)
 	exitOnErr(err)
 
 	exitOnErr(cs.SampleAll(i))

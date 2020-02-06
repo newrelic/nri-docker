@@ -16,9 +16,12 @@ import (
 	"github.com/newrelic/infra-integrations-sdk/log"
 )
 
-const (
-	localCgroupPath = "/sys/fs/cgroup" // todo: make it configurable
-)
+const cgroupDir = "/cgroup"
+
+var localCgroupPaths = []string{
+	"/sys/fs/cgroup",
+	"/cgroup",
+}
 
 // cgroupsFetcher fetches the metrics that can be found in cgroups file system
 type cgroupsFetcher struct {
@@ -26,12 +29,71 @@ type cgroupsFetcher struct {
 	subsystems cgroups.Hierarchy
 }
 
-func newCGroupsFetcher(hostRoot string) *cgroupsFetcher {
-	path := containerToHost(hostRoot, localCgroupPath)
-	return &cgroupsFetcher{
-		cgroupPath: path,
-		subsystems: subsystems(path),
+func newCGroupsFetcher(hostRoot, cgroup string) *cgroupsFetcher {
+	if cgroup != "" {
+		localCgroupPaths = append([]string{cgroup}, localCgroupPaths...)
 	}
+
+	cgroupPath, err := detectCgroupPath(localCgroupPaths)
+	if err != nil {
+		log.Error("couldn't detect cgroup path: %v", err)
+	}
+
+	cgroupPath = containerToHost(hostRoot, cgroupPath)
+	return &cgroupsFetcher{
+		cgroupPath: cgroupPath,
+		subsystems: subsystems(cgroupPath),
+	}
+}
+
+// detectCgroupPath will try to detect cgroup path following this priority precedence:
+// 1. cgroup provided as config parameter to integration
+// 2. predefined list of usual cgroup paths
+// 3. parsing the mounts file.
+func detectCgroupPath(cgroupPaths []string) (string, error) {
+	path, found := getFirstExistingPath(cgroupPaths)
+	if found {
+		return path, nil
+	}
+
+	mountsFile, err := openMountsFile()
+	if err != nil {
+		return "", fmt.Errorf("failed to open mounts file while detecting cgroup path, error: %v", err)
+	}
+	defer mountsFile.Close()
+
+	mounts, err := getMounts(mountsFile)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse mounts file while detecting cgroup path, error: %v", err)
+	}
+
+	path, found = detectCgroupPathFromMounts(mounts)
+	if !found {
+		return "", fmt.Errorf("failed to detect cgroup from mounts file: %s", mountsFile.Name())
+	}
+
+	return path, nil
+}
+
+// detectCgroupPathFromMounts will try to detect from mounts the cgroup path.
+func detectCgroupPathFromMounts(mounts []*mount) (result string, found bool) {
+	for _, mount := range mounts {
+
+		if mount.Device != cgroupDir[1:] {
+			continue
+		}
+
+		i := strings.Index(mount.MountPoint, cgroupDir)
+		if i < 0 {
+			continue
+		}
+
+		found = true
+		result = path.Join(mount.MountPoint[:i], cgroupDir)
+		break
+	}
+
+	return
 }
 
 // gets the relative path to a cgroup container based on the container metadata
