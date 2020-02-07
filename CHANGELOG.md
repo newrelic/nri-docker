@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## 1.0.2 (2020-02-07)
+### Changed
+Added support for auto-detection of the Cgroup path. The auto-detected Cgroup path
+can be overwritten by the new config parameter 'cgroup_path'.
+
 ## 1.0.1 (2020-01-13)
 ### Changed
 Updated execution conditions for integrations v4.
