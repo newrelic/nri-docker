@@ -58,7 +58,7 @@ func NewSampler(hostRoot, cgroupPath string) (ContainerSampler, error) {
 	}
 
 	// Raw metrics fetcher to get the raw metrics from the system (cgroups and proc fs)
-	rawFetcher := raw.NewFetcher(hostRoot, cgroupPath)
+	rawFetcher := raw.NewFetcher(hostRoot, cgroupPath, raw.GetMountsFilePath())
 
 	return ContainerSampler{
 		metrics: biz.NewProcessor(store, rawFetcher, docker),

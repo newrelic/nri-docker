@@ -99,8 +99,7 @@ func getMounts(file io.Reader) ([]*mount, error) {
 	return result, nil
 }
 
-func openMountsFile() (*os.File, error) {
-	mountsFile := getEnv(procPathEnvVarName, defaultProcPath, defaultMountsPath)
-
-	return os.Open(mountsFile)
+// GetMountsFilePath will return the path to the system mounts file.
+func GetMountsFilePath() string {
+	return getEnv(procPathEnvVarName, defaultProcPath, defaultMountsPath)
 }

@@ -29,13 +29,13 @@ type cgroupsFetcher struct {
 	subsystems cgroups.Hierarchy
 }
 
-func newCGroupsFetcher(hostRoot, cgroup string) *cgroupsFetcher {
+func newCGroupsFetcher(hostRoot, cgroup, mountsFilePath string) *cgroupsFetcher {
 	if cgroup != "" {
 		// Prepend cgroup to have higher priority than the predefined paths.
 		localCgroupPaths = append([]string{cgroup}, localCgroupPaths...)
 	}
 
-	cgroupPath, err := detectCgroupPath(localCgroupPaths)
+	cgroupPath, err := detectCgroupPath(localCgroupPaths, mountsFilePath)
 	if err != nil {
 		log.Error("couldn't detect cgroup path, error: %v, "+
 			"use cgroup_path config option to set the correct cgroup path", err)
@@ -53,13 +53,13 @@ func newCGroupsFetcher(hostRoot, cgroup string) *cgroupsFetcher {
 // 1. cgroup provided as config parameter to integration
 // 2. predefined list of usual cgroup paths
 // 3. parsing the mounts file.
-func detectCgroupPath(cgroupPaths []string) (string, error) {
+func detectCgroupPath(cgroupPaths []string, mountsFilePath string) (string, error) {
 	path, found := getFirstExistingNonEmptyPath(cgroupPaths)
 	if found {
 		return path, nil
 	}
 
-	mountsFile, err := openMountsFile()
+	mountsFile, err := os.Open(mountsFilePath)
 	if err != nil {
 		return "", fmt.Errorf("failed to open mounts file while detecting cgroup path, error: %v", err)
 	}

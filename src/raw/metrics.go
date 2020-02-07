@@ -80,9 +80,9 @@ type Fetcher interface {
 }
 
 // NewFetcher returns a raw MetricsFetcher
-func NewFetcher(hostRoot, cgroups string) *MetricsFetcher {
+func NewFetcher(hostRoot, cgroups, mountsFilePath string) *MetricsFetcher {
 	return &MetricsFetcher{
-		cgroups: newCGroupsFetcher(hostRoot, cgroups),
+		cgroups: newCGroupsFetcher(hostRoot, cgroups, mountsFilePath),
 		network: newNetworkFetcher(hostRoot),
 	}
 }
