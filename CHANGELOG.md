@@ -5,10 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## 1.0.2 (2020-02-07)
+## 1.1.1 (2020-02-07)
 ### Changed
-Added support for auto-detection of the Cgroup path. The auto-detected Cgroup path
-can be overwritten by the new config parameter 'cgroup_path'.
+
+- This version fixes missing Docker container metrics improving Linux cgroup path detection. This issue was caused by cgroup not being mounted in the standard path `/sys/fs/cgroup`. This version can now discover cgroup different from the standard path.
+- The auto-detected Cgroup path can be overwritten by the new config parameter 'cgroup_path'.
+- Note: cgroup PIDs (process and thread count) are not available on Kernel versions lower than 4.3 [see support](http://man7.org/linux/man-pages/man7/cgroups.7.html). Therefore column threadCount won't be available for these systems.-- 
 
 ## 1.0.1 (2020-01-13)
 ### Changed
