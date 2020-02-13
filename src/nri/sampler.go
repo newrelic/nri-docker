@@ -152,12 +152,18 @@ func labels(container types.Container) []entry {
 }
 
 func memory(mem *biz.Memory) []entry {
-	return []entry{
+	metrics := []entry{
 		metricMemoryCacheBytes(mem.CacheUsageBytes),
 		metricMemoryUsageBytes(mem.UsageBytes),
 		metricMemoryResidentSizeBytes(mem.RSSUsageBytes),
-		metricMemorySizeLimitBytes(mem.MemLimitBytes),
 	}
+	if mem.MemLimitBytes > 0 {
+		metrics = append(metrics,
+			metricMemorySizeLimitBytes(mem.MemLimitBytes),
+			metricMemoryUsageLimitPercent(mem.UsagePercent),
+		)
+	}
+	return metrics
 }
 
 func pids(pids *biz.Pids) []entry {

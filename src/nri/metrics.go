@@ -24,6 +24,7 @@ var (
 	metricMemoryCacheBytes        = metricFunc("memoryCacheBytes", metric.GAUGE)
 	metricMemoryResidentSizeBytes = metricFunc("memoryResidentSizeBytes", metric.GAUGE)
 	metricMemorySizeLimitBytes    = metricFunc("memorySizeLimitBytes", metric.GAUGE)
+	metricMemoryUsageLimitPercent = metricFunc("memoryUsageLimitPercent", metric.GAUGE)
 	metricIOReadCountPerSecond    = metricFunc("ioReadCountPerSecond", metric.RATE)
 	metricIOWriteCountPerSecond   = metricFunc("ioWriteCountPerSecond", metric.RATE)
 	metricIOReadBytesPerSecond    = metricFunc("ioReadBytesPerSecond", metric.RATE)

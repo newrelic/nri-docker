@@ -5,7 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## 1.0.2 (2020-02-07)
+## Next (TBD)
+
+### Added
+* Metric `memoryUsageLimitPercent` that reports the usage of the container memory as
+  a percentage of the limit. If there is no limit defined, this metric is not reported.
+
+### Changed
+* Metric `memorySizeLimitBytes` is not reported anymore when there is no such limit
+  (before it was reported as `0`)
+
+## 1.1.1 (2020-02-07)
 ### Changed
 Added support for auto-detection of the Cgroup path. The auto-detected Cgroup path
 can be overwritten by the new config parameter 'cgroup_path'.
