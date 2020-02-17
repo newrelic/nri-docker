@@ -125,6 +125,9 @@ func TestMemory(t *testing.T) {
 			"reported usage %v should be >= 60MB (%v)", mem.UsageBytes, expectedUsage)
 		assert.Truef(t, mem.RSSUsageBytes >= expectedUsage,
 			"reported RSS %v should be >= 60MB (%v)", mem.RSSUsageBytes, expectedUsage)
+		expectedPercent := float64(expectedUsage) * 100 / memLimit
+		assert.Truef(t, mem.UsagePercent >= expectedPercent,
+			"reported Usage Percent %v should be >= %v", mem.RSSUsageBytes, expectedPercent)
 		// todo: test cachebytes against a fixed value
 		assert.True(t, mem.CacheUsageBytes > 0, "reported cache bytes %v should not be zero")
 

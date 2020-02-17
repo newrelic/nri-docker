@@ -56,6 +56,7 @@ type Memory struct {
 	CacheUsageBytes uint64
 	RSSUsageBytes   uint64
 	MemLimitBytes   uint64
+	UsagePercent    float64 // Usage percent from the limit, if any
 }
 
 // Processer defines the most essential interface of an exportable container Processer
@@ -191,11 +192,17 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 		usage = mem.RSS + mem.SwapUsage - mem.FuzzUsage
 	}
 
+	usagePercent := float64(0)
+	if memLimits > 0 {
+		usagePercent = 100 * float64(usage) / float64(memLimits)
+	}
+
 	return Memory{
 		MemLimitBytes:   memLimits,
 		CacheUsageBytes: mem.Cache,
 		RSSUsageBytes:   mem.RSS,
 		UsageBytes:      usage,
+		UsagePercent:    usagePercent,
 	}
 }
 
