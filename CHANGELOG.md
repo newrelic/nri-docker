@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 ### Added
 * Metric `memoryUsageLimitPercent` that reports the usage of the container memory as
   a percentage of the limit. If there is no limit defined, this metric is not reported.
+* Renamed metrics: `processCount` to `threadCount`; `processCountLimit` to `threadCountLimit`
 
 ### Changed
 * Metric `memorySizeLimitBytes` is not reported anymore when there is no such limit
