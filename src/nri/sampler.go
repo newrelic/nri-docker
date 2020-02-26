@@ -168,8 +168,8 @@ func memory(mem *biz.Memory) []entry {
 
 func pids(pids *biz.Pids) []entry {
 	return []entry{
-		metricProcessCount(pids.Current),
-		metricProcessCountLimit(pids.Limit),
+		metricThreadCount(pids.Current),
+		metricThreadCountLimit(pids.Limit),
 	}
 }
 
