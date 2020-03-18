@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/data/metric"
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/newrelic/infra-integrations-sdk/log"
@@ -16,7 +15,6 @@ import (
 
 const (
 	labelPrefix            = "label."
-	dockerClientVersion    = "1.24" // todo: make configurable
 	containerSampleName    = "ContainerSample"
 	attrContainerID        = "containerId"
 	attrShortContainerID   = "shortContainerId"
@@ -28,11 +26,11 @@ const (
 type ContainerSampler struct {
 	metrics biz.Processer
 	store   persist.Storer
-	docker  dockerClient
+	docker  DockerClient
 }
 
-// abstraction of the docker client to facilitate testing
-type dockerClient interface {
+// DockerClient is an abstraction of the Docker client.
+type DockerClient interface {
 	biz.Inspector
 	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
 }
@@ -40,30 +38,18 @@ type dockerClient interface {
 // NewSampler returns a ContainerSampler instance. The hostRoot argument is used only if the integration is
 // executed inside a container, and must point to the shared folder that allows accessing to the host root
 // folder (usually /host)
-func NewSampler(hostRoot, cgroupPath string) (ContainerSampler, error) {
-	// instantiating internal components
-	// docker client to list and inspect containers
-	docker, err := client.NewEnvClient()
-	if err != nil {
-		return ContainerSampler{}, err
-	}
-	defer docker.Close()
-	docker.UpdateClientVersion(dockerClientVersion)
-
+func NewSampler(fetcher raw.Fetcher, docker DockerClient) (*ContainerSampler, error) {
 	// SDK Storer to keep metric values between executions (e.g. for rates and deltas)
 	store, err := persist.NewFileStore( // TODO: make the following options configurable
 		persist.DefaultPath("container_cpus"),
 		log.NewStdErr(true),
 		60*time.Second)
 	if err != nil {
-		return ContainerSampler{}, err
+		return nil, err
 	}
 
-	// Raw metrics fetcher to get the raw metrics from the system (cgroups and proc fs)
-	rawFetcher := raw.NewFetcher(hostRoot, cgroupPath, raw.GetMountsFilePath())
-
-	return ContainerSampler{
-		metrics: biz.NewProcessor(store, rawFetcher, docker),
+	return &ContainerSampler{
+		metrics: biz.NewProcessor(store, fetcher, docker),
 		docker:  docker,
 		store:   store,
 	}, nil
@@ -71,17 +57,19 @@ func NewSampler(hostRoot, cgroupPath string) (ContainerSampler, error) {
 
 // SampleAll populates the integration of the argument with metrics and labels from all the containers in the system
 // running and non-running
-func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
-	// todo: configure to retrieve only the running containers
-	containers, err := cs.docker.ContainerList(context.Background(), types.ContainerListOptions{All: true})
-	if err != nil {
-		return err
-	}
+func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integration) error {
 	defer func() {
 		if err := cs.store.Save(); err != nil {
 			log.Warn("persisting previous metrics: %s", err.Error())
 		}
 	}()
+
+	// todo: configure to retrieve only the running containers
+	containers, err := cs.docker.ContainerList(ctx, types.ContainerListOptions{All: true})
+	if err != nil {
+		return err
+	}
+
 	for _, container := range containers {
 		// Creating entity and populating metrics
 		entity, err := i.Entity(container.ID, "docker")
@@ -99,7 +87,13 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 		populate(ms, attributes(container))
 		populate(ms, labels(container))
 
-		if container.State != "running" {
+		// TODO: this *needs* to be refactored into the call to ContainerList, because different
+		// systems might represent running container in a slightly different way. This can be tricky
+		// because for Docker containers we're relyng on the capabilities of the official Docker client.
+		// Possibly wrapping the Docker client with another type is a good solution.
+		// i.e. Docker uses `state = running` and ECS uses `status = RUNNING`.
+		if !(container.State != "running" || container.Status != "RUNNING") {
+			log.Debug("Skipped not running container: %s.", container.ID)
 			continue
 		}
 
@@ -122,7 +116,7 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 func populate(ms *metric.Set, metrics []entry) {
 	for _, metric := range metrics {
 		if err := ms.SetMetric(metric.Name, metric.Value, metric.Type); err != nil {
-			log.Warn("Unexpected error setting metric %#v: %v", metric, err)
+			log.Warn("Unexpected error setting metric %v: %v", metric, err)
 		}
 	}
 }

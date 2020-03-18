@@ -68,32 +68,7 @@ type Network struct {
 	TxPackets int64
 }
 
-// MetricsFetcher fetches raw basic metrics from cgroups and the proc filesystem
-type MetricsFetcher struct {
-	cgroups *cgroupsFetcher
-	network *networkFetcher
-}
-
 // Fetcher is the minimal abstraction of any raw metrics fetcher implementation
 type Fetcher interface {
 	Fetch(types.ContainerJSON) (Metrics, error)
-}
-
-// NewFetcher returns a raw MetricsFetcher
-func NewFetcher(hostRoot, cgroups, mountsFilePath string) *MetricsFetcher {
-	return &MetricsFetcher{
-		cgroups: newCGroupsFetcher(hostRoot, cgroups, mountsFilePath),
-		network: newNetworkFetcher(hostRoot),
-	}
-}
-
-// Fetch returns a raw Metrics snapshot of a container, given its ID and its PID
-func (mf *MetricsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
-	metrics, err := mf.cgroups.fetch(c)
-	if err != nil {
-		return metrics, err
-	}
-	metrics.ContainerID = c.ID
-	metrics.Network, err = mf.network.Fetch(c.State.Pid)
-	return metrics, err
 }
