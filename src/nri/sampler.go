@@ -15,10 +15,12 @@ import (
 )
 
 const (
-	labelPrefix         = "label."
-	dockerClientVersion = "1.24" // todo: make configurable
-	containerSampleName = "ContainerSample"
-	attrContainerID     = "containerId"
+	labelPrefix            = "label."
+	dockerClientVersion    = "1.24" // todo: make configurable
+	containerSampleName    = "ContainerSample"
+	attrContainerID        = "containerId"
+	attrShortContainerID   = "shortContainerId"
+	shortContainerIDLength = 12
 )
 
 // ContainerSampler invokes the metrics sampling and processing for all the existing containers, and populates the
@@ -86,8 +88,12 @@ func (cs *ContainerSampler) SampleAll(i *integration.Integration) error {
 		if err != nil {
 			return err
 		}
+
+		shortContainerID := container.ID[:shortContainerIDLength]
 		ms := entity.NewMetricSet(containerSampleName,
-			metric.Attr(attrContainerID, container.ID))
+			metric.Attr(attrContainerID, container.ID),
+			metric.Attr(attrShortContainerID, shortContainerID),
+		)
 
 		// populating metrics that are common to running and stopped containers
 		populate(ms, attributes(container))
