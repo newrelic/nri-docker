@@ -69,6 +69,12 @@
 			"revisionTime": "2019-09-05T15:29:32Z"
 		},
 		{
+			"checksumSHA1": "igbQDk/nljfXjggzuXZLnmGtjOA=",
+			"path": "github.com/docker/docker/api",
+			"revision": "90af4ba5e7fa5a75387a06f8987c30217f05d618",
+			"revisionTime": "2019-08-11T01:36:03Z"
+		},
+		{
 			"checksumSHA1": "WiUGU96VkSDQoH1/Cf7i7Kp6iVo=",
 			"path": "github.com/docker/docker/api/types",
 			"revision": "89658bed64c2a8fe05a978e5b87dbec409d57a0f",
@@ -398,10 +404,22 @@
 			"revisionTime": "2019-08-07T10:34:36Z"
 		},
 		{
+			"checksumSHA1": "tLHFmMOC2eMcXYaPXfifUVj3wX4=",
+			"path": "github.com/stretchr/objx",
+			"revision": "35313a95ee26395aa17d366c71a2ccf788fa69b6",
+			"revisionTime": "2019-04-15T11:18:23Z"
+		},
+		{
 			"checksumSHA1": "QELcZ0cB4PrpjIoeESHQCGDpMsk=",
 			"path": "github.com/stretchr/testify/assert",
 			"revision": "85f2b59c4459e5bf57488796be8c3667cb8246d6",
 			"revisionTime": "2018-07-16T14:42:29Z"
+		},
+		{
+			"checksumSHA1": "bg70xAHEu6HRf2iFu8h5iJBjUfg=",
+			"path": "github.com/stretchr/testify/mock",
+			"revision": "221dbe5ed46703ee255b1da0dec05086f5035f62",
+			"revisionTime": "2019-05-17T17:51:56Z"
 		},
 		{
 			"checksumSHA1": "ABkrw83kq3/d6oSRX+BFq57/BiY=",
