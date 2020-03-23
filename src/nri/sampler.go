@@ -139,9 +139,25 @@ func attributes(container types.Container) []entry {
 	}
 }
 
+// labelRename contains a list of labels that should be
+// renamed. It does not rename the label in place, but creates
+// a copy to ensure we are not deleting any data.
+var labelRename = map[string]string{
+	"com.amazonaws.ecs.container-name": "ecsContainerName",
+}
+
 func labels(container types.Container) []entry {
 	metrics := make([]entry, 0, len(container.Labels))
 	for key, val := range container.Labels {
+
+		if newName, ok := labelRename[key]; ok {
+			metrics = append(metrics, entry{
+				Name:  newName,
+				Value: val,
+				Type:  metric.ATTRIBUTE,
+			})
+		}
+
 		metrics = append(metrics, entry{
 			Name:  labelPrefix + key,
 			Value: val,

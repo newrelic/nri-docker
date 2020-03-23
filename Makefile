@@ -56,6 +56,9 @@ validate-only:
 
 validate: validate-deps validate-only
 
+run-docker-dev:
+	docker run --rm -it -v $(WORKDIR):/go/src/github.com/newrelic/nri-docker golang:1.10
+
 compile-deps:
 	@echo "=== $(INTEGRATION) === [ compile-deps ]: installing build dependencies..."
 	@$(GO) get -v -d -t ./...
