@@ -14,6 +14,7 @@ import (
 	"github.com/newrelic/nri-docker/src/biz"
 )
 
+// mocker is a Docker mock
 type mocker struct {
 	mock.Mock
 }
@@ -47,8 +48,33 @@ func (m *mockStorer) Save() error {
 	return m.Called().Error(0)
 }
 
-func TestLabelRename(t *testing.T) {
-
+func TestECSLabelRename(t *testing.T) {
+	var (
+		givenLabels = map[string]string{
+			"com.amazonaws.ecs.container-name":          "the-container-name",
+			"com.amazonaws.ecs.cluster":                 "the-cluster-name",
+			"com.amazonaws.ecs.task-arn":                "the-task-arn",
+			"com.amazonaws.ecs.task-definition-family":  "the-task-definition-family",
+			"com.amazonaws.ecs.task-definition-version": "the-task-definition-version",
+			"my-label-name":                             "my-label-value",
+		}
+		expectedLabels = map[string]string{
+			// the original labels
+			"label.com.amazonaws.ecs.container-name":          "the-container-name",
+			"label.com.amazonaws.ecs.cluster":                 "the-cluster-name",
+			"label.com.amazonaws.ecs.task-arn":                "the-task-arn",
+			"label.com.amazonaws.ecs.task-definition-family":  "the-task-definition-family",
+			"label.com.amazonaws.ecs.task-definition-version": "the-task-definition-version",
+			// the normalized ECS labels, not prefixed with "label."
+			"ecsContainerName":         "the-container-name",
+			"ecsClusterName":           "the-cluster-name",
+			"ecsTaskArn":               "the-task-arn",
+			"ecsTaskDefinitionFamily":  "the-task-definition-family",
+			"ecsTaskDefinitionVersion": "the-task-definition-version",
+			// the random label
+			"label.my-label-name": "my-label-value",
+		}
+	)
 	mocker := &mocker{}
 	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{
 		{
@@ -56,9 +82,7 @@ func TestLabelRename(t *testing.T) {
 			Names:   []string{"Container 1"},
 			Image:   "my_image",
 			ImageID: "my_image_id",
-			Labels: map[string]string{
-				"com.amazonaws.ecs.container-name": "my-container-name",
-			},
+			Labels:  givenLabels,
 		},
 	}, nil)
 
@@ -75,10 +99,14 @@ func TestLabelRename(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NoError(t, sampler.SampleAll(i))
 
-	_, ok := i.Entities[0].Metrics[0].Metrics["ecsContainerName"]
-	if !ok {
-		t.Fatalf("Expected ecsContainerName field to be present, but it's not found")
+	for expectedName, expectedValue := range expectedLabels {
+		value, ok := i.Entities[0].Metrics[0].Metrics[expectedName]
+		if !ok {
+			t.Errorf("Expected label '%s=%s' not found.", expectedName, expectedValue)
+		}
+
+		if value != expectedValue {
+			t.Errorf("Label %s has value of %v, expected %s", expectedName, value, expectedValue)
+		}
 	}
-	//b, _ := json.MarshalIndent(i.Entities, "", "  ")
-	//println(string(b))
 }
