@@ -77,7 +77,13 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 			return err
 		}
 
-		shortContainerID := container.ID[:shortContainerIDLength]
+		var shortContainerID string
+		if len(container.ID) > shortContainerIDLength {
+			shortContainerID = container.ID[:shortContainerIDLength]
+		} else {
+			shortContainerID = container.ID
+		}
+
 		ms := entity.NewMetricSet(containerSampleName,
 			metric.Attr(attrContainerID, container.ID),
 			metric.Attr(attrShortContainerID, shortContainerID),
@@ -143,7 +149,11 @@ func attributes(container types.Container) []entry {
 // renamed. It does not rename the label in place, but creates
 // a copy to ensure we are not deleting any data.
 var labelRename = map[string]string{
-	"com.amazonaws.ecs.container-name": "ecsContainerName",
+	"com.amazonaws.ecs.container-name":          "ecsContainerName",
+	"com.amazonaws.ecs.cluster":                 "ecsClusterName",
+	"com.amazonaws.ecs.task-arn":                "ecsTaskArn",
+	"com.amazonaws.ecs.task-definition-family":  "ecsTaskDefinitionFamily",
+	"com.amazonaws.ecs.task-definition-version": "ecsTaskDefinitionVersion",
 }
 
 func labels(container types.Container) []entry {
