@@ -3,7 +3,6 @@ package biz
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"runtime"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/infra-integrations-sdk/persist"
+
 	"github.com/newrelic/nri-docker/src/raw"
 )
 
@@ -94,8 +94,9 @@ func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 	if err != nil {
 		return metrics, err
 	}
+	// TODO: move logic to skip container without State to Docker specific code.
 	if json.State == nil {
-		return metrics, fmt.Errorf("invalid container %v JSON: missing State", json.ID)
+		log.Debug("invalid container %v JSON: missing State", json.ID)
 	}
 	rawMetrics, err := mc.fetcher.Fetch(json)
 	if err != nil {

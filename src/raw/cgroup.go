@@ -23,13 +23,15 @@ var localCgroupPaths = []string{
 	"/cgroup",
 }
 
-// cgroupsFetcher fetches the metrics that can be found in cgroups file system
-type cgroupsFetcher struct {
-	cgroupPath string
-	subsystems cgroups.Hierarchy
+// CgroupsFetcher fetches the metrics that can be found in cgroups file system
+type CgroupsFetcher struct {
+	cgroupPath     string
+	subsystems     cgroups.Hierarchy
+	networkFetcher *networkFetcher
 }
 
-func newCGroupsFetcher(hostRoot, cgroup, mountsFilePath string) *cgroupsFetcher {
+// NewCGroupsFetcher creates a new cgroups data fetcher.
+func NewCGroupsFetcher(hostRoot, cgroup, mountsFilePath string) *CgroupsFetcher {
 	if cgroup != "" {
 		// Prepend cgroup to have higher priority than the predefined paths.
 		localCgroupPaths = append([]string{cgroup}, localCgroupPaths...)
@@ -43,9 +45,10 @@ func newCGroupsFetcher(hostRoot, cgroup, mountsFilePath string) *cgroupsFetcher 
 
 	cgroupPath = containerToHost(hostRoot, cgroupPath)
 
-	return &cgroupsFetcher{
-		cgroupPath: cgroupPath,
-		subsystems: subsystems(cgroupPath),
+	return &CgroupsFetcher{
+		cgroupPath:     cgroupPath,
+		subsystems:     subsystems(cgroupPath),
+		networkFetcher: newNetworkFetcher(hostRoot),
 	}
 }
 
@@ -111,7 +114,7 @@ func staticPath(c types.ContainerJSON) cgroups.Path {
 }
 
 // returns a Metrics without the network: TODO: populate also network from libcgroups
-func (cg *cgroupsFetcher) fetch(c types.ContainerJSON) (Metrics, error) {
+func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	stats := Metrics{}
 
 	control, err := cgroups.Load(cg.subsystems, staticPath(c))
@@ -139,6 +142,17 @@ func (cg *cgroupsFetcher) fetch(c types.ContainerJSON) (Metrics, error) {
 
 	if stats.Memory, err = memory(metrics); err != nil {
 		log.Error("couldn't read memory stats: %v", err)
+	}
+
+	stats.ContainerID = c.ID
+	stats.Network, err = cg.networkFetcher.Fetch(c.State.Pid)
+	if err != nil {
+		log.Error(
+			"couldn't fetch network stats for container %s from cgroups: %v",
+			c.ID,
+			err,
+		)
+		return stats, err
 	}
 
 	return stats, nil
@@ -210,7 +224,7 @@ func blkioEntries(blkioPath string, ioStat string) ([]BlkioEntry, error) {
 
 // TODO: use cgroups library (as for readPidStats)
 // cgroups library currently don't seem to work for blkio. We can fix it and submit a patch
-func (cg *cgroupsFetcher) blkio(containerID string) (Blkio, error) {
+func (cg *CgroupsFetcher) blkio(containerID string) (Blkio, error) {
 	cpath := path.Join(cg.cgroupPath, "blkio", "docker", containerID)
 
 	stats := Blkio{}
