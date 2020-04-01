@@ -85,6 +85,7 @@ func TestECSLabelRename(t *testing.T) {
 			Labels:  givenLabels,
 		},
 	}, nil)
+	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{}, nil)
 
 	mStore := &mockStorer{}
 	mStore.On("Save").Return(nil)
