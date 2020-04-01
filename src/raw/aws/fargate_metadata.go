@@ -153,7 +153,7 @@ func MetadataV3BaseURL() (*url.URL, error) {
 	}
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse Metadata V3 API URL (%s): %w", baseURL, err)
+		return nil, fmt.Errorf("could not parse Metadata V3 API URL (%s): %s", baseURL, err)
 	}
 	return parsedURL, nil
 }

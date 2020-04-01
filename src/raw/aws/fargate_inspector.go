@@ -63,11 +63,11 @@ func (i *FargateInspector) taskResponseFromCacheOrNew(response *TaskResponse) er
 
 	var err error
 	_, err = i.containerStore.Get(fargateTaskMetadataCacheKey, response)
-	if errors.Is(err, persist.ErrNotFound) {
+	if err == persist.ErrNotFound {
 		err = i.fetchTaskResponse(response)
 	}
 	if err != nil {
-		return fmt.Errorf("cannot fetch Fargate task metadata response: %w", err)
+		return fmt.Errorf("cannot fetch Fargate task metadata response: %s", err)
 	}
 	i.containerStore.Set(fargateTaskMetadataCacheKey, response)
 	return nil

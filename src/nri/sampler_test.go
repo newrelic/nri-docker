@@ -97,7 +97,7 @@ func TestECSLabelRename(t *testing.T) {
 
 	i, err := integration.New("test", "test-version")
 	assert.NoError(t, err)
-	assert.NoError(t, sampler.SampleAll(i))
+	assert.NoError(t, sampler.SampleAll(context.Background(), i))
 
 	for expectedName, expectedValue := range expectedLabels {
 		value, ok := i.Entities[0].Metrics[0].Metrics[expectedName]
