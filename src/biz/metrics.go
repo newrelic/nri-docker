@@ -3,6 +3,7 @@ package biz
 
 import (
 	"context"
+	"errors"
 	"math"
 	"runtime"
 	"time"
@@ -95,9 +96,14 @@ func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 		return metrics, err
 	}
 	// TODO: move logic to skip container without State to Docker specific code.
-	if json.State == nil {
-		log.Debug("invalid container %v JSON: missing State", json.ID)
+	if json.ContainerJSONBase == nil {
+		return metrics, errors.New("empty container inspect result")
 	}
+
+	if json.State == nil {
+		log.Debug("invalid container %s JSON: missing State", containerID)
+	}
+
 	rawMetrics, err := mc.fetcher.Fetch(json)
 	if err != nil {
 		return metrics, err

@@ -2,7 +2,6 @@ package aws
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -69,11 +68,11 @@ func (e *FargateFetcher) fargateStatsFromCacheOrNew(response *FargateStats) erro
 
 	var err error
 	_, err = e.containerStore.Get(fargateTaskStatsCacheKey, response)
-	if errors.Is(err, persist.ErrNotFound) {
+	if err == persist.ErrNotFound {
 		err = e.getFargateContainerMetrics(response)
 	}
 	if err != nil {
-		return fmt.Errorf("cannot fetch task stats response: %w", err)
+		return fmt.Errorf("cannot fetch task stats response: %s", err)
 	}
 	e.containerStore.Set(fargateTaskMetadataCacheKey, *response)
 	return nil
