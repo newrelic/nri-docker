@@ -7,6 +7,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Next (TBD)
 ### Added
+* Add enable condition in config for when the FARGATE env var is `"true"`.
 
 ### Changed
 
