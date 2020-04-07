@@ -4,3 +4,9 @@ integrations:
       feature: docker_enabled
       file_exists: /var/run/docker.sock
     interval: 15s
+  - name: nri-docker
+    when:
+      feature: docker_enabled
+      env_exists:
+        FARGATE: "true"
+    interval: 15s
