@@ -6,7 +6,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ## Next (TBD)
+### Added
 
+### Changed
+
+## 1.2.0 (2020-04-01)
 ### Added
 * **BETA** support for Fargate container metrics. For more information or access request please contact mfuentes@newrelic.com.
 * Metric `memoryUsageLimitPercent` that reports the usage of the container memory as
