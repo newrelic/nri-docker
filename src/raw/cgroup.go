@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -17,10 +18,27 @@ import (
 )
 
 const cgroupDir = "/cgroup"
+const cgroupDevice = "cgroup"
 
 var localCgroupPaths = []string{
 	"/sys/fs/cgroup",
 	"/cgroup",
+}
+
+type CgroupMountPoints map[cgroups.Name]string
+
+func extractCgroupMountPoints(mounts []*mount) CgroupMountPoints {
+	cgroupMountPoints := make(CgroupMountPoints)
+
+	for _, mount := range mounts {
+		if mount.Device == cgroupDevice {
+			for _, subsystem := range strings.Split(filepath.Base(mount.MountPoint), ",") {
+				// @todo validate cgroup
+				cgroupMountPoints[cgroups.Name(subsystem)] = filepath.Dir(mount.MountPoint)
+			}
+		}
+	}
+	return cgroupMountPoints
 }
 
 // CgroupsFetcher fetches the metrics that can be found in cgroups file system
@@ -31,13 +49,19 @@ type CgroupsFetcher struct {
 }
 
 // NewCGroupsFetcher creates a new cgroups data fetcher.
-func NewCGroupsFetcher(hostRoot, cgroup, mountsFilePath string) *CgroupsFetcher {
-	if cgroup != "" {
-		// Prepend cgroup to have higher priority than the predefined paths.
-		localCgroupPaths = append([]string{cgroup}, localCgroupPaths...)
+func NewCGroupsFetcher(hostRoot, cgroup, mountsFilePath string) (*CgroupsFetcher, error) {
+
+	mountsFile, err := os.Open(mountsFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open mounts file while detecting cgroup path, error: %v", err)
+	}
+	defer mountsFile.Close()
+
+	mounts, err := getMounts(mountsFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse mounts file while detecting cgroup path, error: %v", err)
 	}
 
-	cgroupPath, err := detectCgroupPath(localCgroupPaths, mountsFilePath)
 	if err != nil {
 		log.Error("couldn't detect cgroup path, error: %v, "+
 			"use cgroup_path config option to set the correct cgroup path", err)
@@ -50,56 +74,6 @@ func NewCGroupsFetcher(hostRoot, cgroup, mountsFilePath string) *CgroupsFetcher 
 		subsystems:     subsystems(cgroupPath),
 		networkFetcher: newNetworkFetcher(hostRoot),
 	}
-}
-
-// detectCgroupPath will try to detect cgroup path following this priority precedence:
-// 1. cgroup provided as config parameter to integration
-// 2. predefined list of usual cgroup paths
-// 3. parsing the mounts file.
-func detectCgroupPath(cgroupPaths []string, mountsFilePath string) (string, error) {
-	path, found := getFirstExistingNonEmptyPath(cgroupPaths)
-	if found {
-		return path, nil
-	}
-
-	mountsFile, err := os.Open(mountsFilePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to open mounts file while detecting cgroup path, error: %v", err)
-	}
-	defer mountsFile.Close()
-
-	mounts, err := getMounts(mountsFile)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse mounts file while detecting cgroup path, error: %v", err)
-	}
-
-	path, found = detectCgroupPathFromMounts(mounts)
-	if !found {
-		return "", fmt.Errorf("failed to detect cgroup from mounts file: %s", mountsFile.Name())
-	}
-
-	return path, nil
-}
-
-// detectCgroupPathFromMounts will try to detect from mounts the cgroup path.
-func detectCgroupPathFromMounts(mounts []*mount) (result string, found bool) {
-	for _, mount := range mounts {
-
-		if mount.Device != cgroupDir[1:] {
-			continue
-		}
-
-		i := strings.Index(mount.MountPoint, cgroupDir)
-		if i < 0 {
-			continue
-		}
-
-		found = true
-		result = path.Join(mount.MountPoint[:i], cgroupDir)
-		break
-	}
-
-	return
 }
 
 // gets the relative path to a cgroup container based on the container metadata
@@ -325,16 +299,29 @@ func memory(metric *cgroups.Metrics) (Memory, error) {
 
 // returns the subsystems where cgroups library has to look for, attaching the
 // hostContainerPath prefix to the folder if the integration is running inside a container
-func subsystems(rootPath string) cgroups.Hierarchy {
+func subsystems(mountPoints CgroupMountPoints) cgroups.Hierarchy {
 	return func() ([]cgroups.Subsystem, error) {
-		// TODO: these are copied from cgroups.V1. Cleanup for the subsystems we really need
-		return []cgroups.Subsystem{
-			cgroups.NewPids(rootPath),
-			cgroups.NewCputset(rootPath),
-			cgroups.NewCpu(rootPath),
-			cgroups.NewCpuacct(rootPath),
-			cgroups.NewMemory(rootPath),
-			cgroups.NewBlkio(rootPath),
-		}, nil
+		subsystems := []cgroups.Subsystem{}
+
+		if cpusetMountPoint, ok := mountPoints[cgroups.Cpuset]; ok {
+			subsystems = append(subsystems, cgroups.NewCputset(cpusetMountPoint))
+		}
+		if cpuMountPoint, ok := mountPoints[cgroups.Cpu]; ok {
+			subsystems = append(subsystems, cgroups.NewCpu(cpuMountPoint))
+		}
+		if cpuacctMountPoint, ok := mountPoints[cgroups.Cpuacct]; ok {
+			subsystems = append(subsystems, cgroups.NewCpuacct(cpuacctMountPoint))
+		}
+		if memoryMountPoint, ok := mountPoints[cgroups.Memory]; ok {
+			subsystems = append(subsystems, cgroups.NewMemory(memoryMountPoint))
+		}
+		if blkioMountPoint, ok := mountPoints[cgroups.Blkio]; ok {
+			subsystems = append(subsystems, cgroups.NewBlkio(blkioMountPoint))
+		}
+		if pidsMountPoint, ok := mountPoints[cgroups.Pids]; ok {
+			subsystems = append(subsystems, cgroups.NewPids(pidsMountPoint))
+		}
+
+		return subsystems, nil
 	}
 }

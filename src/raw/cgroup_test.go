@@ -30,3 +30,4 @@ func TestDetectCgroupPath(t *testing.T) {
 	assert.True(t, found)
 	assert.Equal(t, "/sys/fs/cgroup", result)
 }
+
