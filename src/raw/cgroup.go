@@ -26,23 +26,6 @@ var localCgroupPaths = []string{
 	"/cgroup",
 }
 
-// config loader
-// data loading / metrics fetching
-type CgroupsInfoFetcher interface {
-	Get(containerId string) (*CgroupInfo, error)
-}
-
-type CgroupsPathFetcher struct {
-}
-
-type CgroupInfo struct {
-	mountPoints map[string]string
-	paths       map[string]string
-	//GetPath(name cgroups.Name) (string, error)
-	//GetFullPath(name cgroups.Name) (string, error)
-	//GetMountPoint(name cgroups.Name) (string, error)
-}
-
 
 
 //type CgroupMountPoints map[cgroups.Name]string
@@ -346,7 +329,58 @@ func subsystems() cgroups.Hierarchy {
 	}
 }
 
-func parseCgroupInfo(mountFileInfo, cgroupFileInfo io.Reader) (*CgroupInfo, error) {
+
+// config loader
+// data loading / metrics fetching
+type CgroupsInfoFetcher interface {
+	Get(containerId string) (*CgroupInfo, error)
+}
+
+type CgroupsPathFetcher struct {
+}
+
+type CgroupInfo struct {
+	mountPoints map[string]string
+	paths       map[string]string
+	//GetPath(name cgroups.Name) (string, error)
+	//GetFullPath(name cgroups.Name) (string, error)
+	//GetMountPoint(name cgroups.Name) (string, error)
+}
+
+func (cgi *CgroupInfo) GetPath(name cgroups.Name) (string, error) {
+
+	if result, ok := cgi.paths[string(name)]; ok {
+		return result, nil
+	}
+
+	return "", fmt.Errorf("cgroup path not found for subsystem %s", name)
+}
+
+func (cgi *CgroupInfo) GetMountPoint(name cgroups.Name) (string, error) {
+
+	if result, ok := cgi.mountPoints[string(name)]; ok {
+		return result, nil
+	}
+
+	return "", fmt.Errorf("cgroup mount point not found for subsystem %s", name)
+}
+
+func (cgi *CgroupInfo) GetFullPath(name cgroups.Name) (string, error) {
+
+	cgroupMountPoint, err := cgi.GetMountPoint(name)
+	if  err != nil {
+		return "", err
+	}
+
+	cgroupPath, err := cgi.GetPath(name)
+	if  err != nil {
+		return "", err
+	}
+
+	return filepath.Join(cgroupMountPoint, string(name), cgroupPath), nil
+}
+
+func parseCgroupMountPoints(mountFileInfo io.Reader) (map[string]string, error) {
 	mountPoints := make(map[string]string)
 
 	sc := bufio.NewScanner(mountFileInfo)
@@ -366,8 +400,5 @@ func parseCgroupInfo(mountFileInfo, cgroupFileInfo io.Reader) (*CgroupInfo, erro
 		return nil, err
 	}
 
-	return &CgroupInfo{
-		mountPoints: mountPoints,
-		paths:       nil,
-	}, nil
+	return mountPoints, nil
 }
