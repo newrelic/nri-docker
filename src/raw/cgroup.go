@@ -25,21 +25,44 @@ var localCgroupPaths = []string{
 	"/cgroup",
 }
 
-type CgroupMountPoints map[cgroups.Name]string
 
-func extractCgroupMountPoints(mounts []*mount) CgroupMountPoints {
-	cgroupMountPoints := make(CgroupMountPoints)
 
-	for _, mount := range mounts {
-		if mount.Device == cgroupDevice {
-			for _, subsystem := range strings.Split(filepath.Base(mount.MountPoint), ",") {
-				// @todo validate cgroup
-				cgroupMountPoints[cgroups.Name(subsystem)] = filepath.Dir(mount.MountPoint)
-			}
-		}
-	}
-	return cgroupMountPoints
+// config loader
+// data loading / metrics fetching
+type CgroupsInfoFetcher interface {
+	Get(containerId string) (*CgroupInfo, error)
 }
+
+type CgroupsPathFetcher struct {
+	mountPoints map[cgroups.Name]string
+	paths map[cgroups.Name]string
+}
+
+type CgroupInfo struct {
+	mountPoints map[cgroups.Name]string
+	paths map[cgroups.Name]string
+	//GetPath(name cgroups.Name) (string, error)
+	//GetFullPath(name cgroups.Name) (string, error)
+	//GetMountPoint(name cgroups.Name) (string, error)
+}
+
+
+
+//type CgroupMountPoints map[cgroups.Name]string
+
+//func extractCgroupMountPoints(mounts []*mount) CgroupMountPoints {
+//	cgroupMountPoints := make(CgroupMountPoints)
+//
+//	for _, mount := range mounts {
+//		if mount.Device == cgroupDevice {
+//			for _, subsystem := range strings.Split(filepath.Base(mount.MountPoint), ",") {
+//				// @todo validate cgroup
+//				cgroupMountPoints[cgroups.Name(subsystem)] = filepath.Dir(mount.MountPoint)
+//			}
+//		}
+//	}
+//	return cgroupMountPoints
+//}
 
 // CgroupsFetcher fetches the metrics that can be found in cgroups file system
 type CgroupsFetcher struct {
@@ -67,7 +90,7 @@ func NewCGroupsFetcher(hostRoot, cgroup, mountsFilePath string) (*CgroupsFetcher
 			"use cgroup_path config option to set the correct cgroup path", err)
 	}
 
-	cgroupPath = containerToHost(hostRoot, cgroupPath)
+	cgroupPath := containerToHost(hostRoot, cgroupPath)
 
 	return &CgroupsFetcher{
 		cgroupPath:     cgroupPath,
