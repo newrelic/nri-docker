@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -25,8 +26,6 @@ var localCgroupPaths = []string{
 	"/cgroup",
 }
 
-
-
 // config loader
 // data loading / metrics fetching
 type CgroupsInfoFetcher interface {
@@ -34,13 +33,11 @@ type CgroupsInfoFetcher interface {
 }
 
 type CgroupsPathFetcher struct {
-	mountPoints map[cgroups.Name]string
-	paths map[cgroups.Name]string
 }
 
 type CgroupInfo struct {
-	mountPoints map[cgroups.Name]string
-	paths map[cgroups.Name]string
+	mountPoints map[string]string
+	paths       map[string]string
 	//GetPath(name cgroups.Name) (string, error)
 	//GetFullPath(name cgroups.Name) (string, error)
 	//GetMountPoint(name cgroups.Name) (string, error)
@@ -80,7 +77,7 @@ func NewCGroupsFetcher(hostRoot, cgroup, mountsFilePath string) (*CgroupsFetcher
 	}
 	defer mountsFile.Close()
 
-	mounts, err := getMounts(mountsFile)
+	_, err = getMounts(mountsFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse mounts file while detecting cgroup path, error: %v", err)
 	}
@@ -90,13 +87,13 @@ func NewCGroupsFetcher(hostRoot, cgroup, mountsFilePath string) (*CgroupsFetcher
 			"use cgroup_path config option to set the correct cgroup path", err)
 	}
 
-	cgroupPath := containerToHost(hostRoot, cgroupPath)
+	cgroupPath := containerToHost(hostRoot, "/sys/fs/cgroup")
 
 	return &CgroupsFetcher{
 		cgroupPath:     cgroupPath,
-		subsystems:     subsystems(cgroupPath),
+		subsystems:     subsystems(),
 		networkFetcher: newNetworkFetcher(hostRoot),
-	}
+	}, nil
 }
 
 // gets the relative path to a cgroup container based on the container metadata
@@ -322,29 +319,55 @@ func memory(metric *cgroups.Metrics) (Memory, error) {
 
 // returns the subsystems where cgroups library has to look for, attaching the
 // hostContainerPath prefix to the folder if the integration is running inside a container
-func subsystems(mountPoints CgroupMountPoints) cgroups.Hierarchy {
+func subsystems() cgroups.Hierarchy {
 	return func() ([]cgroups.Subsystem, error) {
 		subsystems := []cgroups.Subsystem{}
 
-		if cpusetMountPoint, ok := mountPoints[cgroups.Cpuset]; ok {
-			subsystems = append(subsystems, cgroups.NewCputset(cpusetMountPoint))
-		}
-		if cpuMountPoint, ok := mountPoints[cgroups.Cpu]; ok {
-			subsystems = append(subsystems, cgroups.NewCpu(cpuMountPoint))
-		}
-		if cpuacctMountPoint, ok := mountPoints[cgroups.Cpuacct]; ok {
-			subsystems = append(subsystems, cgroups.NewCpuacct(cpuacctMountPoint))
-		}
-		if memoryMountPoint, ok := mountPoints[cgroups.Memory]; ok {
-			subsystems = append(subsystems, cgroups.NewMemory(memoryMountPoint))
-		}
-		if blkioMountPoint, ok := mountPoints[cgroups.Blkio]; ok {
-			subsystems = append(subsystems, cgroups.NewBlkio(blkioMountPoint))
-		}
-		if pidsMountPoint, ok := mountPoints[cgroups.Pids]; ok {
-			subsystems = append(subsystems, cgroups.NewPids(pidsMountPoint))
-		}
+		//if cpusetMountPoint, ok := mountPoints[cgroups.Cpuset]; ok {
+		//	subsystems = append(subsystems, cgroups.NewCputset(cpusetMountPoint))
+		//}
+		//if cpuMountPoint, ok := mountPoints[cgroups.Cpu]; ok {
+		//	subsystems = append(subsystems, cgroups.NewCpu(cpuMountPoint))
+		//}
+		//if cpuacctMountPoint, ok := mountPoints[cgroups.Cpuacct]; ok {
+		//	subsystems = append(subsystems, cgroups.NewCpuacct(cpuacctMountPoint))
+		//}
+		//if memoryMountPoint, ok := mountPoints[cgroups.Memory]; ok {
+		//	subsystems = append(subsystems, cgroups.NewMemory(memoryMountPoint))
+		//}
+		//if blkioMountPoint, ok := mountPoints[cgroups.Blkio]; ok {
+		//	subsystems = append(subsystems, cgroups.NewBlkio(blkioMountPoint))
+		//}
+		//if pidsMountPoint, ok := mountPoints[cgroups.Pids]; ok {
+		//	subsystems = append(subsystems, cgroups.NewPids(pidsMountPoint))
+		//}
 
 		return subsystems, nil
 	}
+}
+
+func parseCgroupInfo(mountFileInfo, cgroupFileInfo io.Reader) (*CgroupInfo, error) {
+	mountPoints := make(map[string]string)
+
+	sc := bufio.NewScanner(mountFileInfo)
+	for sc.Scan() {
+		line := sc.Text()
+		fields := strings.Fields(line)
+
+		if len(fields) != 6 || fields[0] != "cgroup" {
+			continue
+		}
+
+		for _, subsystem := range strings.Split(filepath.Base(fields[1]), ",") {
+			mountPoints[subsystem] = filepath.Dir(fields[1])
+		}
+	}
+	if err := sc.Err(); err != nil {
+		return nil, err
+	}
+
+	return &CgroupInfo{
+		mountPoints: mountPoints,
+		paths:       nil,
+	}, nil
 }
