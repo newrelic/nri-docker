@@ -26,8 +26,6 @@ var localCgroupPaths = []string{
 	"/cgroup",
 }
 
-
-
 //type CgroupMountPoints map[cgroups.Name]string
 
 //func extractCgroupMountPoints(mounts []*mount) CgroupMountPoints {
@@ -329,7 +327,6 @@ func subsystems() cgroups.Hierarchy {
 	}
 }
 
-
 // config loader
 // data loading / metrics fetching
 type CgroupsInfoFetcher interface {
@@ -368,12 +365,12 @@ func (cgi *CgroupInfo) GetMountPoint(name cgroups.Name) (string, error) {
 func (cgi *CgroupInfo) GetFullPath(name cgroups.Name) (string, error) {
 
 	cgroupMountPoint, err := cgi.GetMountPoint(name)
-	if  err != nil {
+	if err != nil {
 		return "", err
 	}
 
 	cgroupPath, err := cgi.GetPath(name)
-	if  err != nil {
+	if err != nil {
 		return "", err
 	}
 
@@ -401,4 +398,28 @@ func parseCgroupMountPoints(mountFileInfo io.Reader) (map[string]string, error) 
 	}
 
 	return mountPoints, nil
+}
+
+func parseCgroupPaths(cgroupFile io.Reader) (map[string]string, error) {
+	cgroupPaths := make(map[string]string)
+
+	sc := bufio.NewScanner(cgroupFile)
+	for sc.Scan() {
+		line := sc.Text()
+		fields := strings.Split(line, ":")
+
+		if len(fields) != 3 {
+			return nil, fmt.Errorf("unexpected cgroup file format: \"%s\"", line)
+		}
+
+		for _, subsystem := range strings.Split(fields[1], ",") {
+			cgroupPaths[subsystem] = fields[2]
+		}
+	}
+
+	if err := sc.Err(); err != nil {
+		return nil, err
+	}
+
+	return cgroupPaths, nil
 }
