@@ -357,7 +357,7 @@ func subsystems() cgroups.Hierarchy {
 // @TODO close the file
 type CgroupInfoFetcher struct {
 	fileOpenFn func(string) (io.ReadCloser, error)
-	root string
+	root       string
 }
 
 func NewCgroupInfoFetcher() *CgroupInfoFetcher {
@@ -368,29 +368,52 @@ func NewCgroupInfoFetcher() *CgroupInfoFetcher {
 	}
 }
 
-func generateCgroupFilePaths(pid int, root string) (mountFileInfoFilePath string, cgroupFilePath string){
-	return "", "" // return path here
-}
+//func generateCgroupFilePaths(pid int, root string) (mountFileInfoFilePath string, cgroupFilePath string){
+//	return "", "" // return path here
+//}
 
-func (f *CgroupInfoFetcher) Parse(pid int) (*CgroupInfo, error){
+const (
+	mountsFilePath    = "/proc/mounts"
+	cgroupFilePathTpl = "/proc/%d/cgroup"
+)
+
+func (f *CgroupInfoFetcher) Parse(pid int) (*CgroupInfo, error) {
 
 	// handle default root path
 
-	mountFileInfo,parseCgroupPaths := generateCgroupFilePaths(pid, f.root)
-
-	cgroupMountPoints, err := parseCgroupMountPoints(mountFileInfo)
-	cgroupPaths, err := parseCgroupPaths(cgroupFile)
-
-	if err != nil{
-		// error
+	mountsFile, err := f.fileOpenFn(mountsFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file: %s, while detecting cgroup mountpoints error: %v",
+			mountsFilePath, err)
 	}
-	// check err
+	defer func() {
+		if closeErr := mountsFile.Close(); closeErr != nil {
+			log.Error("Error occurred while closing the file: %v", closeErr)
+		}
+	}()
 
-	//...
+	cgroupMountPoints, err := parseCgroupMountPoints(mountsFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse cgroup mountpoints error: %v", err)
+	}
+
+	cgroupFilePath := fmt.Sprintf(cgroupFilePathTpl, pid)
+	cgroupFile, err := f.fileOpenFn(cgroupFilePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open file: %s, while detecting cgroup paths error: %v",
+			mountsFilePath, err)
+	}
+	// TODO: handle err
+	defer cgroupFile.Close()
+	cgroupPaths, err := parseCgroupPaths(cgroupFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse cgroup paths error: %v", err)
+	}
+
 	return &CgroupInfo{
 		mountPoints: cgroupMountPoints,
-		paths: cgroupPaths,
-	}
+		paths:       cgroupPaths,
+	}, nil
 }
 
 type CgroupInfo struct {
