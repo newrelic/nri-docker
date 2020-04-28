@@ -11,31 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestDetectCgroupPath(t *testing.T) {
-	//mounts := []*mount{
-	//	{
-	//		Device:     "sysfs",
-	//		MountPoint: "/sys",
-	//		FSType:     "sysfs",
-	//		Options:    "rw,nosuid,nodev,noexec,relatime",
-	//	},
-	//	{
-	//		Device:     "cgroup",
-	//		MountPoint: "/sys/fs/cgroup/unified",
-	//		FSType:     "cgroup2",
-	//		Options:    "rw,nosuid,nodev,noexec,relatime",
-	//	},
-	//}
-	//
-	//result, found := detectCgroupPathFromMounts(mounts[:1])
-	//assert.False(t, found)
-	//assert.Empty(t, result)
-	//
-	//result, found = detectCgroupPathFromMounts(mounts[1:])
-	//assert.True(t, found)
-	//assert.Equal(t, "/sys/fs/cgroup", result)
-}
-
 // parse one file into cgroup info obj
 
 func TestParseCgroupMountPoints(t *testing.T) {
@@ -48,39 +23,15 @@ cgroup /sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,relatime,cpu,cpu
 	mountFileInfo := strings.NewReader(mountInfoFileContains)
 
 	expected := map[string]string{
-		"cpu":     "/sys/fs/cgroup",
-		"systemd": "/sys/fs/cgroup",
-		"cpuacct": "/sys/fs/cgroup",
+		"cpu":     "/custom/host/sys/fs/cgroup",
+		"systemd": "/custom/host/sys/fs/cgroup",
+		"cpuacct": "/custom/host/sys/fs/cgroup",
 	}
 
-	actual, err := parseCgroupMountPoints(mountFileInfo)
+	actual, err := parseCgroupMountPoints(mountFileInfo, "/custom/host")
 	assert.NoError(t, err)
 
 	assert.Equal(t, expected, actual)
-
-	//mountPointCPU, err := cgroupInfo.getMountPoint(cgroups.Cpu)
-	//assert.NoError(t, err)
-	//assert.Equal(t, "/sys/fs/cgroup", mountPointCPU)
-	//
-	//mountPointSystemD, err := cgroupInfo.getMountPoint(cgroups.SystemdDbus)
-	//assert.NoError(t, err)
-	//assert.Equal(t, "/sys/fs/cgroup", mountPointSystemD)
-	//
-	//pathCPU, err := cgroupInfo.getPath(cgroups.Cpu)
-	//assert.NoError(t, err)
-	//assert.Equal(t, "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0", pathCPU)
-	//
-	//pathSystemD, err := cgroupInfo.getPath(cgroups.SystemdDbus)
-	//assert.NoError(t, err)
-	//assert.Equal(t, "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0", pathSystemD)
-	//
-	//fullPathCPU, err := cgroupInfo.getFullPath(cgroups.Cpu)
-	//assert.NoError(t, err)
-	//assert.Equal(t, "/sys/fs/cgroup/cpu/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0", fullPathCPU)
-	//
-	//fullPathSystemD, err := cgroupInfo.getFullPath(cgroups.SystemdDbus)
-	//assert.NoError(t, err)
-	//assert.Equal(t, "/sys/fs/cgroup/systemd/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0", fullPathSystemD)
 }
 
 func TestParseCgroupPaths(t *testing.T) {
