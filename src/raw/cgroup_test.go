@@ -23,12 +23,12 @@ cgroup /sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,relatime,cpu,cpu
 	mountFileInfo := strings.NewReader(mountInfoFileContains)
 
 	expected := map[string]string{
-		"cpu":     "/custom/host/sys/fs/cgroup",
-		"systemd": "/custom/host/sys/fs/cgroup",
-		"cpuacct": "/custom/host/sys/fs/cgroup",
+		"cpu":     "/sys/fs/cgroup",
+		"systemd": "/sys/fs/cgroup",
+		"cpuacct": "/sys/fs/cgroup",
 	}
 
-	actual, err := parseCgroupMountPoints(mountFileInfo, "/custom/host")
+	actual, err := parseCgroupMountPoints(mountFileInfo)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expected, actual)
@@ -58,6 +58,7 @@ func TestParseCgroupPaths(t *testing.T) {
 func TestCgroupInfoGetFullPath(t *testing.T) {
 
 	cgroupInfo := &CgroupInfo{
+		hostRoot: "/custom/host",
 		mountPoints: map[string]string{
 			"cpu":     "/sys/fs/cgroup",
 			"systemd": "/sys/fs/cgroup",
@@ -74,11 +75,26 @@ func TestCgroupInfoGetFullPath(t *testing.T) {
 
 	fullPathCPU, err := cgroupInfo.getFullPath(cgroups.Cpu)
 	assert.NoError(t, err)
-	assert.Equal(t, "/sys/fs/cgroup/cpu/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0", fullPathCPU)
+	assert.Equal(t, "/custom/host/sys/fs/cgroup/cpu/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0", fullPathCPU)
 
 	fullPathCpuacct, err := cgroupInfo.getFullPath(cgroups.Cpuacct)
 	assert.NoError(t, err)
-	assert.Equal(t, "/sys/fs/cgroup/cpuacct/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0", fullPathCpuacct)
+	assert.Equal(t, "/custom/host/sys/fs/cgroup/cpuacct/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0", fullPathCpuacct)
+}
+
+func TestCgroupInfoGetMountPoint(t *testing.T) {
+	cgroupInfo := &CgroupInfo{
+		hostRoot: "/custom/host",
+		mountPoints: map[string]string{
+			"cpu":     "/sys/fs/cgroup",
+			"systemd": "/sys/fs/cgroup",
+			"cpuacct": "/sys/fs/cgroup",
+		},
+	}
+
+	mountPoint, err := cgroupInfo.getMountPoint(cgroups.Cpu)
+	assert.NoError(t, err)
+	assert.Equal(t, "/custom/host/sys/fs/cgroup", mountPoint)
 }
 
 func TestCgroupInfoFetcherParse(t *testing.T) {
@@ -97,12 +113,13 @@ cgroup /sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,relatime,cpu,cpu
 
 	cgroupInfoFetcher := &CgroupInfoFetcher{
 		fileOpenFn: createFileOpenFnMock(filesMap),
-		root:       "/custom/host",
+		hostRoot:   "/custom/host",
 	}
 
 	cgroupInfo, err := cgroupInfoFetcher.Parse(123)
 
 	expected := &CgroupInfo{
+		hostRoot: "/custom/host",
 		mountPoints: map[string]string{
 			"cpu":     "/sys/fs/cgroup",
 			"systemd": "/sys/fs/cgroup",
@@ -168,7 +185,7 @@ configfs /sys/kernel/config configfs rw,relatime 0 0`,
 
 	cgroupInfoFetcher := &CgroupInfoFetcher{
 		fileOpenFn: createFileOpenFnMock(filesMap),
-		root:       "/custom/host",
+		hostRoot:   "/custom/host",
 	}
 
 	cgroupInfo, err := cgroupInfoFetcher.Parse(123)

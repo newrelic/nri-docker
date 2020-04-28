@@ -44,7 +44,7 @@ var localCgroupPaths = []string{
 
 // CgroupsFetcher fetches the metrics that can be found in cgroups file system
 type CgroupsFetcher struct {
-	networkFetcher *networkFetcher
+	networkFetcher    *networkFetcher
 	cgroupInfoFetcher *CgroupInfoFetcher
 }
 
@@ -287,26 +287,9 @@ func memory(metric *cgroups.Metrics) (Memory, error) {
 	return mem, nil
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 type CgroupInfoFetcher struct {
 	fileOpenFn func(string) (io.ReadCloser, error)
-	root       string
+	hostRoot   string
 }
 
 func newCgroupInfoFetcher(root string) *CgroupInfoFetcher {
@@ -314,18 +297,18 @@ func newCgroupInfoFetcher(root string) *CgroupInfoFetcher {
 		fileOpenFn: func(filePath string) (io.ReadCloser, error) {
 			return os.Open(filePath)
 		},
-		root: root,
+		hostRoot: root,
 	}
 }
 
 const (
-	mountsFilePathTpl    = "%s/proc/mounts"
+	mountsFilePathTpl = "%s/proc/mounts"
 	cgroupFilePathTpl = "%s/proc/%d/cgroup"
 )
 
 func (f *CgroupInfoFetcher) Parse(pid int) (*CgroupInfo, error) {
 
-	mountsFilePath := fmt.Sprintf(mountsFilePathTpl,f.root)
+	mountsFilePath := fmt.Sprintf(mountsFilePathTpl, f.hostRoot)
 	mountsFile, err := f.fileOpenFn(mountsFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %s, while detecting cgroup mountpoints error: %v",
@@ -342,7 +325,7 @@ func (f *CgroupInfoFetcher) Parse(pid int) (*CgroupInfo, error) {
 		return nil, fmt.Errorf("failed to parse cgroup mountpoints error: %v", err)
 	}
 
-	cgroupFilePath := fmt.Sprintf(cgroupFilePathTpl,f.root, pid)
+	cgroupFilePath := fmt.Sprintf(cgroupFilePathTpl, f.hostRoot, pid)
 	cgroupFile, err := f.fileOpenFn(cgroupFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %s, while detecting cgroup paths error: %v",
@@ -359,16 +342,17 @@ func (f *CgroupInfoFetcher) Parse(pid int) (*CgroupInfo, error) {
 	}
 
 	return &CgroupInfo{
+		hostRoot:    f.hostRoot,
 		mountPoints: cgroupMountPoints,
 		paths:       cgroupPaths,
 	}, nil
 }
 
 type CgroupInfo struct {
+	hostRoot    string
 	mountPoints map[string]string
 	paths       map[string]string
 }
-
 
 func (cgi *CgroupInfo) getPath(name cgroups.Name) (string, error) {
 
@@ -382,7 +366,7 @@ func (cgi *CgroupInfo) getPath(name cgroups.Name) (string, error) {
 func (cgi *CgroupInfo) getMountPoint(name cgroups.Name) (string, error) {
 
 	if result, ok := cgi.mountPoints[string(name)]; ok {
-		return result, nil
+		return  filepath.Join(cgi.hostRoot,result), nil
 	}
 
 	return "", fmt.Errorf("cgroup mount point not found for subsystem %s", name)
@@ -402,7 +386,6 @@ func (cgi *CgroupInfo) getFullPath(name cgroups.Name) (string, error) {
 
 	return filepath.Join(cgroupMountPoint, string(name), cgroupPath), nil
 }
-
 
 // returns the subsystems where cgroups library has to look for, attaching the
 // hostContainerPath prefix to the folder if the integration is running inside a container
@@ -481,4 +464,3 @@ func parseCgroupPaths(cgroupFile io.Reader) (map[string]string, error) {
 
 	return cgroupPaths, nil
 }
-
