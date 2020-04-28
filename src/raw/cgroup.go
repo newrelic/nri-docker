@@ -327,22 +327,77 @@ func subsystems() cgroups.Hierarchy {
 	}
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // config loader
 // data loading / metrics fetching
-type CgroupsInfoFetcher interface {
-	Get(containerId string) (*CgroupInfo, error)
+//type CgroupInfoFetcher interface {
+//	Get(pid int) (*CgroupInfo, error)
+//}
+
+// @TODO close the file
+type CgroupInfoFetcher struct {
+	fileOpenFn func(string) (io.ReadCloser, error)
+	root string
 }
 
-type CgroupsPathFetcher struct {
+func NewCgroupInfoFetcher() *CgroupInfoFetcher {
+	return &CgroupInfoFetcher{
+		fileOpenFn: func(filePath string) (io.ReadCloser, error) {
+			return os.Open(filePath)
+		},
+	}
+}
+
+func generateCgroupFilePaths(pid int, root string) (mountFileInfoFilePath string, cgroupFilePath string){
+	return "", "" // return path here
+}
+
+func (f *CgroupInfoFetcher) Parse(pid int) (*CgroupInfo, error){
+
+	// handle default root path
+
+	mountFileInfo,parseCgroupPaths := generateCgroupFilePaths(pid, f.root)
+
+	cgroupMountPoints, err := parseCgroupMountPoints(mountFileInfo)
+	cgroupPaths, err := parseCgroupPaths(cgroupFile)
+
+	if err != nil{
+		// error
+	}
+	// check err
+
+	//...
+	return &CgroupInfo{
+		mountPoints: cgroupMountPoints,
+		paths: cgroupPaths,
+	}
 }
 
 type CgroupInfo struct {
 	mountPoints map[string]string
 	paths       map[string]string
-	//GetPath(name cgroups.Name) (string, error)
-	//GetFullPath(name cgroups.Name) (string, error)
-	//GetMountPoint(name cgroups.Name) (string, error)
 }
+
 
 func (cgi *CgroupInfo) GetPath(name cgroups.Name) (string, error) {
 

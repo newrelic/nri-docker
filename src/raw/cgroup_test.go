@@ -1,6 +1,10 @@
 package raw
 
 import (
+	"fmt"
+	"github.com/containerd/cgroups"
+	"io"
+	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -44,7 +48,7 @@ cgroup /sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,relatime,cpu,cpu
 	mountFileInfo := strings.NewReader(mountInfoFileContains)
 
 	expected := map[string]string{
-		"cpu": "/sys/fs/cgroup",
+		"cpu":     "/sys/fs/cgroup",
 		"systemd": "/sys/fs/cgroup",
 		"cpuacct": "/sys/fs/cgroup",
 	}
@@ -80,17 +84,17 @@ cgroup /sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,relatime,cpu,cpu
 }
 
 func TestParseCgroupPaths(t *testing.T) {
-		cgroupFileContains := `4:pids:/system.slice/docker-ea06501e021b11a0d46a09de007b3d71bd6f37537cceabd2c3cbfa7f9b3da1ee.scope
+	cgroupFileContains := `4:pids:/system.slice/docker-ea06501e021b11a0d46a09de007b3d71bd6f37537cceabd2c3cbfa7f9b3da1ee.scope
 	3:cpuset:/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0
 	2:cpu,cpuacct:/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0
 	1:name=systemd:/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0`
-		cgroupPaths := strings.NewReader(cgroupFileContains)
+	cgroupPaths := strings.NewReader(cgroupFileContains)
 
 	expected := map[string]string{
-		"pids": "/system.slice/docker-ea06501e021b11a0d46a09de007b3d71bd6f37537cceabd2c3cbfa7f9b3da1ee.scope",
-		"cpuset": "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
-		"cpu": "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
-		"cpuacct": "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
+		"pids":         "/system.slice/docker-ea06501e021b11a0d46a09de007b3d71bd6f37537cceabd2c3cbfa7f9b3da1ee.scope",
+		"cpuset":       "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
+		"cpu":          "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
+		"cpuacct":      "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
 		"name=systemd": "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
 	}
 
@@ -98,5 +102,78 @@ func TestParseCgroupPaths(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, expected, actual)
+}
 
+func TestCgroupInfoGetFullPath(t *testing.T) {
+
+	cgroupInfo := &CgroupInfo{
+		mountPoints: map[string]string{
+			"cpu":     "/sys/fs/cgroup",
+			"systemd": "/sys/fs/cgroup",
+			"cpuacct": "/sys/fs/cgroup",
+		},
+		paths: map[string]string{
+			"pids":         "/system.slice/docker-ea06501e021b11a0d46a09de007b3d71bd6f37537cceabd2c3cbfa7f9b3da1ee.scope",
+			"cpuset":       "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
+			"cpu":          "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
+			"cpuacct":      "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
+			"name=systemd": "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
+		},
+	}
+
+	fullPathCPU, err := cgroupInfo.GetFullPath(cgroups.Cpu)
+	assert.NoError(t, err)
+	assert.Equal(t, "/sys/fs/cgroup/cpu/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0", fullPathCPU)
+
+	fullPathCpuacct, err := cgroupInfo.GetFullPath(cgroups.Cpuacct)
+	assert.NoError(t, err)
+	assert.Equal(t, "/sys/fs/cgroup/cpuacct/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0", fullPathCpuacct)
+}
+
+func TestCgroupInfoFetcherParse(t *testing.T) {
+
+	cgroupInfoFetcher := &CgroupInfoFetcher{
+		fileOpenFn: fileOpenFnMock,
+	}
+
+	cgroupInfo, err := cgroupInfoFetcher.Parse(123)
+
+	expected := &CgroupInfo{
+		mountPoints: map[string]string{
+			"cpu":     "/sys/fs/cgroup",
+			"systemd": "/sys/fs/cgroup",
+			"cpuacct": "/sys/fs/cgroup",
+		},
+		paths: map[string]string{
+			"pids":         "/system.slice/docker-ea06501e021b11a0d46a09de007b3d71bd6f37537cceabd2c3cbfa7f9b3da1ee.scope",
+			"cpuset":       "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
+			"cpu":          "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
+			"cpuacct":      "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
+			"name=systemd": "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
+		},
+	}
+
+	assert.NoError(t, err)
+	assert.Equal(t, expected, cgroupInfo)
+}
+
+func fileOpenFnMock(filePath string) (io.ReadCloser, error) {
+
+	files := map[string]string{
+		"/proc/mounts": `tmpfs /dev/shm tmpfs rw,nosuid,nodev 0 0
+tmpfs /run/lock tmpfs rw,nosuid,nodev,noexec,relatime,size=5120k 0 0
+tmpfs /sys/fs/cgroup tmpfs ro,nosuid,nodev,noexec,mode=755 0 0
+cgroup /sys/fs/cgroup/systemd cgroup rw,nosuid,nodev,noexec,relatime,xattr,name=systemd 0 0
+cgroup /sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,relatime,cpu,cpuacct 0 0`,
+		"/proc/123/cgroup": `4:pids:/system.slice/docker-ea06501e021b11a0d46a09de007b3d71bd6f37537cceabd2c3cbfa7f9b3da1ee.scope
+3:cpuset:/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0
+2:cpu,cpuacct:/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0
+1:name=systemd:/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0`,
+	}
+
+	if fileContent, ok := files[filePath]; ok {
+		return ioutil.NopCloser(strings.NewReader(fileContent)), nil
+	}
+
+	return nil, fmt.Errorf("file not found by path: %s", filePath)
 }
