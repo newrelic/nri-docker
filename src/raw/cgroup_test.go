@@ -226,7 +226,7 @@ configfs /sys/kernel/config configfs rw,relatime 0 0`,
 	actual, err := cgroupInfo.getHierarchyFn()()
 	assert.NoError(t, err)
 
-	assert.Equal(t, expected, actual)
+	assert.ElementsMatch(t, expected, actual)
 }
 
 func createFileOpenFnMock(filesMap map[string]string) func(string) (io.ReadCloser, error) {

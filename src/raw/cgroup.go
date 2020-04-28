@@ -44,7 +44,6 @@ var localCgroupPaths = []string{
 
 // CgroupsFetcher fetches the metrics that can be found in cgroups file system
 type CgroupsFetcher struct {
-	subsystems     cgroups.Hierarchy
 	networkFetcher *networkFetcher
 	cgroupInfoFetcher *CgroupInfoFetcher
 }
@@ -55,28 +54,34 @@ func NewCGroupsFetcher(hostRoot, cgroup string) (*CgroupsFetcher, error) {
 	// TODO handle cgroup
 
 	return &CgroupsFetcher{
-		subsystems:        subsystems(),
 		networkFetcher:    newNetworkFetcher(hostRoot),
 		cgroupInfoFetcher: newCgroupInfoFetcher(hostRoot),
 	}, nil
 }
 
 // gets the relative path to a cgroup container based on the container metadata
-func staticPath(c types.ContainerJSON) cgroups.Path {
-	var parent string
-	if c.HostConfig == nil || c.HostConfig.CgroupParent == "" {
-		parent = "docker"
-	} else {
-		parent = c.HostConfig.CgroupParent
-	}
-	return cgroups.StaticPath(path.Join(parent, c.ID))
-}
+//func staticPath(c types.ContainerJSON) cgroups.Path {
+//	var parent string
+//	if c.HostConfig == nil || c.HostConfig.CgroupParent == "" {
+//		parent = "docker"
+//	} else {
+//		parent = c.HostConfig.CgroupParent
+//	}
+//	return cgroups.StaticPath(path.Join(parent, c.ID))
+//}
 
 // returns a Metrics without the network: TODO: populate also network from libcgroups
 func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	stats := Metrics{}
 
-	control, err := cgroups.Load(subsystems(), staticPath(c))
+	pid := c.State.Pid
+
+	cgroupInfo, err := cg.cgroupInfoFetcher.Parse(pid)
+	if err != nil {
+		return stats, err
+	}
+
+	control, err := cgroups.Load(cgroupInfo.getHierarchyFn(), cgroupInfo.getPath)
 	if err != nil {
 		return stats, err
 	}
@@ -104,7 +109,7 @@ func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	}
 
 	stats.ContainerID = c.ID
-	stats.Network, err = cg.networkFetcher.Fetch(c.State.Pid)
+	stats.Network, err = cg.networkFetcher.Fetch(pid)
 	if err != nil {
 		log.Error(
 			"couldn't fetch network stats for container %s from cgroups: %v",
@@ -282,35 +287,6 @@ func memory(metric *cgroups.Metrics) (Memory, error) {
 	return mem, nil
 }
 
-// returns the subsystems where cgroups library has to look for, attaching the
-// hostContainerPath prefix to the folder if the integration is running inside a container
-func subsystems() cgroups.Hierarchy {
-	return func() ([]cgroups.Subsystem, error) {
-		subsystems := []cgroups.Subsystem{}
-
-		//if cpusetMountPoint, ok := mountPoints[cgroups.Cpuset]; ok {
-		//	subsystems = append(subsystems, cgroups.NewCputset(cpusetMountPoint))
-		//}
-		//if cpuMountPoint, ok := mountPoints[cgroups.Cpu]; ok {
-		//	subsystems = append(subsystems, cgroups.NewCpu(cpuMountPoint))
-		//}
-		//if cpuacctMountPoint, ok := mountPoints[cgroups.Cpuacct]; ok {
-		//	subsystems = append(subsystems, cgroups.NewCpuacct(cpuacctMountPoint))
-		//}
-		//if memoryMountPoint, ok := mountPoints[cgroups.Memory]; ok {
-		//	subsystems = append(subsystems, cgroups.NewMemory(memoryMountPoint))
-		//}
-		//if blkioMountPoint, ok := mountPoints[cgroups.Blkio]; ok {
-		//	subsystems = append(subsystems, cgroups.NewBlkio(blkioMountPoint))
-		//}
-		//if pidsMountPoint, ok := mountPoints[cgroups.Pids]; ok {
-		//	subsystems = append(subsystems, cgroups.NewPids(pidsMountPoint))
-		//}
-
-		return subsystems, nil
-	}
-}
-
 
 
 
@@ -434,30 +410,30 @@ func (cgi *CgroupInfo) getHierarchyFn() cgroups.Hierarchy {
 	return func() ([]cgroups.Subsystem, error) {
 		subsystems := []cgroups.Subsystem{}
 
-		//if cpusetMountPoint, ok := mountPoints[cgroups.Cpuset]; ok {
-		//	subsystems = append(subsystems, cgroups.NewCputset(cpusetMountPoint))
-		//}
-		//if cpuMountPoint, ok := mountPoints[cgroups.Cpu]; ok {
-		//	subsystems = append(subsystems, cgroups.NewCpu(cpuMountPoint))
-		//}
-		//if cpuacctMountPoint, ok := mountPoints[cgroups.Cpuacct]; ok {
-		//	subsystems = append(subsystems, cgroups.NewCpuacct(cpuacctMountPoint))
-		//}
-		//if memoryMountPoint, ok := mountPoints[cgroups.Memory]; ok {
-		//	subsystems = append(subsystems, cgroups.NewMemory(memoryMountPoint))
-		//}
-		//if blkioMountPoint, ok := mountPoints[cgroups.Blkio]; ok {
-		//	subsystems = append(subsystems, cgroups.NewBlkio(blkioMountPoint))
-		//}
-		//if pidsMountPoint, ok := mountPoints[cgroups.Pids]; ok {
-		//	subsystems = append(subsystems, cgroups.NewPids(pidsMountPoint))
-		//}
+		if cpusetMountPoint, ok := cgi.mountPoints[string(cgroups.Cpuset)]; ok {
+			subsystems = append(subsystems, cgroups.NewCputset(cpusetMountPoint))
+		}
+		if cpuMountPoint, ok := cgi.mountPoints[string(cgroups.Cpu)]; ok {
+			subsystems = append(subsystems, cgroups.NewCpu(cpuMountPoint))
+		}
+		if cpuacctMountPoint, ok := cgi.mountPoints[string(cgroups.Cpuacct)]; ok {
+			subsystems = append(subsystems, cgroups.NewCpuacct(cpuacctMountPoint))
+		}
+		if memoryMountPoint, ok := cgi.mountPoints[string(cgroups.Memory)]; ok {
+			subsystems = append(subsystems, cgroups.NewMemory(memoryMountPoint))
+		}
+		if blkioMountPoint, ok := cgi.mountPoints[string(cgroups.Blkio)]; ok {
+			subsystems = append(subsystems, cgroups.NewBlkio(blkioMountPoint))
+		}
+		if pidsMountPoint, ok := cgi.mountPoints[string(cgroups.Pids)]; ok {
+			subsystems = append(subsystems, cgroups.NewPids(pidsMountPoint))
+		}
 
 		return subsystems, nil
 	}
 }
 
-
+// TODO handle hostRoot
 func parseCgroupMountPoints(mountFileInfo io.Reader) (map[string]string, error) {
 	mountPoints := make(map[string]string)
 
@@ -481,6 +457,7 @@ func parseCgroupMountPoints(mountFileInfo io.Reader) (map[string]string, error) 
 	return mountPoints, nil
 }
 
+// TODO handle hostRoot
 func parseCgroupPaths(cgroupFile io.Reader) (map[string]string, error) {
 	cgroupPaths := make(map[string]string)
 
