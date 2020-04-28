@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/integration"
@@ -53,11 +55,10 @@ func main() {
 		docker, err = aws.NewFargateInspector(metadataV3BaseURL)
 		exitOnErr(err)
 	} else {
-
-		// TODO add /host default value
-
+		detectedHostRoot, err := detectHostRoot(args.HostRoot)
+		exitOnErr(err)
 		fetcher, err = raw.NewCGroupsFetcher(
-			args.HostRoot,
+			detectedHostRoot,
 			args.CgroupPath,
 		)
 		exitOnErr(err)
@@ -79,4 +80,24 @@ func exitOnErr(err error) {
 		log.Error(err.Error())
 		os.Exit(-1)
 	}
+}
+
+func detectHostRoot(customHostRoot string) (string, error){
+
+	if customHostRoot == "" {
+		customHostRoot = "/host"
+	}
+
+	defaultHostRoot := ""
+
+	for _, hostRoot := range []string{customHostRoot, defaultHostRoot}{
+
+		_, err := os.Stat(filepath.Join(hostRoot, "/proc"))
+
+		if err == nil {
+			return hostRoot, nil
+		}
+	}
+
+	return "", fmt.Errorf("no /proc folder found on the system")
 }
