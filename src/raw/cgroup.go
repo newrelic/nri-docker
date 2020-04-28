@@ -184,7 +184,7 @@ func blkioEntries(blkioPath string, ioStat string) ([]BlkioEntry, error) {
 // TODO: use cgroups library (as for readPidStats)
 // cgroups library currently don't seem to work for blkio. We can fix it and submit a patch
 func (cg *CgroupsFetcher) blkio(containerID string) (Blkio, error) {
-	cpath := path.Join(cg.cgroupPath, "blkio", "docker", containerID)
+	cpath := path.Join("cg.cgroupPath", "blkio", "docker", containerID)
 
 	stats := Blkio{}
 	var err error
@@ -430,7 +430,7 @@ func (cgi *CgroupInfo) getFullPath(name cgroups.Name) (string, error) {
 
 // returns the subsystems where cgroups library has to look for, attaching the
 // hostContainerPath prefix to the folder if the integration is running inside a container
-func (cgi *CgroupInfo) subsystems() cgroups.Hierarchy {
+func (cgi *CgroupInfo) getHierarchyFn() cgroups.Hierarchy {
 	return func() ([]cgroups.Subsystem, error) {
 		subsystems := []cgroups.Subsystem{}
 
