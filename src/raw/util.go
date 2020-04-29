@@ -21,7 +21,7 @@ func containerToHost(hostFolder, hostPath string) string {
 
 var ErrHostRootNotFound = errors.New("no /proc folder found on the system")
 
-func detectHostRoot(customHostRoot string, pathExists func(string) bool) (string, error) {
+func DetectHostRoot(customHostRoot string, pathExists func(string) bool) (string, error) {
 	if customHostRoot == "" {
 		customHostRoot = "/host"
 	}
@@ -35,4 +35,10 @@ func detectHostRoot(customHostRoot string, pathExists func(string) bool) (string
 	}
 
 	return "", ErrHostRootNotFound
+}
+
+func CanAccessDir(dir string) bool {
+	_, err := os.Stat(dir)
+
+	return err == nil
 }

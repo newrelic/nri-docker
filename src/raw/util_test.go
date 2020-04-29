@@ -93,7 +93,7 @@ func TestDetectHostRoot(t *testing.T) {
 
 	for _, testCase := range testCases {
 		t.Run(testCase.name, func(t *testing.T) {
-			actual, actualErr := detectHostRoot(testCase.hostRoot, func(dir string) bool {
+			actual, actualErr := DetectHostRoot(testCase.hostRoot, func(dir string) bool {
 				for _, existingPath := range testCase.existingPaths {
 					if existingPath == dir {
 						return true

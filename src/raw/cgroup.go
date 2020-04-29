@@ -96,7 +96,13 @@ func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		log.Error("couldn't read pids stats: %v", err)
 	}
 
-	if stats.Blkio, err = cg.blkio(c.ID); err != nil {
+	cgroupFullPathBlkio, err := cgroupInfo.getFullPath(cgroups.Blkio)
+
+	if err == nil {
+		if stats.Blkio, err = cg.blkio(cgroupFullPathBlkio); err != nil {
+			log.Error("couldn't read blkio stats: %v", err)
+		}
+	} else {
 		log.Error("couldn't read blkio stats: %v", err)
 	}
 
@@ -188,8 +194,7 @@ func blkioEntries(blkioPath string, ioStat string) ([]BlkioEntry, error) {
 
 // TODO: use cgroups library (as for readPidStats)
 // cgroups library currently don't seem to work for blkio. We can fix it and submit a patch
-func (cg *CgroupsFetcher) blkio(containerID string) (Blkio, error) {
-	cpath := path.Join("cg.cgroupPath", "blkio", "docker", containerID)
+func (cg *CgroupsFetcher) blkio(cpath string) (Blkio, error) {
 
 	stats := Blkio{}
 	var err error

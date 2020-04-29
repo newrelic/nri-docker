@@ -2,13 +2,10 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"path/filepath"
-
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/newrelic/infra-integrations-sdk/log"
+	"os"
 
 	"github.com/newrelic/nri-docker/src/nri"
 	"github.com/newrelic/nri-docker/src/raw"
@@ -55,7 +52,7 @@ func main() {
 		docker, err = aws.NewFargateInspector(metadataV3BaseURL)
 		exitOnErr(err)
 	} else {
-		detectedHostRoot, err := detectHostRoot(args.HostRoot, canAccessDir)
+		detectedHostRoot, err := raw.DetectHostRoot(args.HostRoot, raw.CanAccessDir)
 		exitOnErr(err)
 		fetcher, err = raw.NewCGroupsFetcher(
 			detectedHostRoot,
@@ -80,28 +77,4 @@ func exitOnErr(err error) {
 		log.Error(err.Error())
 		os.Exit(-1)
 	}
-}
-
-func canAccessDir(dir string) bool {
-	_, err := os.Stat(dir)
-
-	log.Debug("Error from is.stat: %v", err)
-
-	return err == nil
-}
-
-func detectHostRoot(customHostRoot string, canAccessDirFn func(string) bool) (string, error) {
-	if customHostRoot == "" {
-		customHostRoot = "/host"
-	}
-
-	defaultHostRoot := "/"
-
-	for _, hostRoot := range []string{customHostRoot, defaultHostRoot} {
-		if canAccessDirFn(filepath.Join(hostRoot, "/proc")) {
-			return hostRoot, nil
-		}
-	}
-
-	return "", fmt.Errorf("no /proc folder found on the system")
 }
