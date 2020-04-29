@@ -82,19 +82,20 @@ func exitOnErr(err error) {
 	}
 }
 
-func detectHostRoot(customHostRoot string) (string, error){
-
+//_, err := os.Stat(filepath.Join(hostRoot, "/proc"))
+//
+//if err == nil {
+//return hostRoot, nil
+//}
+func detectHostRoot(customHostRoot string, pathExists func(string) bool) (string, error) {
 	if customHostRoot == "" {
 		customHostRoot = "/host"
 	}
 
-	defaultHostRoot := ""
+	defaultHostRoot := "/"
 
-	for _, hostRoot := range []string{customHostRoot, defaultHostRoot}{
-
-		_, err := os.Stat(filepath.Join(hostRoot, "/proc"))
-
-		if err == nil {
+	for _, hostRoot := range []string{customHostRoot, defaultHostRoot} {
+		if pathExists(filepath.Join(hostRoot, "/proc")) {
 			return hostRoot, nil
 		}
 	}
