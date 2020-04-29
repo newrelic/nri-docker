@@ -22,15 +22,15 @@ type CgroupsFetcher struct {
 	hostRoot string
 }
 
-// NewCGroupsFetcher creates a new cgroups data fetcher. TODO handle cgroup
-func NewCGroupsFetcher(hostRoot, cgroup string) (*CgroupsFetcher, error) {
+// NewCgroupsFetcher creates a new cgroups data fetcher. TODO handle cgroup
+func NewCgroupsFetcher(hostRoot, cgroup string) (*CgroupsFetcher, error) {
 	return &CgroupsFetcher{
 		hostRoot: hostRoot,
 	}, nil
 }
 
-// TODO: check if c.HostConfig.CgroupParent is requried
-// returns a Metrics without the network: TODO: populate also network from libcgroups
+// Fetch get the metrics that can be found in cgroups file system:
+//TODO: populate also network from libcgroups, check if c.HostConfig.CgroupParent is requried
 func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	stats := Metrics{}
 

@@ -54,7 +54,7 @@ func main() {
 	} else {
 		detectedHostRoot, err := raw.DetectHostRoot(args.HostRoot, raw.CanAccessDir)
 		exitOnErr(err)
-		fetcher, err = raw.NewCGroupsFetcher(
+		fetcher, err = raw.NewCgroupsFetcher(
 			detectedHostRoot,
 			args.CgroupPath,
 		)
