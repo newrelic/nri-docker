@@ -55,7 +55,7 @@ func main() {
 		docker, err = aws.NewFargateInspector(metadataV3BaseURL)
 		exitOnErr(err)
 	} else {
-		detectedHostRoot, err := detectHostRoot(args.HostRoot)
+		detectedHostRoot, err := detectHostRoot(args.HostRoot, canAccessDir)
 		exitOnErr(err)
 		fetcher, err = raw.NewCGroupsFetcher(
 			detectedHostRoot,
@@ -82,12 +82,15 @@ func exitOnErr(err error) {
 	}
 }
 
-//_, err := os.Stat(filepath.Join(hostRoot, "/proc"))
-//
-//if err == nil {
-//return hostRoot, nil
-//}
-func detectHostRoot(customHostRoot string, pathExists func(string) bool) (string, error) {
+func canAccessDir(dir string) bool {
+	_, err := os.Stat(dir)
+
+	log.Debug("Error from is.stat: %v", err)
+
+	return err == nil
+}
+
+func detectHostRoot(customHostRoot string, canAccessDirFn func(string) bool) (string, error) {
 	if customHostRoot == "" {
 		customHostRoot = "/host"
 	}
@@ -95,7 +98,7 @@ func detectHostRoot(customHostRoot string, pathExists func(string) bool) (string
 	defaultHostRoot := "/"
 
 	for _, hostRoot := range []string{customHostRoot, defaultHostRoot} {
-		if pathExists(filepath.Join(hostRoot, "/proc")) {
+		if canAccessDirFn(filepath.Join(hostRoot, "/proc")) {
 			return hostRoot, nil
 		}
 	}
