@@ -55,7 +55,7 @@ func TestParseCgroupPaths(t *testing.T) {
 
 func TestCgroupPathsGetFullPath(t *testing.T) {
 
-	cgroupInfo := &CgroupPaths{
+	cgroupInfo := &cgroupPaths{
 		hostRoot: "/custom/host",
 		mountPoints: map[string]string{
 			"cpu":     "/sys/fs/cgroup",
@@ -81,7 +81,7 @@ func TestCgroupPathsGetFullPath(t *testing.T) {
 }
 
 func TestCgroupPathsGetMountPoint(t *testing.T) {
-	cgroupInfo := &CgroupPaths{
+	cgroupInfo := &cgroupPaths{
 		hostRoot: "/custom/host",
 		mountPoints: map[string]string{
 			"cpu":     "/sys/fs/cgroup",
@@ -111,7 +111,7 @@ cgroup /sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,relatime,cpu,cpu
 
 	cgroupInfo, err := cgroupPathsFetch("/custom/host",123, createFileOpenFnMock(filesMap))
 
-	expected := &CgroupPaths{
+	expected := &cgroupPaths{
 		hostRoot: "/custom/host",
 		mountPoints: map[string]string{
 			"cpu":     "/sys/fs/cgroup",

@@ -19,37 +19,24 @@ import (
 
 // CgroupsFetcher fetches the metrics that can be found in cgroups file system
 type CgroupsFetcher struct {
-	hostRoot          string
+	hostRoot string
 }
 
-// NewCGroupsFetcher creates a new cgroups data fetcher.
+// NewCGroupsFetcher creates a new cgroups data fetcher. TODO handle cgroup
 func NewCGroupsFetcher(hostRoot, cgroup string) (*CgroupsFetcher, error) {
-
-	// TODO handle cgroup
 	return &CgroupsFetcher{
-		hostRoot:          hostRoot,
+		hostRoot: hostRoot,
 	}, nil
 }
 
-// gets the relative path to a cgroup container based on the container metadata
-// TODO: check if we can remove it
-//func staticPath(c types.ContainerJSON) cgroups.Path {
-//	var parent string
-//	if c.HostConfig == nil || c.HostConfig.CgroupParent == "" {
-//		parent = "docker"
-//	} else {
-//		parent = c.HostConfig.CgroupParent
-//	}
-//	return cgroups.StaticPath(path.Join(parent, c.ID))
-//}
-
+// TODO: check if c.HostConfig.CgroupParent is requried
 // returns a Metrics without the network: TODO: populate also network from libcgroups
 func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	stats := Metrics{}
 
 	pid := c.State.Pid
 
-	cgroupInfo, err := getCgroupPaths(cg.hostRoot,pid)
+	cgroupInfo, err := getCgroupPaths(cg.hostRoot, pid)
 	if err != nil {
 		return stats, err
 	}

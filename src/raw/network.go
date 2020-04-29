@@ -9,7 +9,7 @@ import (
 	"github.com/newrelic/infra-integrations-sdk/log"
 )
 
-// network fetches the network metrics from the /proc file system TODO: use cgroups library
+// network fetches the network metrics from the /proc file system TODO: use cgroups library + split this to open and parse.
 func network(filePath string) (Network, error) {
 	var network Network
 	file, err := os.Open(filePath)

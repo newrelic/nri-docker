@@ -49,7 +49,7 @@ func TestDetectHostRoot(t *testing.T) {
 				"/host/test/proc",
 			},
 			expected:    "",
-			expectedErr: ErrHostRootNotFound,
+			expectedErr: errHostRootNotFound,
 		},
 		{
 			name:     "Custom_HostRoot_OnContainer",
@@ -78,7 +78,7 @@ func TestDetectHostRoot(t *testing.T) {
 				"/host/test/proc",
 			},
 			expected:    "",
-			expectedErr: ErrHostRootNotFound,
+			expectedErr: errHostRootNotFound,
 		},
 		{
 			name:     "Custom_HostRoot_Root",
