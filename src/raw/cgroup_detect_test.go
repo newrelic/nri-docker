@@ -11,8 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// parse one file into cgroup info obj
-
 func TestParseCgroupMountPoints(t *testing.T) {
 
 	mountInfoFileContains := `tmpfs /dev/shm tmpfs rw,nosuid,nodev 0 0
@@ -55,9 +53,9 @@ func TestParseCgroupPaths(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestCgroupInfoGetFullPath(t *testing.T) {
+func TestCgroupPathsGetFullPath(t *testing.T) {
 
-	cgroupInfo := &CgroupInfo{
+	cgroupInfo := &CgroupPaths{
 		hostRoot: "/custom/host",
 		mountPoints: map[string]string{
 			"cpu":     "/sys/fs/cgroup",
@@ -82,8 +80,8 @@ func TestCgroupInfoGetFullPath(t *testing.T) {
 	assert.Equal(t, "/custom/host/sys/fs/cgroup/cpuacct/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0", fullPathCpuacct)
 }
 
-func TestCgroupInfoGetMountPoint(t *testing.T) {
-	cgroupInfo := &CgroupInfo{
+func TestCgroupPathsGetMountPoint(t *testing.T) {
+	cgroupInfo := &CgroupPaths{
 		hostRoot: "/custom/host",
 		mountPoints: map[string]string{
 			"cpu":     "/sys/fs/cgroup",
@@ -97,7 +95,7 @@ func TestCgroupInfoGetMountPoint(t *testing.T) {
 	assert.Equal(t, "/custom/host/sys/fs/cgroup", mountPoint)
 }
 
-func TestCgroupInfoFetcherParse(t *testing.T) {
+func TestCgroupPathsFetcherParse(t *testing.T) {
 
 	filesMap := map[string]string{
 		"/custom/host/proc/mounts": `tmpfs /dev/shm tmpfs rw,nosuid,nodev 0 0
@@ -111,14 +109,9 @@ cgroup /sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,relatime,cpu,cpu
 1:name=systemd:/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0`,
 	}
 
-	cgroupInfoFetcher := &CgroupInfoFetcher{
-		fileOpenFn: createFileOpenFnMock(filesMap),
-		hostRoot:   "/custom/host",
-	}
+	cgroupInfo, err := cgroupPathsFetch("/custom/host",123, createFileOpenFnMock(filesMap))
 
-	cgroupInfo, err := cgroupInfoFetcher.Parse(123)
-
-	expected := &CgroupInfo{
+	expected := &CgroupPaths{
 		hostRoot: "/custom/host",
 		mountPoints: map[string]string{
 			"cpu":     "/sys/fs/cgroup",
@@ -138,7 +131,7 @@ cgroup /sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,relatime,cpu,cpu
 	assert.Equal(t, expected, cgroupInfo)
 }
 
-func TestCgroupInfoSubsystems(t *testing.T) {
+func TestCgroupPathsSubsystems(t *testing.T) {
 	filesMap := map[string]string{
 		"/custom/host/proc/mounts": `sysfs /sys sysfs rw,nosuid,nodev,noexec,relatime 0 0
 proc /proc proc rw,nosuid,nodev,noexec,relatime 0 0
@@ -183,12 +176,7 @@ configfs /sys/kernel/config configfs rw,relatime 0 0`,
 		cgroups.NewBlkio("/sys/fs/cgroup5"),
 	}
 
-	cgroupInfoFetcher := &CgroupInfoFetcher{
-		fileOpenFn: createFileOpenFnMock(filesMap),
-		hostRoot:   "/custom/host",
-	}
-
-	cgroupInfo, err := cgroupInfoFetcher.Parse(123)
+	cgroupInfo, err := cgroupPathsFetch("/custom/host",123,createFileOpenFnMock(filesMap))
 	assert.NoError(t, err)
 
 	actual, err := cgroupInfo.getHierarchyFn()()
