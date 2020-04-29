@@ -3,31 +3,24 @@ package raw
 import (
 	"bufio"
 	"os"
-	"path"
 	"strconv"
 	"strings"
 
 	"github.com/newrelic/infra-integrations-sdk/log"
 )
 
-// NetworkFetcher fetches the network metrics from the /proc file system
-// TODO: use cgroups library
-type networkFetcher struct {
-	hostRoot string
-}
-
-func newNetworkFetcher(hostRoot string) *networkFetcher {
-	return &networkFetcher{hostRoot: hostRoot}
-}
-
-func (f *networkFetcher) Fetch(containerPid int) (Network, error) {
+// network fetches the network metrics from the /proc file system TODO: use cgroups library
+func network(filePath string) (Network, error) {
 	var network Network
-	filePath := containerToHost(f.hostRoot, path.Join("/proc", strconv.Itoa(containerPid), "net", "dev"))
 	file, err := os.Open(filePath)
 	if err != nil {
 		return network, err
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Error("Failed to close file: %s, error: %v", filePath, err)
+		}
+	}()
 
 	sc := bufio.NewScanner(file)
 	sc.Split(bufio.ScanLines)

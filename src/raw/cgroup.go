@@ -44,7 +44,7 @@ var localCgroupPaths = []string{
 
 // CgroupsFetcher fetches the metrics that can be found in cgroups file system
 type CgroupsFetcher struct {
-	networkFetcher    *networkFetcher
+	hostRoot          string
 	cgroupInfoFetcher *CgroupInfoFetcher
 }
 
@@ -52,9 +52,8 @@ type CgroupsFetcher struct {
 func NewCGroupsFetcher(hostRoot, cgroup string) (*CgroupsFetcher, error) {
 
 	// TODO handle cgroup
-
 	return &CgroupsFetcher{
-		networkFetcher:    newNetworkFetcher(hostRoot),
+		hostRoot:          hostRoot,
 		cgroupInfoFetcher: newCgroupInfoFetcher(hostRoot),
 	}, nil
 }
@@ -115,7 +114,9 @@ func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	}
 
 	stats.ContainerID = c.ID
-	stats.Network, err = cg.networkFetcher.Fetch(pid)
+
+	netMetricsPath := filepath.Join(cg.hostRoot, "/proc", strconv.Itoa(pid), "net", "dev")
+	stats.Network, err = network(netMetricsPath)
 	if err != nil {
 		log.Error(
 			"couldn't fetch network stats for container %s from cgroups: %v",
@@ -371,7 +372,7 @@ func (cgi *CgroupInfo) getPath(name cgroups.Name) (string, error) {
 func (cgi *CgroupInfo) getMountPoint(name cgroups.Name) (string, error) {
 
 	if result, ok := cgi.mountPoints[string(name)]; ok {
-		return  filepath.Join(cgi.hostRoot,result), nil
+		return filepath.Join(cgi.hostRoot, result), nil
 	}
 
 	return "", fmt.Errorf("cgroup mount point not found for subsystem %s", name)
