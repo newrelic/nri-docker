@@ -7,6 +7,7 @@ import (
 	"github.com/newrelic/infra-integrations-sdk/log"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -15,6 +16,31 @@ const (
 	mountsFilePathTpl = "%s/proc/mounts"
 	cgroupFilePathTpl = "%s/proc/%d/cgroup"
 )
+
+// TODO: get rid of this case
+func getStaticCgroupPaths(hostRoot, cgroupDriver, cgroupPath, cgroupParent, containerId string) (*cgroupPaths, error) {
+
+	mountPoints := make(map[string]string)
+	paths := make(map[string]string)
+
+	for _, subsystem := range []string{
+		string(cgroups.Cpuset),
+		string(cgroups.Cpu),
+		string(cgroups.Cpuacct),
+		string(cgroups.Memory),
+		string(cgroups.Blkio),
+		string(cgroups.Pids),
+	} {
+		mountPoints[subsystem] = cgroupPath
+		paths[subsystem] = path.Join(cgroupParent, containerId)
+	}
+
+	return &cgroupPaths{
+		hostRoot:    hostRoot,
+		mountPoints: mountPoints,
+		paths:       paths,
+	}, nil
+}
 
 // getCgroupPaths will detect the cgroup paths for a container pid.
 func getCgroupPaths(hostRoot string, pid int) (*cgroupPaths, error) {
