@@ -37,6 +37,7 @@ func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	stats := Metrics{}
 
 	pid := c.State.Pid
+	containerId := c.ID
 
 	var (
 		cgroupInfo *cgroupPaths
@@ -51,7 +52,7 @@ func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		} else {
 			parent = c.HostConfig.CgroupParent
 		}
-		cgroupInfo, err = getStaticCgroupPaths(cg.hostRoot, "cgroupDriver", cg.customCgroup, parent, c.ID)
+		cgroupInfo, err = getStaticCgroupPaths(cg.hostRoot, "cgroupDriver", cg.customCgroup, parent, containerId)
 	}
 	if err != nil {
 		return stats, err
@@ -90,14 +91,14 @@ func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		log.Error("couldn't read memory stats: %v", err)
 	}
 
-	stats.ContainerID = c.ID
+	stats.ContainerID = containerId
 
 	netMetricsPath := filepath.Join(cg.hostRoot, "/proc", strconv.Itoa(pid), "net", "dev")
 	stats.Network, err = network(netMetricsPath)
 	if err != nil {
 		log.Error(
 			"couldn't fetch network stats for container %s from cgroups: %v",
-			c.ID,
+			containerId,
 			err,
 		)
 		return stats, err
