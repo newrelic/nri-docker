@@ -27,6 +27,7 @@ func DetectHostRoot(hostRoot string, pathExists func(string) bool) (string, erro
 	return "", errHostRootNotFound
 }
 
+// CanAccessDir returns true if the the dir is accessible.
 func CanAccessDir(dir string) bool {
 	_, err := os.Stat(dir)
 
