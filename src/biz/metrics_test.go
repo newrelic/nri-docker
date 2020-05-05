@@ -36,7 +36,7 @@ func TestHighCPU(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "")
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
 	require.NoError(t, err)
 
 	metrics := NewProcessor(
@@ -82,7 +82,7 @@ func TestLowCPU(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "")
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
 	require.NoError(t, err)
 
 	metrics := NewProcessor(
@@ -119,7 +119,7 @@ func TestMemory(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "")
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
 	require.NoError(t, err)
 
 	metrics := NewProcessor(
