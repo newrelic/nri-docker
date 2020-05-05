@@ -7,18 +7,17 @@ import (
 	"github.com/newrelic/infra-integrations-sdk/log"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 )
 
 const (
-	mountsFilePathTpl = "%s/proc/mounts"
-	cgroupFilePathTpl = "%s/proc/%d/cgroup"
+	mountsFilePath    = "/proc/mounts"
+	cgroupFilePathTpl = "/proc/%d/cgroup"
 )
 
 // TODO: get rid of this case
-func getStaticCgroupPaths(hostRoot, cgroupDriver, cgroupPath, cgroupParent, containerId string) (*cgroupPaths, error) {
+func getStaticCgroupPaths(cgroupDriver, cgroupMountPoint, cgroupParent, containerID string) (*cgroupPaths, error) {
 
 	mountPoints := make(map[string]string)
 	paths := make(map[string]string)
@@ -31,12 +30,15 @@ func getStaticCgroupPaths(hostRoot, cgroupDriver, cgroupPath, cgroupParent, cont
 		string(cgroups.Blkio),
 		string(cgroups.Pids),
 	} {
-		mountPoints[subsystem] = cgroupPath
-		paths[subsystem] = path.Join(cgroupParent, containerId)
+		mountPoints[subsystem] = cgroupMountPoint
+		if cgroupDriver == "systemd" {
+			paths[subsystem] = fmt.Sprintf("/system.slice/docker-%s.scope", containerID)
+		} else {
+			paths[subsystem] = fmt.Sprintf("/%s/%s", cgroupParent, containerID)
+		}
 	}
 
 	return &cgroupPaths{
-		hostRoot:    hostRoot,
 		mountPoints: mountPoints,
 		paths:       paths,
 	}, nil
@@ -49,7 +51,7 @@ func getCgroupPaths(hostRoot string, pid int) (*cgroupPaths, error) {
 
 func cgroupPathsFetch(hostRoot string, pid int, fileOpenFn func(filePath string) (io.ReadCloser, error)) (*cgroupPaths, error) {
 
-	mountsFilePath := fmt.Sprintf(mountsFilePathTpl, hostRoot)
+	mountsFilePath := filepath.Join(hostRoot, mountsFilePath)
 	mountsFile, err := fileOpenFn(mountsFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %s, while detecting cgroup mountpoints error: %v",
@@ -61,12 +63,12 @@ func cgroupPathsFetch(hostRoot string, pid int, fileOpenFn func(filePath string)
 		}
 	}()
 
-	mountPoints, err := parseCgroupMountPoints(mountsFile)
+	mountPoints, err := parseCgroupMountPoints(hostRoot, mountsFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse cgroup mountpoints error: %v", err)
 	}
 
-	cgroupFilePath := fmt.Sprintf(cgroupFilePathTpl, hostRoot, pid)
+	cgroupFilePath := filepath.Join(hostRoot, fmt.Sprintf(cgroupFilePathTpl, pid))
 	cgroupFile, err := fileOpenFn(cgroupFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %s, while detecting cgroup paths error: %v",
@@ -83,14 +85,12 @@ func cgroupPathsFetch(hostRoot string, pid int, fileOpenFn func(filePath string)
 	}
 
 	return &cgroupPaths{
-		hostRoot:    hostRoot,
 		mountPoints: mountPoints,
 		paths:       paths,
 	}, nil
 }
 
 type cgroupPaths struct {
-	hostRoot    string
 	mountPoints map[string]string
 	paths       map[string]string
 }
@@ -107,7 +107,7 @@ func (cgi *cgroupPaths) getPath(name cgroups.Name) (string, error) {
 func (cgi *cgroupPaths) getMountPoint(name cgroups.Name) (string, error) {
 
 	if result, ok := cgi.mountPoints[string(name)]; ok {
-		return filepath.Join(cgi.hostRoot, result), nil
+		return result, nil
 	}
 
 	return "", fmt.Errorf("cgroup mount point not found for subsystem %s", name)
@@ -132,7 +132,7 @@ func (cgi *cgroupPaths) getFullPath(name cgroups.Name) (string, error) {
 // hostContainerPath prefix to the folder if the integration is running inside a container
 func (cgi *cgroupPaths) getHierarchyFn() cgroups.Hierarchy {
 	return func() ([]cgroups.Subsystem, error) {
-		subsystems := []cgroups.Subsystem{}
+		var subsystems []cgroups.Subsystem
 
 		if cpusetMountPoint, ok := cgi.mountPoints[string(cgroups.Cpuset)]; ok {
 			subsystems = append(subsystems, cgroups.NewCputset(cpusetMountPoint))
@@ -157,7 +157,7 @@ func (cgi *cgroupPaths) getHierarchyFn() cgroups.Hierarchy {
 	}
 }
 
-func parseCgroupMountPoints(mountFileInfo io.Reader) (map[string]string, error) {
+func parseCgroupMountPoints(hostRoot string, mountFileInfo io.Reader) (map[string]string, error) {
 	mountPoints := make(map[string]string)
 
 	sc := bufio.NewScanner(mountFileInfo)
@@ -165,7 +165,8 @@ func parseCgroupMountPoints(mountFileInfo io.Reader) (map[string]string, error) 
 		line := sc.Text()
 		fields := strings.Fields(line)
 
-		if len(fields) != 6 || fields[0] != "cgroup" {
+		// Filter mount points if the type is not 'cgroup' or not mounted under </host>/proc
+		if len(fields) < 3 || fields[2] != "cgroup" || !strings.HasPrefix(fields[1], hostRoot) {
 			continue
 		}
 

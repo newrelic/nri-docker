@@ -13,18 +13,19 @@ import (
 )
 
 type argumentList struct {
-	Verbose    bool   `default:"false" help:"Print more information to logs."`
-	Pretty     bool   `default:"false" help:"Print pretty formatted JSON."`
-	NriCluster string `default:"" help:"Optional. Cluster name"`
-	HostRoot   string `default:"" help:"If the integration is running from a container, the mounted folder pointing to the host root folder"`
-	CgroupPath string `default:"" help:"Optional. The path where cgroup is mounted."`
-	Fargate    bool   `default:"false" help:"Enables Fargate container metrics fetching. If enabled no metrics are collected from cgroups or Docker. Defaults to false"`
+	Verbose             bool   `default:"false" help:"Print more information to logs."`
+	Pretty              bool   `default:"false" help:"Print pretty formatted JSON."`
+	NriCluster          string `default:"" help:"Optional. Cluster name"`
+	HostRoot            string `default:"" help:"If the integration is running from a container, the mounted folder pointing to the host root folder"`
+	CgroupPath          string `default:"" help:"Optional. The path where cgroup is mounted."`
+	Fargate             bool   `default:"false" help:"Enables Fargate container metrics fetching. If enabled no metrics are collected from cgroups or Docker. Defaults to false"`
+	CgroupDriver        string `default:"" help:"Optional. Specify the cgroup driver."`
+	DockerClientVersion string `default:"1.24" help:"Optional. Specify the version of the docker client. Used for compatibility."`
 }
 
 const (
-	integrationName     = "com.newrelic.docker"
-	integrationVersion  = "0.6.0"
-	dockerClientVersion = "1.24" // todo: make configurable
+	integrationName    = "com.newrelic.docker"
+	integrationVersion = "0.7.0"
 )
 
 var (
@@ -56,6 +57,7 @@ func main() {
 		exitOnErr(err)
 		fetcher, err = raw.NewCgroupsFetcher(
 			detectedHostRoot,
+			args.CgroupDriver,
 			args.CgroupPath,
 		)
 		exitOnErr(err)
@@ -63,7 +65,7 @@ func main() {
 		tmpDocker, err = client.NewEnvClient()
 		exitOnErr(err)
 		defer tmpDocker.Close()
-		tmpDocker.UpdateClientVersion(dockerClientVersion)
+		tmpDocker.UpdateClientVersion(args.DockerClientVersion)
 		docker = tmpDocker
 	}
 	sampler, err := nri.NewSampler(fetcher, docker)

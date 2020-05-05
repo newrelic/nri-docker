@@ -2,6 +2,7 @@ package nri
 
 import (
 	"context"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -98,7 +99,8 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 		// because for Docker containers we're relyng on the capabilities of the official Docker client.
 		// Possibly wrapping the Docker client with another type is a good solution.
 		// i.e. Docker uses `state = running` and ECS uses `status = RUNNING`.
-		if container.State != "running" && container.Status != "RUNNING" {
+		if strings.ToLower(container.State) != "running" &&
+			(container.State == "" && !strings.HasPrefix(strings.ToLower(container.Status), "up")) {
 			log.Debug("Skipped not running container: %s.", container.ID)
 			continue
 		}

@@ -19,15 +19,17 @@ import (
 
 // CgroupsFetcher fetches the metrics that can be found in cgroups file system
 type CgroupsFetcher struct {
-	hostRoot     string
-	customCgroup string
+	hostRoot         string
+	cgroupDriver     string
+	cgroupMountPoint string
 }
 
-// NewCgroupsFetcher creates a new cgroups data fetcher. TODO handle cgroup
-func NewCgroupsFetcher(hostRoot, customCgroup string) (*CgroupsFetcher, error) {
+// NewCgroupsFetcher creates a new cgroups data fetcher.
+func NewCgroupsFetcher(hostRoot, cgroupDriver, cgroupMountPoint string) (*CgroupsFetcher, error) {
 	return &CgroupsFetcher{
-		hostRoot:     hostRoot,
-		customCgroup: customCgroup,
+		hostRoot:         hostRoot,
+		cgroupDriver:     cgroupDriver,
+		cgroupMountPoint: cgroupMountPoint,
 	}, nil
 }
 
@@ -37,13 +39,13 @@ func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	stats := Metrics{}
 
 	pid := c.State.Pid
-	containerId := c.ID
+	containerID := c.ID
 
 	var (
 		cgroupInfo *cgroupPaths
 		err        error
 	)
-	if cg.customCgroup == "" {
+	if cg.cgroupMountPoint == "" {
 		cgroupInfo, err = getCgroupPaths(cg.hostRoot, pid)
 	} else {
 		var parent string
@@ -52,7 +54,7 @@ func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		} else {
 			parent = c.HostConfig.CgroupParent
 		}
-		cgroupInfo, err = getStaticCgroupPaths(cg.hostRoot, "cgroupDriver", cg.customCgroup, parent, containerId)
+		cgroupInfo, err = getStaticCgroupPaths(cg.cgroupDriver, filepath.Join(cg.hostRoot, cg.cgroupMountPoint), parent, containerID)
 	}
 	if err != nil {
 		return stats, err
@@ -91,14 +93,14 @@ func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		log.Error("couldn't read memory stats: %v", err)
 	}
 
-	stats.ContainerID = containerId
+	stats.ContainerID = containerID
 
 	netMetricsPath := filepath.Join(cg.hostRoot, "/proc", strconv.Itoa(pid), "net", "dev")
 	stats.Network, err = network(netMetricsPath)
 	if err != nil {
 		log.Error(
 			"couldn't fetch network stats for container %s from cgroups: %v",
-			containerId,
+			containerID,
 			err,
 		)
 		return stats, err
