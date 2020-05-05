@@ -16,7 +16,7 @@ const (
 	cgroupFilePathTpl = "/proc/%d/cgroup"
 )
 
-// TODO: get rid of this case
+// TODO: This keeps the previous behavior if specified by configuration. Should be removed in future versions together with config arguments.
 func getStaticCgroupPaths(cgroupDriver, cgroupMountPoint, cgroupParent, containerID string) (*cgroupPaths, error) {
 
 	mountPoints := make(map[string]string)
@@ -32,7 +32,7 @@ func getStaticCgroupPaths(cgroupDriver, cgroupMountPoint, cgroupParent, containe
 	} {
 		mountPoints[subsystem] = cgroupMountPoint
 		if cgroupDriver == "systemd" {
-			paths[subsystem] = fmt.Sprintf("/system.slice/docker-%s.scope", containerID)
+			paths[subsystem] = fmt.Sprintf("/system.slice/%s-%s.scope", cgroupParent, containerID)
 		} else {
 			paths[subsystem] = fmt.Sprintf("/%s/%s", cgroupParent, containerID)
 		}
@@ -165,13 +165,15 @@ func parseCgroupMountPoints(hostRoot string, mountFileInfo io.Reader) (map[strin
 		line := sc.Text()
 		fields := strings.Fields(line)
 
-		// Filter mount points if the type is not 'cgroup' or not mounted under </host>/proc
+		// Filter mount points if the type is not 'cgroup' or not mounted under </host>/sys
 		if len(fields) < 3 || fields[2] != "cgroup" || !strings.HasPrefix(fields[1], hostRoot) {
 			continue
 		}
 
 		for _, subsystem := range strings.Split(filepath.Base(fields[1]), ",") {
-			mountPoints[subsystem] = filepath.Dir(fields[1])
+			if _, found := mountPoints[subsystem]; !found {
+				mountPoints[subsystem] = filepath.Dir(fields[1])
+			}
 		}
 	}
 	if err := sc.Err(); err != nil {

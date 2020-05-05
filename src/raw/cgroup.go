@@ -34,7 +34,7 @@ func NewCgroupsFetcher(hostRoot, cgroupDriver, cgroupMountPoint string) (*Cgroup
 }
 
 // Fetch get the metrics that can be found in cgroups file system:
-//TODO: populate also network from libcgroups, check if c.HostConfig.CgroupParent is requried
+//TODO: populate also network from libcgroups
 func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	stats := Metrics{}
 
@@ -56,6 +56,7 @@ func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		}
 		cgroupInfo, err = getStaticCgroupPaths(cg.cgroupDriver, filepath.Join(cg.hostRoot, cg.cgroupMountPoint), parent, containerID)
 	}
+
 	if err != nil {
 		return stats, err
 	}
