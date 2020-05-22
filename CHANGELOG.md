@@ -5,7 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## Next (TBD)
+## 1.3.0 (20-04-?)
+* Added support for cgroup driver 'systemd'.
+
+## 1.2.1 (2020-04-15)
 ### Added
 * Add enable condition in config for when the FARGATE env var is `"true"`.
 

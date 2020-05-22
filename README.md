@@ -2,11 +2,6 @@
 
 Reports status and metrics of Docker containers running into a host.
 
-## Disclaimer
-
-This integration is at the moment at private beta stage. Running it does not
-guarantee you get the full functionality in the New Relic site.
-
 ## Requirements
 
 * Linux (Windows support TBD)

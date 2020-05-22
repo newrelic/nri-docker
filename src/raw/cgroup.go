@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -16,108 +17,51 @@ import (
 	"github.com/newrelic/infra-integrations-sdk/log"
 )
 
-const cgroupDir = "/cgroup"
-
-var localCgroupPaths = []string{
-	"/sys/fs/cgroup",
-	"/cgroup",
-}
-
 // CgroupsFetcher fetches the metrics that can be found in cgroups file system
 type CgroupsFetcher struct {
-	cgroupPath     string
-	subsystems     cgroups.Hierarchy
-	networkFetcher *networkFetcher
+	hostRoot         string
+	cgroupDriver     string
+	cgroupMountPoint string
 }
 
-// NewCGroupsFetcher creates a new cgroups data fetcher.
-func NewCGroupsFetcher(hostRoot, cgroup, mountsFilePath string) *CgroupsFetcher {
-	if cgroup != "" {
-		// Prepend cgroup to have higher priority than the predefined paths.
-		localCgroupPaths = append([]string{cgroup}, localCgroupPaths...)
-	}
-
-	cgroupPath, err := detectCgroupPath(localCgroupPaths, mountsFilePath)
-	if err != nil {
-		log.Error("couldn't detect cgroup path, error: %v, "+
-			"use cgroup_path config option to set the correct cgroup path", err)
-	}
-
-	cgroupPath = containerToHost(hostRoot, cgroupPath)
-
+// NewCgroupsFetcher creates a new cgroups data fetcher.
+func NewCgroupsFetcher(hostRoot, cgroupDriver, cgroupMountPoint string) (*CgroupsFetcher, error) {
 	return &CgroupsFetcher{
-		cgroupPath:     cgroupPath,
-		subsystems:     subsystems(cgroupPath),
-		networkFetcher: newNetworkFetcher(hostRoot),
-	}
+		hostRoot:         hostRoot,
+		cgroupDriver:     cgroupDriver,
+		cgroupMountPoint: cgroupMountPoint,
+	}, nil
 }
 
-// detectCgroupPath will try to detect cgroup path following this priority precedence:
-// 1. cgroup provided as config parameter to integration
-// 2. predefined list of usual cgroup paths
-// 3. parsing the mounts file.
-func detectCgroupPath(cgroupPaths []string, mountsFilePath string) (string, error) {
-	path, found := getFirstExistingNonEmptyPath(cgroupPaths)
-	if found {
-		return path, nil
-	}
-
-	mountsFile, err := os.Open(mountsFilePath)
-	if err != nil {
-		return "", fmt.Errorf("failed to open mounts file while detecting cgroup path, error: %v", err)
-	}
-	defer mountsFile.Close()
-
-	mounts, err := getMounts(mountsFile)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse mounts file while detecting cgroup path, error: %v", err)
-	}
-
-	path, found = detectCgroupPathFromMounts(mounts)
-	if !found {
-		return "", fmt.Errorf("failed to detect cgroup from mounts file: %s", mountsFile.Name())
-	}
-
-	return path, nil
-}
-
-// detectCgroupPathFromMounts will try to detect from mounts the cgroup path.
-func detectCgroupPathFromMounts(mounts []*mount) (result string, found bool) {
-	for _, mount := range mounts {
-
-		if mount.Device != cgroupDir[1:] {
-			continue
-		}
-
-		i := strings.Index(mount.MountPoint, cgroupDir)
-		if i < 0 {
-			continue
-		}
-
-		found = true
-		result = path.Join(mount.MountPoint[:i], cgroupDir)
-		break
-	}
-
-	return
-}
-
-// gets the relative path to a cgroup container based on the container metadata
-func staticPath(c types.ContainerJSON) cgroups.Path {
-	var parent string
-	if c.HostConfig == nil || c.HostConfig.CgroupParent == "" {
-		parent = "docker"
-	} else {
-		parent = c.HostConfig.CgroupParent
-	}
-	return cgroups.StaticPath(path.Join(parent, c.ID))
-}
-
-// returns a Metrics without the network: TODO: populate also network from libcgroups
+// Fetch get the metrics that can be found in cgroups file system:
+//TODO: populate also network from libcgroups
 func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	stats := Metrics{}
 
-	control, err := cgroups.Load(cg.subsystems, staticPath(c))
+	pid := c.State.Pid
+	containerID := c.ID
+
+	var (
+		cgroupInfo *cgroupPaths
+		err        error
+	)
+	if cg.cgroupMountPoint == "" {
+		cgroupInfo, err = getCgroupPaths(cg.hostRoot, pid)
+	} else {
+		var parent string
+		if c.HostConfig == nil || c.HostConfig.CgroupParent == "" {
+			parent = "docker"
+		} else {
+			parent = c.HostConfig.CgroupParent
+		}
+		cgroupInfo, err = getStaticCgroupPaths(cg.cgroupDriver, filepath.Join(cg.hostRoot, cg.cgroupMountPoint), parent, containerID)
+	}
+
+	if err != nil {
+		return stats, err
+	}
+
+	control, err := cgroups.Load(cgroupInfo.getHierarchyFn(), cgroupInfo.getPath)
 	if err != nil {
 		return stats, err
 	}
@@ -132,7 +76,13 @@ func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		log.Error("couldn't read pids stats: %v", err)
 	}
 
-	if stats.Blkio, err = cg.blkio(c.ID); err != nil {
+	cgroupFullPathBlkio, err := cgroupInfo.getFullPath(cgroups.Blkio)
+
+	if err == nil {
+		if stats.Blkio, err = blkio(cgroupFullPathBlkio); err != nil {
+			log.Error("couldn't read blkio stats: %v", err)
+		}
+	} else {
 		log.Error("couldn't read blkio stats: %v", err)
 	}
 
@@ -144,12 +94,14 @@ func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		log.Error("couldn't read memory stats: %v", err)
 	}
 
-	stats.ContainerID = c.ID
-	stats.Network, err = cg.networkFetcher.Fetch(c.State.Pid)
+	stats.ContainerID = containerID
+
+	netMetricsPath := filepath.Join(cg.hostRoot, "/proc", strconv.Itoa(pid), "net", "dev")
+	stats.Network, err = network(netMetricsPath)
 	if err != nil {
 		log.Error(
 			"couldn't fetch network stats for container %s from cgroups: %v",
-			c.ID,
+			containerID,
 			err,
 		)
 		return stats, err
@@ -224,8 +176,7 @@ func blkioEntries(blkioPath string, ioStat string) ([]BlkioEntry, error) {
 
 // TODO: use cgroups library (as for readPidStats)
 // cgroups library currently don't seem to work for blkio. We can fix it and submit a patch
-func (cg *CgroupsFetcher) blkio(containerID string) (Blkio, error) {
-	cpath := path.Join(cg.cgroupPath, "blkio", "docker", containerID)
+func blkio(cpath string) (Blkio, error) {
 
 	stats := Blkio{}
 	var err error
@@ -321,20 +272,4 @@ func memory(metric *cgroups.Metrics) (Memory, error) {
 	mem.SwapUsage = metric.Memory.Swap.Usage
 
 	return mem, nil
-}
-
-// returns the subsystems where cgroups library has to look for, attaching the
-// hostContainerPath prefix to the folder if the integration is running inside a container
-func subsystems(rootPath string) cgroups.Hierarchy {
-	return func() ([]cgroups.Subsystem, error) {
-		// TODO: these are copied from cgroups.V1. Cleanup for the subsystems we really need
-		return []cgroups.Subsystem{
-			cgroups.NewPids(rootPath),
-			cgroups.NewCputset(rootPath),
-			cgroups.NewCpu(rootPath),
-			cgroups.NewCpuacct(rootPath),
-			cgroups.NewMemory(rootPath),
-			cgroups.NewBlkio(rootPath),
-		}, nil
-	}
 }
