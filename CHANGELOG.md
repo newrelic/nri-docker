@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## Unreleased
+
+* Fixed bug in detection of non-running container in ECS environments.
+
 ## 1.3.0 (20-04-?)
 * Added support for cgroup driver 'systemd'.
 
