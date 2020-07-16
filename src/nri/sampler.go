@@ -101,7 +101,8 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 		// i.e. Docker uses `state = running` and ECS uses `status = RUNNING`.
 		// If State is empty, we check by status up.
 		if strings.ToLower(container.State) != "running" &&
-			!(container.State == "" && strings.HasPrefix(strings.ToLower(container.Status), "up")) {
+			strings.ToLower(container.Status) != "running" &&
+			!strings.HasPrefix(strings.ToLower(container.Status), "up") {
 			log.Debug("Skipped not running container: %s.", container.ID)
 			continue
 		}
