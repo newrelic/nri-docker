@@ -5,18 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
-## Unreleased
-
+## 1.3.1 (2020-07-17)
+### Changed
 * Fixed bug in detection of non-running container in ECS environments.
 
-## 1.3.0 (20-04-?)
+## 1.3.0 (2020-05-11)
+### Added
 * Added support for cgroup driver 'systemd'.
 
 ## 1.2.1 (2020-04-15)
 ### Added
 * Add enable condition in config for when the FARGATE env var is `"true"`.
-
-### Changed
 
 ## 1.2.0 (2020-04-01)
 ### Added
