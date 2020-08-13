@@ -2,10 +2,11 @@ package main
 
 import (
 	"context"
+	"os"
+
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/newrelic/infra-integrations-sdk/log"
-	"os"
 
 	"github.com/newrelic/nri-docker/src/nri"
 	"github.com/newrelic/nri-docker/src/raw"
@@ -25,7 +26,7 @@ type argumentList struct {
 
 const (
 	integrationName    = "com.newrelic.docker"
-	integrationVersion = "1.3.0"
+	integrationVersion = "1.3.2"
 )
 
 var (
