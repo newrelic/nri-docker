@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## 1.3.2 (2020-07-17)
+### Changed
+* Set the correct integration Version
+
 ## 1.3.1 (2020-07-17)
 ### Changed
 * Fixed bug in detection of non-running container in ECS environments.
