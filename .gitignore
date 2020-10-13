@@ -1,3 +1,7 @@
 coverage.xml
 bin
 .idea
+
+# CICD
+dist/
+*.gpg
