@@ -1,18 +1,10 @@
-before:
-  hooks:
-  # You may remove this if you don't use go modules.
-  #- go mod download
-  # you may remove this if you don't need go generate
-  #- go generate ./...
-  #- make validate
-
 builds:
   - id: nri-docker-nix
     main: ./src
     binary: nri-docker
     gobinary: "go1.9.7"
     ldflags:
-      - -s -w -X main.integrationVersion={{.Version}} -X main.gitCommit={{.Commit}}
+      - -s -w -X main.integrationVersion={{.Version}} -X main.gitCommit={{.Commit}} -X main.buildDate={{.Date}}
     goos:
       - linux
       - darwin
@@ -30,7 +22,7 @@ builds:
     binary: nri-docker
     gobinary: "go1.9.7"
     ldflags:
-      - -s -w -X main.integrationVersion={{.Version}} -X main.gitCommit={{.Commit}}
+      - -s -w -X main.integrationVersion={{.Version}} -X main.gitCommit={{.Commit}} -X main.buildDate={{.Date}}
     goos:
       - windows
     goarch:
@@ -98,7 +90,6 @@ archives:
     files:
       - docker-config.yml.sample
       - docker-definition.yml
-      # installation scripts?
     format: tar.gz
 
   - id: nri-docker-win
@@ -108,7 +99,6 @@ archives:
     files:
       - docker-win-config.yml.sample
       - docker-win-definition.yml
-      # installation scripts?
     format: zip
 
 # we use custom publisher for fixing archives and signing them
