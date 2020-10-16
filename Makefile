@@ -66,7 +66,6 @@ compile: compile-deps bin/$(BINARY_NAME)
 test-deps: compile-deps
 	@echo "=== $(INTEGRATION) === [ test-deps ]: installing testing dependencies..."
 	@$(GO) get -v $(TEST_DEPS)
-	#@docker build -t stress:latest src/biz/
 
 test-only:
 	@echo "=== $(INTEGRATION) === [ test ]: running unit tests..."
@@ -74,7 +73,11 @@ test-only:
 
 test: test-deps test-only
 
-integration-test: test-deps
+integration-test-deps: compile-deps
+	@echo "=== $(INTEGRATION) === [ integration-test-deps ]: installing testing dependencies..."
+	@docker build -t stress:latest src/biz/
+
+integration-test: integration-test-deps test-deps
 	@echo "=== $(INTEGRATION) === [ test ]: running integration tests..."
 	@$(GO) test -v -tags=integration ./tests/integration/.
 
