@@ -1,5 +1,5 @@
 builds:
-  - id: nri-docker-nix
+  - id: nri-nix
     main: ./src
     binary: nri-docker
     gobinary: "go1.9.7"
@@ -14,9 +14,9 @@ builds:
       - arm64
 
 nfpms:
-  - id: nri-docker-deb
+  - id: nri-deb
     builds:
-      - nri-docker-nix
+      - nri-nix
     file_name_template: "{{ .ProjectName }}_{{ .Version }}-1_{{ .Arch }}"
     vendor: "New Relic, Inc."
     homepage: "https://www.newrelic.com/infrastructure"
@@ -37,9 +37,9 @@ nfpms:
     dependencies:
       - "newrelic-infra"
 
-  - id: nri-docker-rpm
+  - id: nri-rpm
     builds:
-      - nri-docker-nix
+      - nri-nix
     file_name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Arch }}"
     vendor: "New Relic, Inc."
     homepage: "https://www.newrelic.com/infrastructure"
@@ -65,9 +65,9 @@ nfpms:
           amd64: 1.x86_64
 
 archives:
-  - id: nri-docker-nix
+  - id: nri-nix
     builds:
-      - nri-docker-nix
+      - nri-nix
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Version }}_{{ .Arch }}_dirty"
     files:
       - docker-config.yml.sample
