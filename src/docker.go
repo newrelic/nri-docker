@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"os"
+	"runtime"
+	"strings"
 
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/integration"
@@ -22,15 +25,18 @@ type argumentList struct {
 	Fargate             bool   `default:"false" help:"Enables Fargate container metrics fetching. If enabled no metrics are collected from cgroups or Docker. Defaults to false"`
 	CgroupDriver        string `default:"" help:"Optional. Specify the cgroup driver."`
 	DockerClientVersion string `default:"1.24" help:"Optional. Specify the version of the docker client. Used for compatibility."`
+	ShowVersion         bool   `default:"false" help:"Print build information and exit"`
 }
 
 const (
-	integrationName    = "com.newrelic.docker"
-	integrationVersion = "1.3.2"
+	integrationName = "com.newrelic.docker"
 )
 
 var (
-	args argumentList
+	args               argumentList
+	integrationVersion = "0.0.0"
+	gitCommit          = ""
+	buildDate          = ""
 )
 
 func main() {
@@ -38,6 +44,18 @@ func main() {
 	if err != nil {
 		log.Error(err.Error())
 		os.Exit(1)
+	}
+
+	if args.ShowVersion {
+		fmt.Printf(
+			"New Relic %s integration Version: %s, Platform: %s, GoVersion: %s, GitCommit: %s, BuildDate: %s\n",
+			strings.Title(strings.Replace(integrationName, "com.newrelic.", "", 1)),
+			integrationVersion,
+			fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+			runtime.Version(),
+			gitCommit,
+			buildDate)
+		os.Exit(0)
 	}
 
 	log.SetupLogging(args.Verbose)

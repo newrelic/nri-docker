@@ -7,29 +7,11 @@ builds:
       - -s -w -X main.integrationVersion={{.Version}} -X main.gitCommit={{.Commit}} -X main.buildDate={{.Date}}
     goos:
       - linux
-      - darwin
     goarch:
       - 386
       - amd64
       - arm
       - arm64
-    ignore:
-      - goos: darwin
-        goarch: 386
-
-  - id: nri-docker-win
-    main: ./src
-    binary: nri-docker
-    gobinary: "go1.9.7"
-    ldflags:
-      - -s -w -X main.integrationVersion={{.Version}} -X main.gitCommit={{.Commit}} -X main.buildDate={{.Date}}
-    goos:
-      - windows
-    goarch:
-      - 386
-      - amd64
-    hooks:
-      pre: build/windows/set_exe_properties.sh {{ .Env.TAG }} "docker"
 
 nfpms:
   - id: nri-docker-deb
@@ -91,15 +73,6 @@ archives:
       - docker-config.yml.sample
       - docker-definition.yml
     format: tar.gz
-
-  - id: nri-docker-win
-    builds:
-      - nri-docker-win
-    name_template: "{{ .ProjectName }}-{{ .Arch }}.{{ .Version }}_dirty"
-    files:
-      - docker-win-config.yml.sample
-      - docker-win-definition.yml
-    format: zip
 
 # we use custom publisher for fixing archives and signing them
 release:

@@ -1,8 +1,10 @@
-package biz
+package integration
 
 import (
 	"bytes"
 	"fmt"
+	"github.com/newrelic/nri-docker/src/biz"
+	"github.com/newrelic/nri-docker/test"
 	"log"
 	"os/exec"
 	"strings"
@@ -12,7 +14,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/persist"
 	"github.com/newrelic/nri-docker/src/raw"
-	"github.com/newrelic/nri-docker/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,7 +40,7 @@ func TestHighCPU(t *testing.T) {
 	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
 	require.NoError(t, err)
 
-	metrics := NewProcessor(
+	metrics := biz.NewProcessor(
 		persist.NewInMemoryStore(),
 		cgroupFetcher,
 		docker)
@@ -85,7 +86,7 @@ func TestLowCPU(t *testing.T) {
 	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
 	require.NoError(t, err)
 
-	metrics := NewProcessor(
+	metrics := biz.NewProcessor(
 		persist.NewInMemoryStore(),
 		cgroupFetcher,
 		docker)
@@ -122,7 +123,7 @@ func TestMemory(t *testing.T) {
 	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
 	require.NoError(t, err)
 
-	metrics := NewProcessor(
+	metrics := biz.NewProcessor(
 		persist.NewInMemoryStore(),
 		cgroupFetcher,
 		docker)
