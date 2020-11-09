@@ -129,12 +129,30 @@ func containerResponseToDocker(container ContainerResponse) types.Container {
 
 func processFargateLabels(labels map[string]string) map[string]string {
 	for label, value := range labels {
-		// The cluster name label has to be processed because in ECS with EC2 launch type it's only the cluster name.
-		// Meanwhile, in ECS with Fargate launch type the same label has the full cluster ARN as value.
-		if label == "com.amazonaws.ecs.cluster" && isECSARN(value) {
-			labels[label] = ecsClusterNameFromARN(value)
+		switch label {
+		case "com.amazonaws.ecs.cluster":
+			if isECSARN(value) {
+				// The cluster name label has to be processed because in ECS with EC2 launch type it's only the cluster name.
+				// Meanwhile, in ECS with Fargate launch type the same label has the full cluster ARN as value.
+				labels[label] = ecsClusterNameFromARN(value)
+				// Preserve the original arn in a synthetic label
+				labels["com.newrelic.nri-docker.cluster-arn"] = value
+			}
+
+		case "com.amazonaws.ecs.task-arn":
+			// Obtain aws region from task arn
+			if isECSARN(value) {
+				labels["com.newrelic.nri-docker.aws-region"] = regionFromTask(value)
+			} else {
+				// Log an error if task-arn is not an arn
+				log.Error("could not process wrongly-formatted task arn: %s", label)
+			}
 		}
 	}
+
+	// Add label signaling fargate launch type
+	labels["com.newrelic.nri-docker.launch-type"] = "fargate"
+
 	return labels
 }
 
@@ -152,4 +170,20 @@ func isECSARN(arn string) bool {
 	const arnSections = 6
 
 	return strings.HasPrefix(arn, arnPrefix) && strings.Count(arn, ":") >= arnSections-1
+}
+
+// regionFromTask returns the aws region from the task ARN.
+// Example of task ARN: arn:aws:ecs:us-west-2:xxxxxxxx:task/ecs-local-cluster/37e873f6-37b4-42a7-af47-eac7275c6152
+func regionFromTask(taskARN string) string {
+	_, arnPrefix := resourceNameAndARNBase(taskARN)
+	return strings.Split(arnPrefix, ":")[3]
+}
+
+// resourceNameAndARNBase explodes a resource ARN and returns the resource's name and the base ARN prefix for the
+// account and region of the original resource.
+func resourceNameAndARNBase(resourceARN string) (resourceName string, arnPrefix string) {
+	arnPrefixAndType := resourceARN[:strings.Index(resourceARN, "/")-1]
+	arnPrefix = arnPrefixAndType[:strings.LastIndex(arnPrefixAndType, ":")]
+	resourceName = resourceARN[strings.Index(resourceARN, "/")+1:]
+	return resourceName, arnPrefix
 }
