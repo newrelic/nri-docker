@@ -158,12 +158,16 @@ var labelRename = map[string]string{
 	"com.amazonaws.ecs.task-arn":                "ecsTaskArn",
 	"com.amazonaws.ecs.task-definition-family":  "ecsTaskDefinitionFamily",
 	"com.amazonaws.ecs.task-definition-version": "ecsTaskDefinitionVersion",
+
+	// com.newrelic.nri-docker.* labels are created by aws.processFargateLabels containing fargate info
+	"com.newrelic.nri-docker.launch-type": "ecsLaunchType",
+	"com.newrelic.nri-docker.cluster-arn": "ecsClusterArn",
+	"com.newrelic.nri-docker.aws-region":  "awsRegion",
 }
 
 func labels(container types.Container) []entry {
 	metrics := make([]entry, 0, len(container.Labels))
 	for key, val := range container.Labels {
-
 		if newName, ok := labelRename[key]; ok {
 			metrics = append(metrics, entry{
 				Name:  newName,
@@ -178,6 +182,7 @@ func labels(container types.Container) []entry {
 			Type:  metric.ATTRIBUTE,
 		})
 	}
+
 	return metrics
 }
 

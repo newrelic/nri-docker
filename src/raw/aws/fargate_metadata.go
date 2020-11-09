@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/newrelic/infra-integrations-sdk/log"
@@ -157,20 +156,4 @@ func MetadataV3BaseURL() (*url.URL, error) {
 		return nil, fmt.Errorf("could not parse Metadata V3 API URL (%s): %s", baseURL, err)
 	}
 	return parsedURL, nil
-}
-
-// RegionFromTask returns the aws region from the task ARN.
-// Example of task ARN: arn:aws:ecs:us-west-2:xxxxxxxx:task/ecs-local-cluster/37e873f6-37b4-42a7-af47-eac7275c6152
-func RegionFromTask(taskARN string) string {
-	_, arnPrefix := ResourceNameAndARNBase(taskARN)
-	return strings.Split(arnPrefix, ":")[3]
-}
-
-// ResourceNameAndARNBase explodes a resource ARN and returns the resource's name and the base ARN prefix for the
-// account and region of the original resource.
-func ResourceNameAndARNBase(resourceARN string) (resourceName string, arnPrefix string) {
-	arnPrefixAndType := resourceARN[:strings.Index(resourceARN, "/")-1]
-	arnPrefix = arnPrefixAndType[:strings.LastIndex(arnPrefixAndType, ":")]
-	resourceName = resourceARN[strings.Index(resourceARN, "/")+1:]
-	return resourceName, arnPrefix
 }
