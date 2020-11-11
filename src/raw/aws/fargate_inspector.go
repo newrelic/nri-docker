@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/docker/docker/api/types"
 	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/infra-integrations-sdk/persist"
@@ -131,21 +132,21 @@ func processFargateLabels(labels map[string]string) map[string]string {
 	for label, value := range labels {
 		switch label {
 		case "com.amazonaws.ecs.cluster":
-			if isECSARN(value) {
+			if name := clusterNameFromARN(value); name != "" {
 				// The cluster name label has to be processed because in ECS with EC2 launch type it's only the cluster name.
 				// Meanwhile, in ECS with Fargate launch type the same label has the full cluster ARN as value.
-				labels[label] = ecsClusterNameFromARN(value)
+				labels[label] = name
 				// Preserve the original arn in a synthetic label
 				labels["com.newrelic.nri-docker.cluster-arn"] = value
 			}
 
 		case "com.amazonaws.ecs.task-arn":
 			// Obtain aws region from task arn
-			if isECSARN(value) {
-				labels["com.newrelic.nri-docker.aws-region"] = regionFromTask(value)
+			if region := regionFromTaskARN(value); region != "" {
+				labels["com.newrelic.nri-docker.aws-region"] = region
 			} else {
 				// Log an error if task-arn is not an arn
-				log.Error("could not process wrongly-formatted task arn: %s", label)
+				log.Error("could not process task arn: %s", label)
 			}
 		}
 	}
@@ -156,34 +157,28 @@ func processFargateLabels(labels map[string]string) map[string]string {
 	return labels
 }
 
-// ecsClusterNameFromARN extracts the cluster name from an ECS cluster ARN.
-func ecsClusterNameFromARN(ecsClusterARN string) string {
-	return strings.Split(ecsClusterARN, "/")[1]
+// clusterNameFromARN extracts the cluster name from an ECS cluster ARN.
+func clusterNameFromARN(ecsClusterARN string) string {
+	a, err := arn.Parse(ecsClusterARN)
+	if err != nil {
+		return ""
+	}
+
+	resourceParts := strings.Split(a.Resource, "/")
+	if len(resourceParts) < 2 || resourceParts[0] != "cluster" {
+		return ""
+	}
+
+	return resourceParts[1]
 }
 
-// isARN returns whether the given string is an ECS ARN by looking for
-// whether the string starts with "arn:aws:ecs" and contains the correct number
-// of sections delimited by colons(:).
-// Copied from: https://github.com/aws/aws-sdk-go/blob/81abf80dec07700b14a91ece14b8eca6c5e6b4f8/aws/arn/arn.go#L81
-func isECSARN(arn string) bool {
-	const arnPrefix = "arn:aws:ecs"
-	const arnSections = 6
-
-	return strings.HasPrefix(arn, arnPrefix) && strings.Count(arn, ":") >= arnSections-1
-}
-
-// regionFromTask returns the aws region from the task ARN.
+// regionFromTaskARN returns the aws region from the task ARN.
 // Example of task ARN: arn:aws:ecs:us-west-2:xxxxxxxx:task/ecs-local-cluster/37e873f6-37b4-42a7-af47-eac7275c6152
-func regionFromTask(taskARN string) string {
-	_, arnPrefix := resourceNameAndARNBase(taskARN)
-	return strings.Split(arnPrefix, ":")[3]
-}
+func regionFromTaskARN(taskARN string) string {
+	a, err := arn.Parse(taskARN)
+	if err != nil {
+		return ""
+	}
 
-// resourceNameAndARNBase explodes a resource ARN and returns the resource's name and the base ARN prefix for the
-// account and region of the original resource.
-func resourceNameAndARNBase(resourceARN string) (resourceName string, arnPrefix string) {
-	arnPrefixAndType := resourceARN[:strings.Index(resourceARN, "/")-1]
-	arnPrefix = arnPrefixAndType[:strings.LastIndex(arnPrefixAndType, ":")]
-	resourceName = resourceARN[strings.Index(resourceARN, "/")+1:]
-	return resourceName, arnPrefix
+	return a.Region
 }
