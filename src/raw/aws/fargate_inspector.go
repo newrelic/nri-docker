@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/docker/docker/api/types"
 	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/infra-integrations-sdk/persist"
@@ -129,27 +130,55 @@ func containerResponseToDocker(container ContainerResponse) types.Container {
 
 func processFargateLabels(labels map[string]string) map[string]string {
 	for label, value := range labels {
-		// The cluster name label has to be processed because in ECS with EC2 launch type it's only the cluster name.
-		// Meanwhile, in ECS with Fargate launch type the same label has the full cluster ARN as value.
-		if label == "com.amazonaws.ecs.cluster" && isECSARN(value) {
-			labels[label] = ecsClusterNameFromARN(value)
+		switch label {
+		case "com.amazonaws.ecs.cluster":
+			if name := clusterNameFromARN(value); name != "" {
+				// The cluster name label has to be processed because in ECS with EC2 launch type it's only the cluster name.
+				// Meanwhile, in ECS with Fargate launch type the same label has the full cluster ARN as value.
+				labels[label] = name
+				// Preserve the original arn in a synthetic label
+				labels["com.newrelic.nri-docker.cluster-arn"] = value
+			}
+
+		case "com.amazonaws.ecs.task-arn":
+			// Obtain aws region from task arn
+			if region := regionFromTaskARN(value); region != "" {
+				labels["com.newrelic.nri-docker.aws-region"] = region
+			} else {
+				// Log an error if task-arn is not an arn
+				log.Error("could not process task arn: %s", label)
+			}
 		}
 	}
+
+	// Add label signaling fargate launch type
+	labels["com.newrelic.nri-docker.launch-type"] = "fargate"
+
 	return labels
 }
 
-// ecsClusterNameFromARN extracts the cluster name from an ECS cluster ARN.
-func ecsClusterNameFromARN(ecsClusterARN string) string {
-	return strings.Split(ecsClusterARN, "/")[1]
+// clusterNameFromARN extracts the cluster name from an ECS cluster ARN.
+func clusterNameFromARN(ecsClusterARN string) string {
+	a, err := arn.Parse(ecsClusterARN)
+	if err != nil {
+		return ""
+	}
+
+	resourceParts := strings.Split(a.Resource, "/")
+	if len(resourceParts) < 2 || resourceParts[0] != "cluster" {
+		return ""
+	}
+
+	return resourceParts[1]
 }
 
-// isARN returns whether the given string is an ECS ARN by looking for
-// whether the string starts with "arn:aws:ecs" and contains the correct number
-// of sections delimited by colons(:).
-// Copied from: https://github.com/aws/aws-sdk-go/blob/81abf80dec07700b14a91ece14b8eca6c5e6b4f8/aws/arn/arn.go#L81
-func isECSARN(arn string) bool {
-	const arnPrefix = "arn:aws:ecs"
-	const arnSections = 6
+// regionFromTaskARN returns the aws region from the task ARN.
+// Example of task ARN: arn:aws:ecs:us-west-2:xxxxxxxx:task/ecs-local-cluster/37e873f6-37b4-42a7-af47-eac7275c6152
+func regionFromTaskARN(taskARN string) string {
+	a, err := arn.Parse(taskARN)
+	if err != nil {
+		return ""
+	}
 
-	return strings.HasPrefix(arn, arnPrefix) && strings.Count(arn, ":") >= arnSections-1
+	return a.Region
 }
