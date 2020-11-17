@@ -180,7 +180,7 @@ func stress(t *testing.T, args ...string) (containerID string, closeFunc func())
 
 func TestExitedContainersWithTTL(t *testing.T) {
 	// GIVEN a container consuming a lot of CPU
-	containerID, dockerRM := stress(t, "stress-ng", "-c", "4", "-l 100", "-t", "1s")
+	containerID, dockerRM := stress(t, "stress-ng", "-c", "0", "-l", "0", "--vm", "1", "--vm-bytes", "60M", "-t", "1s")
 	defer dockerRM()
 
 	// WHEN its metrics are sampled and processed
@@ -201,7 +201,7 @@ func TestExitedContainersWithTTL(t *testing.T) {
 
 func TestExitedContainersWithoutTTL(t *testing.T) {
 	// GIVEN a container consuming a lot of CPU
-	containerID, dockerRM := stress(t, "stress-ng", "-c", "4", "-l 100", "-t", "1s")
+	containerID, dockerRM := stress(t, "stress-ng", "-c", "0", "-l", "0", "--vm", "1", "--vm-bytes", "60M", "-t", "1s")
 	defer dockerRM()
 
 	// WHEN its metrics are sampled and processed
