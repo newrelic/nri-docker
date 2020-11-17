@@ -121,10 +121,16 @@ func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 	if mc.exitedContainerTTL != 0 && strings.ToLower(json.State.Status) == "exited" {
 		exitTimestamp, err := time.Parse(time.RFC3339Nano, json.State.FinishedAt)
 		if err != nil {
-			return metrics, fmt.Errorf("invalid finished_at timestamp for exited container: %v", err)
+			return metrics, fmt.Errorf("invalid finished_at timestamp for exited container %s: %s (%v)",
+				containerID,
+				json.State.FinishedAt,
+				err,
+			)
 		}
 		if time.Now().After(exitTimestamp.Add(mc.exitedContainerTTL)) {
-			return metrics, ErrExitedContainerExpired{"container exited after TTL, skipping"}
+			return metrics, ErrExitedContainerExpired{
+				fmt.Sprintf("container %s exited after TTL (%v), skipping", containerID, mc.exitedContainerTTL),
+			}
 		}
 	}
 
