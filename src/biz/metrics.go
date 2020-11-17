@@ -91,6 +91,8 @@ func NewProcessor(store persist.Storer, fetcher raw.Fetcher, inspector Inspector
 	}
 }
 
+// ErrExitedContainerExpired is the error type used when exited containers have exceed the TTL that would allow the
+// integration to keep reporting them.
 type ErrExitedContainerExpired struct {
 	s string
 }
