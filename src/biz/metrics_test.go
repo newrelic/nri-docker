@@ -190,7 +190,7 @@ func TestExitedContainersWithTTL(t *testing.T) {
 	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
 	require.NoError(t, err)
 
-	metrics := NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 1 * time.Second)
+	metrics := NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 1*time.Second)
 
 	test.Eventually(t, eventuallyTimeout, func(t require.TestingT) {
 		samples, err := metrics.Process(containerID)
