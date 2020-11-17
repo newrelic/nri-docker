@@ -214,8 +214,8 @@ func TestExitedContainersWithoutTTL(t *testing.T) {
 	metrics := NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
 
 	test.Eventually(t, eventuallyTimeout, func(t require.TestingT) {
-		samples, err := metrics.Process(containerID)
+		sample, err := metrics.Process(containerID)
 		require.NoError(t, err)
-		assert.Len(t, samples, 1)
+		assert.Empty(t, sample)
 	})
 }
