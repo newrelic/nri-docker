@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"os"
+	"time"
 
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/integration"
@@ -20,6 +21,7 @@ type argumentList struct {
 	HostRoot            string `default:"" help:"If the integration is running from a container, the mounted folder pointing to the host root folder"`
 	CgroupPath          string `default:"" help:"Optional. The path where cgroup is mounted."`
 	Fargate             bool   `default:"false" help:"Enables Fargate container metrics fetching. If enabled no metrics are collected from cgroups or Docker. Defaults to false"`
+	ExitedContainersTTL string `default:"" help:"Enables to integration to stop reporting Exited contaienrs that are older than the set TTL. Possible values are time-strings: 1s, 1m, 1h, 1d"`
 	CgroupDriver        string `default:"" help:"Optional. Specify the cgroup driver."`
 	DockerClientVersion string `default:"1.24" help:"Optional. Specify the version of the docker client. Used for compatibility."`
 }
@@ -41,6 +43,9 @@ func main() {
 	}
 
 	log.SetupLogging(args.Verbose)
+
+	exitedContainerTTL, err := time.ParseDuration(args.ExitedContainersTTL)
+	exitOnErr(err)
 
 	var fetcher raw.Fetcher
 	var docker nri.DockerClient
@@ -69,7 +74,7 @@ func main() {
 		tmpDocker.UpdateClientVersion(args.DockerClientVersion)
 		docker = tmpDocker
 	}
-	sampler, err := nri.NewSampler(fetcher, docker)
+	sampler, err := nri.NewSampler(fetcher, docker, exitedContainerTTL)
 	exitOnErr(err)
 	exitOnErr(sampler.SampleAll(context.Background(), i))
 	exitOnErr(i.Publish())

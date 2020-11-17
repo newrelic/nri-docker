@@ -39,10 +39,7 @@ func TestHighCPU(t *testing.T) {
 	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
 	require.NoError(t, err)
 
-	metrics := NewProcessor(
-		persist.NewInMemoryStore(),
-		cgroupFetcher,
-		docker)
+	metrics := NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
 	sample, err := metrics.Process(containerID)
 	require.NoError(t, err)
 
@@ -85,10 +82,7 @@ func TestLowCPU(t *testing.T) {
 	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
 	require.NoError(t, err)
 
-	metrics := NewProcessor(
-		persist.NewInMemoryStore(),
-		cgroupFetcher,
-		docker)
+	metrics := NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
 	sample, err := metrics.Process(containerID)
 	require.NoError(t, err)
 
@@ -122,10 +116,7 @@ func TestMemory(t *testing.T) {
 	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
 	require.NoError(t, err)
 
-	metrics := NewProcessor(
-		persist.NewInMemoryStore(),
-		cgroupFetcher,
-		docker)
+	metrics := NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
 	// Then the Memory metrics are reported according to the usage and limits
 	test.Eventually(t, eventuallyTimeout, func(t require.TestingT) {
 		sample, err := metrics.Process(containerID)

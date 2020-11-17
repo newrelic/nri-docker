@@ -91,7 +91,7 @@ func TestECSLabelRename(t *testing.T) {
 	mStore.On("Save").Return(nil)
 
 	sampler := ContainerSampler{
-		metrics: biz.NewProcessor(mStore, nil, mocker),
+		metrics: biz.NewProcessor(mStore, nil, mocker, 0),
 		docker:  mocker,
 		store:   mStore,
 	}
