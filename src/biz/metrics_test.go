@@ -215,7 +215,7 @@ func TestExitedContainersWithoutTTL(t *testing.T) {
 
 	test.Eventually(t, eventuallyTimeout, func(t require.TestingT) {
 		sample, err := metrics.Process(containerID)
-		require.NoError(t, err)
+		require.Error(t, err)
 		assert.Empty(t, sample)
 	})
 }
