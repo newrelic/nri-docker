@@ -70,9 +70,9 @@ type Processer interface {
 // MetricsFetcher fetches the container system-level metrics from different sources and processes it to export
 // metrics with business-value
 type MetricsFetcher struct {
-	store     persist.Storer
-	fetcher   raw.Fetcher
-	inspector Inspector
+	store              persist.Storer
+	fetcher            raw.Fetcher
+	inspector          Inspector
 	exitedContainerTTL time.Duration
 }
 
@@ -84,9 +84,9 @@ type Inspector interface {
 // NewProcessor creates a MetricsFetcher from implementations of its required components
 func NewProcessor(store persist.Storer, fetcher raw.Fetcher, inspector Inspector, exitedContainerTTL time.Duration) *MetricsFetcher {
 	return &MetricsFetcher{
-		store:     store,
-		fetcher:   fetcher,
-		inspector: inspector,
+		store:              store,
+		fetcher:            fetcher,
+		inspector:          inspector,
 		exitedContainerTTL: exitedContainerTTL,
 	}
 }
@@ -125,7 +125,6 @@ func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 			return metrics, ErrExitedContainerExpired{"container exited after TTL, skipping"}
 		}
 	}
-
 
 	rawMetrics, err := mc.fetcher.Fetch(json)
 	if err != nil {
