@@ -150,7 +150,7 @@ func stress(t *testing.T, args ...string) (containerID string, closeFunc func())
 	t.Helper()
 
 	arguments := []string{
-		"run", "-d", "--rm",
+		"run", "-d",
 		"--name", containerName,
 		"--cpus", fmt.Sprint(cpus),
 		"--memory", memLimitStr,
@@ -176,4 +176,46 @@ func stress(t *testing.T, args ...string) (containerID string, closeFunc func())
 			log.Println("error removing container", err)
 		}
 	}
+}
+
+func TestExitedContainersWithTTL(t *testing.T) {
+	// GIVEN a container consuming a lot of CPU
+	containerID, dockerRM := stress(t, "stress-ng", "-c", "4", "-l 100", "-t", "1s")
+	defer dockerRM()
+
+	// WHEN its metrics are sampled and processed
+	docker := newDocker(t)
+	defer docker.Close()
+
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
+	require.NoError(t, err)
+
+	metrics := NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 1 * time.Second)
+
+	test.Eventually(t, eventuallyTimeout, func(t require.TestingT) {
+		samples, err := metrics.Process(containerID)
+		require.Error(t, err)
+		assert.Empty(t, samples)
+	})
+}
+
+func TestExitedContainersWithoutTTL(t *testing.T) {
+	// GIVEN a container consuming a lot of CPU
+	containerID, dockerRM := stress(t, "stress-ng", "-c", "4", "-l 100", "-t", "1s")
+	defer dockerRM()
+
+	// WHEN its metrics are sampled and processed
+	docker := newDocker(t)
+	defer docker.Close()
+
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
+	require.NoError(t, err)
+
+	metrics := NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
+
+	test.Eventually(t, eventuallyTimeout, func(t require.TestingT) {
+		samples, err := metrics.Process(containerID)
+		require.NoError(t, err)
+		assert.Len(t, samples, 1)
+	})
 }
