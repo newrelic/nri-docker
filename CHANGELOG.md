@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## Unreleased
+
+### Changed
+* The integration by default does not report exited containers that are older than 24 hours.
+  This value can be configured using the `ExitedContainersTTL` argument using any value that 
+  can be parsed into a `time.Duration`, i.e. `1s`, `1m`, `1h`.
+  To replicate the old behavior of the integration, set this argument to `0` (zero).
+
 ## 1.3.3 (2020-11-12)
 ### Changed
 * Add metadata to samples from Fargate (#50)
