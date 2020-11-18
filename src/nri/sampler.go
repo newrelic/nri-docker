@@ -72,11 +72,11 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 	for _, container := range containers {
 		metrics, err := cs.metrics.Process(container.ID)
 		if err != nil {
-			log.Error("error fetching metrics for container %v: %v", container.ID, err)
 			if _, ok := err.(*biz.ErrExitedContainerExpired); ok {
-				log.Debug("skipping exited container older than TTL")
+				log.Debug(err.Error())
 				continue
 			}
+			log.Error("error fetching metrics for container %v: %v", container.ID, err)
 		}
 
 		// Creating entity and populating metrics
