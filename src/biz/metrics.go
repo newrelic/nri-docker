@@ -127,7 +127,7 @@ func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 				err,
 			)
 		}
-		if time.Now().After(exitTimestamp.Add(mc.exitedContainerTTL)) {
+		if time.Since(exitTimestamp) > mc.exitedContainerTTL {
 			return metrics, ErrExitedContainerExpired{
 				fmt.Sprintf("container %s exited after TTL (%v), skipping", containerID, mc.exitedContainerTTL),
 			}
