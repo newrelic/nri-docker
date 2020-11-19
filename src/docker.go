@@ -21,7 +21,7 @@ type argumentList struct {
 	HostRoot            string `default:"" help:"If the integration is running from a container, the mounted folder pointing to the host root folder"`
 	CgroupPath          string `default:"" help:"Optional. The path where cgroup is mounted."`
 	Fargate             bool   `default:"false" help:"Enables Fargate container metrics fetching. If enabled no metrics are collected from cgroups or Docker. Defaults to false"`
-	ExitedContainersTTL string `default:"24h" help:"Enables to integration to stop reporting Exited contaienrs that are older than the set TTL. Possible values are time-strings: 1s, 1m, 1h"`
+	ExitedContainersTTL string `default:"24h" help:"Enables to integration to stop reporting Exited containers that are older than the set TTL. Possible values are time-strings: 1s, 1m, 1h"`
 	CgroupDriver        string `default:"" help:"Optional. Specify the cgroup driver."`
 	DockerClientVersion string `default:"1.24" help:"Optional. Specify the version of the docker client. Used for compatibility."`
 }
