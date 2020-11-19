@@ -4,8 +4,10 @@ package biz
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math"
 	"runtime"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -68,9 +70,10 @@ type Processer interface {
 // MetricsFetcher fetches the container system-level metrics from different sources and processes it to export
 // metrics with business-value
 type MetricsFetcher struct {
-	store     persist.Storer
-	fetcher   raw.Fetcher
-	inspector Inspector
+	store              persist.Storer
+	fetcher            raw.Fetcher
+	inspector          Inspector
+	exitedContainerTTL time.Duration
 }
 
 // Inspector is the abstraction of the only method that we require from the docker go client
@@ -79,12 +82,23 @@ type Inspector interface {
 }
 
 // NewProcessor creates a MetricsFetcher from implementations of its required components
-func NewProcessor(store persist.Storer, fetcher raw.Fetcher, inspector Inspector) *MetricsFetcher {
+func NewProcessor(store persist.Storer, fetcher raw.Fetcher, inspector Inspector, exitedContainerTTL time.Duration) *MetricsFetcher {
 	return &MetricsFetcher{
-		store:     store,
-		fetcher:   fetcher,
-		inspector: inspector,
+		store:              store,
+		fetcher:            fetcher,
+		inspector:          inspector,
+		exitedContainerTTL: exitedContainerTTL,
 	}
+}
+
+// ErrExitedContainerExpired is the error type used when exited containers have exceed the TTL that would allow the
+// integration to keep reporting them.
+type ErrExitedContainerExpired struct {
+	s string
+}
+
+func (e ErrExitedContainerExpired) Error() string {
+	return e.s
 }
 
 // Process returns a metrics Sample of the container with the given ID
@@ -95,13 +109,29 @@ func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 	if err != nil {
 		return metrics, err
 	}
-	// TODO: move logic to skip container without State to Docker specific code.
 	if json.ContainerJSONBase == nil {
 		return metrics, errors.New("empty container inspect result")
 	}
 
+	// TODO: move logic to skip container without State to Docker specific code.
 	if json.State == nil {
 		log.Debug("invalid container %s JSON: missing State", containerID)
+	}
+
+	if mc.exitedContainerTTL != 0 && json.State != nil && strings.ToLower(json.State.Status) == "exited" {
+		exitTimestamp, err := time.Parse(time.RFC3339Nano, json.State.FinishedAt)
+		if err != nil {
+			return metrics, fmt.Errorf("invalid finished_at timestamp for exited container %s: %s (%v)",
+				containerID,
+				json.State.FinishedAt,
+				err,
+			)
+		}
+		if time.Since(exitTimestamp) > mc.exitedContainerTTL {
+			return metrics, ErrExitedContainerExpired{
+				fmt.Sprintf("container %s exited after TTL (%v), skipping", containerID, mc.exitedContainerTTL),
+			}
+		}
 	}
 
 	rawMetrics, err := mc.fetcher.Fetch(json)

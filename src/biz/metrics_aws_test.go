@@ -30,11 +30,7 @@ func TestFargateMetrics(t *testing.T) {
 	inspector, err := aws.NewFargateInspector(baseURL)
 	require.NoError(t, err)
 
-	metrics := NewProcessor(
-		persist.NewInMemoryStore(),
-		fetcher,
-		inspector,
-	)
+	metrics := NewProcessor(persist.NewInMemoryStore(), fetcher, inspector, 0)
 	samples, err := metrics.Process(fargateContainerID)
 	require.NoError(t, err)
 

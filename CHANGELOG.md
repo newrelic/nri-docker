@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## 1.4.0 (2020-11-19)
+
+### Changed
+* nri-docker will no longer report containers that have been stopped for more than 24 hours.
+  This value can be configured using the `EXITED_CONTAINERS_TTL` environment variable using 
+  any value that can be parsed into a `time.Duration`, i.e. `1s`, `1m`, `1h`.
+  To replicate the old behavior of the integration, set this environment variable to `0` (zero).
+
 ## 1.3.3 (2020-11-12)
 ### Changed
 * Add metadata to samples from Fargate (#50)

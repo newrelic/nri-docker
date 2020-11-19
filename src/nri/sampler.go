@@ -36,10 +36,8 @@ type DockerClient interface {
 	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
 }
 
-// NewSampler returns a ContainerSampler instance. The hostRoot argument is used only if the integration is
-// executed inside a container, and must point to the shared folder that allows accessing to the host root
-// folder (usually /host)
-func NewSampler(fetcher raw.Fetcher, docker DockerClient) (*ContainerSampler, error) {
+// NewSampler returns a ContainerSampler instance.
+func NewSampler(fetcher raw.Fetcher, docker DockerClient, exitedContainerTTL time.Duration) (*ContainerSampler, error) {
 	// SDK Storer to keep metric values between executions (e.g. for rates and deltas)
 	store, err := persist.NewFileStore( // TODO: make the following options configurable
 		persist.DefaultPath("container_cpus"),
@@ -50,7 +48,7 @@ func NewSampler(fetcher raw.Fetcher, docker DockerClient) (*ContainerSampler, er
 	}
 
 	return &ContainerSampler{
-		metrics: biz.NewProcessor(store, fetcher, docker),
+		metrics: biz.NewProcessor(store, fetcher, docker, exitedContainerTTL),
 		docker:  docker,
 		store:   store,
 	}, nil
@@ -72,6 +70,15 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 	}
 
 	for _, container := range containers {
+		metrics, err := cs.metrics.Process(container.ID)
+		if err != nil {
+			if _, ok := err.(*biz.ErrExitedContainerExpired); ok {
+				log.Debug(err.Error())
+				continue
+			}
+			log.Error("error fetching metrics for container %v: %v", container.ID, err)
+		}
+
 		// Creating entity and populating metrics
 		entity, err := i.Entity(container.ID, "docker")
 		if err != nil {
@@ -95,8 +102,8 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 		populate(ms, labels(container))
 
 		// TODO: this *needs* to be refactored into the call to ContainerList, because different
-		// systems might represent running container in a slightly different way. This can be tricky
-		// because for Docker containers we're relyng on the capabilities of the official Docker client.
+		// systems might represent running containers in a slightly different way. This can be tricky
+		// because for Docker containers we're relying on the capabilities of the official Docker client.
 		// Possibly wrapping the Docker client with another type is a good solution.
 		// i.e. Docker uses `state = running` and ECS uses `status = RUNNING`.
 		// If State is empty, we check by status up.
@@ -108,11 +115,6 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 		}
 
 		// populating metrics that only apply to running containers
-		metrics, err := cs.metrics.Process(container.ID)
-		if err != nil {
-			log.Error("error fetching metrics for container %v: %v", container.ID, err)
-			continue
-		}
 		populate(ms, misc(&metrics))
 		populate(ms, cpu(&metrics.CPU))
 		populate(ms, memory(&metrics.Memory))
