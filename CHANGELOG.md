@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## 1.4.1 (2020-11-26)
+
+### Fixed
+* Fixed a bug where an error type assertion would not work correctly and "exited"
+  containers could still be reported by nri-docker even after their TTL has passed.
+
 ## 1.4.0 (2020-11-19)
 
 ### Changed
