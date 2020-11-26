@@ -136,8 +136,8 @@ func TestExitedContainerTTL_Expired(t *testing.T) {
 	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{
 		ContainerJSONBase: &types.ContainerJSONBase{
 			State: &types.ContainerState{
-				Status: "exited",
-				FinishedAt: time.Now().Add(-2*time.Hour).Format(time.RFC3339Nano),
+				Status:     "exited",
+				FinishedAt: time.Now().Add(-2 * time.Hour).Format(time.RFC3339Nano),
 			},
 		},
 	}, nil)
@@ -171,8 +171,8 @@ func TestSampleAll(t *testing.T) {
 	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{
 		ContainerJSONBase: &types.ContainerJSONBase{
 			State: &types.ContainerState{
-				Status: "exited",
-				FinishedAt: time.Now().Add(15*time.Minute).Format(time.RFC3339Nano),
+				Status:     "exited",
+				FinishedAt: time.Now().Add(15 * time.Minute).Format(time.RFC3339Nano),
 			},
 		},
 	}, nil)
