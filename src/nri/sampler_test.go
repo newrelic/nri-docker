@@ -195,6 +195,7 @@ func TestSampleAll(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = sampler.SampleAll(context.Background(), i)
+	assert.NoError(t, err)
 	assert.Len(t, i.Entities, 1)
 	assert.Equal(t, i.Entities[0].Metadata.Name, "containerid")
 }
