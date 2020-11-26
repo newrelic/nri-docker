@@ -97,7 +97,7 @@ type ErrExitedContainerExpired struct {
 	s string
 }
 
-func (e ErrExitedContainerExpired) Error() string {
+func (e *ErrExitedContainerExpired) Error() string {
 	return e.s
 }
 
@@ -128,7 +128,7 @@ func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 			)
 		}
 		if time.Since(exitTimestamp) > mc.exitedContainerTTL {
-			return metrics, ErrExitedContainerExpired{
+			return metrics, &ErrExitedContainerExpired{
 				fmt.Sprintf("container %s exited after TTL (%v), skipping", containerID, mc.exitedContainerTTL),
 			}
 		}
