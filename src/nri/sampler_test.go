@@ -50,11 +50,11 @@ func (m *mockStorer) Save() error {
 	return m.Called().Error(0)
 }
 
-type mockFecher struct {
+type mockFetcher struct {
 	mock.Mock
 }
 
-func (m *mockFecher) Fetch(json types.ContainerJSON) (raw.Metrics, error) {
+func (m *mockFetcher) Fetch(json types.ContainerJSON) (raw.Metrics, error) {
 	args := m.Called(json)
 	return args.Get(0).(raw.Metrics), nil
 }
@@ -123,7 +123,7 @@ func TestECSLabelRename(t *testing.T) {
 	}
 }
 
-func TestExitedContainerTTL_Expired(t *testing.T) {
+func TestExitedContainerTTLExpired(t *testing.T) {
 	mocker := &mocker{}
 	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{
 		{
@@ -172,7 +172,7 @@ func TestSampleAll(t *testing.T) {
 		ContainerJSONBase: &types.ContainerJSONBase{
 			State: &types.ContainerState{
 				Status:     "exited",
-				FinishedAt: time.Now().Add(15 * time.Minute).Format(time.RFC3339Nano),
+				FinishedAt: time.Now().Add(-15 * time.Minute).Format(time.RFC3339Nano),
 			},
 		},
 	}, nil)
@@ -182,7 +182,7 @@ func TestSampleAll(t *testing.T) {
 	mStore.On("Get", mock.Anything, mock.Anything).Return(int64(0), nil)
 	mStore.On("Set", mock.Anything, mock.Anything).Return(int64(0))
 
-	fetcher := &mockFecher{}
+	fetcher := &mockFetcher{}
 	fetcher.On("Fetch", mock.Anything).Return(raw.Metrics{}, nil)
 
 	sampler := ContainerSampler{
