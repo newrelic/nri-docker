@@ -3,6 +3,7 @@ package nri
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/stretchr/testify/assert"
@@ -12,6 +13,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/newrelic/nri-docker/src/biz"
+	"github.com/newrelic/nri-docker/src/raw"
 )
 
 // mocker is a Docker mock
@@ -46,6 +48,15 @@ func (m *mockStorer) Delete(key string) error {
 }
 func (m *mockStorer) Save() error {
 	return m.Called().Error(0)
+}
+
+type mockFecher struct {
+	mock.Mock
+}
+
+func (m *mockFecher) Fetch(json types.ContainerJSON) (raw.Metrics, error) {
+	args := m.Called(json)
+	return args.Get(0).(raw.Metrics), nil
 }
 
 func TestECSLabelRename(t *testing.T) {
@@ -110,4 +121,80 @@ func TestECSLabelRename(t *testing.T) {
 			t.Errorf("Label %s has value of %v, expected %s", expectedName, value, expectedValue)
 		}
 	}
+}
+
+func TestExitedContainerTTL_Expired(t *testing.T) {
+	mocker := &mocker{}
+	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{
+		{
+			ID:      "containerid",
+			Names:   []string{"Container 1"},
+			Image:   "my_image",
+			ImageID: "my_image_id",
+		},
+	}, nil)
+	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{
+		ContainerJSONBase: &types.ContainerJSONBase{
+			State: &types.ContainerState{
+				Status: "exited",
+				FinishedAt: time.Now().Add(-2*time.Hour).Format(time.RFC3339Nano),
+			},
+		},
+	}, nil)
+
+	mStore := &mockStorer{}
+	mStore.On("Save").Return(nil)
+
+	sampler := ContainerSampler{
+		metrics: biz.NewProcessor(mStore, nil, mocker, 30*time.Minute),
+		docker:  mocker,
+		store:   mStore,
+	}
+
+	i, err := integration.New("test", "test-version")
+	assert.NoError(t, err)
+
+	err = sampler.SampleAll(context.Background(), i)
+	assert.Empty(t, i.Entities)
+}
+
+func TestSampleAll(t *testing.T) {
+	mocker := &mocker{}
+	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{
+		{
+			ID:      "containerid",
+			Names:   []string{"Container 1"},
+			Image:   "my_image",
+			ImageID: "my_image_id",
+		},
+	}, nil)
+	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{
+		ContainerJSONBase: &types.ContainerJSONBase{
+			State: &types.ContainerState{
+				Status: "exited",
+				FinishedAt: time.Now().Add(15*time.Minute).Format(time.RFC3339Nano),
+			},
+		},
+	}, nil)
+
+	mStore := &mockStorer{}
+	mStore.On("Save").Return(nil)
+	mStore.On("Get", mock.Anything, mock.Anything).Return(int64(0), nil)
+	mStore.On("Set", mock.Anything, mock.Anything).Return(int64(0))
+
+	fetcher := &mockFecher{}
+	fetcher.On("Fetch", mock.Anything).Return(raw.Metrics{}, nil)
+
+	sampler := ContainerSampler{
+		metrics: biz.NewProcessor(mStore, fetcher, mocker, 30*time.Minute),
+		docker:  mocker,
+		store:   mStore,
+	}
+
+	i, err := integration.New("test", "test-version")
+	assert.NoError(t, err)
+
+	err = sampler.SampleAll(context.Background(), i)
+	assert.Len(t, i.Entities, 1)
+	assert.Equal(t, i.Entities[0].Metadata.Name, "containerid")
 }
