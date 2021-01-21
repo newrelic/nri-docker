@@ -27,6 +27,12 @@
 			"revisionTime": "2019-08-06T19:59:04Z"
 		},
 		{
+			"checksumSHA1": "ex3N80cLtG4/PfXpIMPOGtbYz98=",
+			"path": "github.com/aws/aws-sdk-go/aws/arn",
+			"revision": "be10aadefc0a3b97e8cdbc09d9693f633cfed290",
+			"revisionTime": "2021-01-15T19:22:01Z"
+		},
+		{
 			"checksumSHA1": "YykxL1sZqdRrhEH5s5Hr6VK0geA=",
 			"path": "github.com/containerd/cgroups",
 			"revision": "fc51bcbe4714807834a6481e609aef94e5e6b917",

@@ -3,6 +3,8 @@ package biz
 import (
 	"bytes"
 	"fmt"
+	"github.com/newrelic/nri-docker/src/biz"
+	"github.com/newrelic/nri-docker/test"
 	"log"
 	"os/exec"
 	"strings"
@@ -12,7 +14,6 @@ import (
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/persist"
 	"github.com/newrelic/nri-docker/src/raw"
-	"github.com/newrelic/nri-docker/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -39,7 +40,11 @@ func TestHighCPU(t *testing.T) {
 	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
 	require.NoError(t, err)
 
-	metrics := NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
+	metrics := biz.NewProcessor(
+		persist.NewInMemoryStore(),
+		cgroupFetcher,
+		docker,
+		0)
 	sample, err := metrics.Process(containerID)
 	require.NoError(t, err)
 
@@ -82,7 +87,11 @@ func TestLowCPU(t *testing.T) {
 	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
 	require.NoError(t, err)
 
-	metrics := NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
+	metrics := biz.NewProcessor(
+		persist.NewInMemoryStore(),
+		cgroupFetcher,
+		docker,
+		0)
 	sample, err := metrics.Process(containerID)
 	require.NoError(t, err)
 
@@ -116,7 +125,11 @@ func TestMemory(t *testing.T) {
 	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
 	require.NoError(t, err)
 
-	metrics := NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
+	metrics := biz.NewProcessor(
+		persist.NewInMemoryStore(),
+		cgroupFetcher,
+		docker,
+		0)
 	// Then the Memory metrics are reported according to the usage and limits
 	test.Eventually(t, eventuallyTimeout, func(t require.TestingT) {
 		sample, err := metrics.Process(containerID)
@@ -188,7 +201,7 @@ func TestExitedContainersWithTTL(t *testing.T) {
 	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
 	require.NoError(t, err)
 
-	metrics := NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 1*time.Second)
+	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 1*time.Second)
 
 	test.Eventually(t, eventuallyTimeout, func(t require.TestingT) {
 		samples, err := metrics.Process(containerID)
@@ -207,7 +220,7 @@ func TestExitedContainersWithoutTTL(t *testing.T) {
 	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
 	require.NoError(t, err)
 
-	metrics := NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
+	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
 
 	test.Eventually(t, eventuallyTimeout, func(t require.TestingT) {
 		sample, err := metrics.Process(containerID)

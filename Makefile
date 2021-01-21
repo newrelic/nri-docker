@@ -6,9 +6,6 @@ TEST_DEPS        = github.com/axw/gocov/gocov github.com/AlekSi/gocov-xml
 INTEGRATIONS_DIR = /var/db/newrelic-infra/newrelic-integrations/
 CONFIG_DIR       = /etc/newrelic-infra/integrations.d
 GO_FILES        := ./src/
-WORKDIR         := $(shell pwd)
-TARGET          := target
-TARGET_DIR       = $(WORKDIR)/$(TARGET)
 GOOS             = GOOS=linux
 GO               = $(GOOS) go
 GOCOV            = $(GOOS) gocov
@@ -19,7 +16,7 @@ build: clean validate compile test
 
 clean: compile-deps
 	@echo "=== $(INTEGRATION) === [ clean ]: removing binaries and coverage file..."
-	@rm -rfv bin coverage.xml $(TARGET)
+	@rm -rfv bin coverage.xml
 
 validate-deps:
 	@echo "=== $(INTEGRATION) === [ validate-deps ]: installing validation dependencies..."
@@ -56,9 +53,6 @@ validate-only:
 
 validate: validate-deps validate-only
 
-run-docker-dev:
-	docker run --rm -it -v $(WORKDIR):/go/src/github.com/newrelic/nri-docker golang:1.10
-
 compile-deps:
 	@echo "=== $(INTEGRATION) === [ compile-deps ]: installing build dependencies..."
 	@$(GO) get -v -d -t ./...
@@ -72,7 +66,6 @@ compile: compile-deps bin/$(BINARY_NAME)
 test-deps: compile-deps
 	@echo "=== $(INTEGRATION) === [ test-deps ]: installing testing dependencies..."
 	@$(GO) get -v $(TEST_DEPS)
-	@docker build -t stress:latest src/biz/
 
 test-only:
 	@echo "=== $(INTEGRATION) === [ test ]: running unit tests..."
@@ -80,11 +73,13 @@ test-only:
 
 test: test-deps test-only
 
-integration-test: test-deps
+integration-test-deps: compile-deps
+	@echo "=== $(INTEGRATION) === [ integration-test-deps ]: installing testing dependencies..."
+	@docker build -t stress:latest src/biz/
+
+integration-test: integration-test-deps test-deps
 	@echo "=== $(INTEGRATION) === [ test ]: running integration tests..."
-	@docker-compose -f tests/integration/docker-compose.yml up -d --build
-	@$(GO) test -v -tags=integration ./tests/integration/. || (ret=$$?; docker-compose -f tests/integration/docker-compose.yml down && exit $$ret)
-	@docker-compose -f tests/integration/docker-compose.yml down
+	@$(GO) test -v -tags=integration ./tests/integration/.
 
 install: bin/$(BINARY_NAME)
 	@echo "=== $(INTEGRATION) === [ install ]: installing bin/$(BINARY_NAME)..."
@@ -93,6 +88,7 @@ install: bin/$(BINARY_NAME)
 	@sudo install -D --mode=644 --owner=root $(ROOT)$(INTEGRATION)-config.yml.sample $(CONFIG_DIR)/$(INTEGRATION)-config.yml.sample
 
 # Include thematic Makefiles
-include Makefile-*.mk
+include $(CURDIR)/build/ci.mk
+include $(CURDIR)/build/release.mk
 
 .PHONY: all build clean validate-deps validate-only validate compile-deps compile test-deps test-only test integration-test install
