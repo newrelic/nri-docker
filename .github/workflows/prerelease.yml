@@ -88,6 +88,8 @@ jobs:
     needs: [validate, test-nix, snyk, test-integration-nix]
     steps:
       - uses: actions/checkout@v2
+        with:
+          fetch-depth: 50 # Needed for the changelog to run properly
       - name: Login to DockerHub
         uses: docker/login-action@v1
         with:
@@ -117,6 +119,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           compareLink: "false"
           author: "false"
+          onlyLastTag: "true"
           stripHeaders: "true"
           stripGeneratorNotice: "true"
       - name: Push push changelog to release notes
