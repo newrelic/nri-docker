@@ -99,7 +99,6 @@ jobs:
         uses: heinrichreimer/github-changelog-generator-action@v2.2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          output: CHANGELOG.md
           issues: true
           issuesWoLabels: true
           pullRequests: true
@@ -120,8 +119,10 @@ jobs:
         id: changelog
         uses: heinrichreimer/github-changelog-generator-action@v2.2
         with:
+          onlyLastTag: true
+          stripHeaders: true
+
           token: ${{ secrets.GITHUB_TOKEN }}
-          output: release-changelog
           issues: true
           issuesWoLabels: true
           pullRequests: true
@@ -129,7 +130,6 @@ jobs:
           compareLink: false
           author: false
           stripGeneratorNotice: true
-          onlyLastTag: true
-      - name: Push push changelog to release notes
+      - name: Push changelog to release notes
         run: | # Uses hub as gh does not support editing. First line of stdin is the release title.
-          (echo $TAG && cat release-changelog) | hub release edit -F -
+          (echo $TAG && cat CHANGELOG.md) | hub release edit -F - $TAG
