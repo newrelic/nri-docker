@@ -93,6 +93,14 @@ jobs:
         with:
           username: ${{ secrets.OHAI_DOCKER_HUB_ID }}
           password: ${{ secrets.OHAI_DOCKER_HUB_PASSWORD }}
+      - name: Create CHANGELOG.md
+        uses: heinrichreimer/github-changelog-generator-action@v2.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          output: CHANGELOG.md
+          compareLink: "false"
+          author: "false"
+          stripGeneratorNotice: "true"
       - name: Pre release
         run: make ci/prerelease
       - name: Notify failure via Slack
@@ -102,3 +110,18 @@ jobs:
           slack-bot-user-oauth-access-token: ${{ secrets.COREINT_SLACK_TOKEN }}
           slack-channel: ${{ secrets.COREINT_SLACK_CHANNEL }}
           slack-text: "❌ `${{ env.REPO_FULL_NAME }}`: prerelease pipeline failed."
+      - name: Build latest release changelog
+        id: changelog
+        uses: heinrichreimer/github-changelog-generator-action@v2.2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          compareLink: "false"
+          author: "false"
+          stripHeaders: "true"
+          stripGeneratorNotice: "true"
+      - name: Push push changelog to release notes
+        run: | # using hub since gh does not support editing releases
+          hub release edit -F - $TAG <<EOF
+          $TAG
+          ${{ steps.changelog.outputs.changelog }}
+          EOF

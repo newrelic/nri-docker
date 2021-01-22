@@ -13,3 +13,6 @@ bin/
 # build files
 src/versioninfo.json
 src/resource.syso
+
+# Changelog is generated in prerelease pipeline
+CHANGELOG.md
