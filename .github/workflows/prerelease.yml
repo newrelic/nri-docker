@@ -100,7 +100,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           issues: true
-          issuesWoLabels: true
+          issuesWoLabels: false
           pullRequests: true
           prWoLabels: true
           compareLink: false
@@ -124,7 +124,7 @@ jobs:
 
           token: ${{ secrets.GITHUB_TOKEN }}
           issues: true
-          issuesWoLabels: true
+          issuesWoLabels: false
           pullRequests: true
           prWoLabels: true
           compareLink: false
