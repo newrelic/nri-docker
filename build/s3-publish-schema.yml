@@ -1,6 +1,6 @@
 # This is a schema for newrelic/infrastructure-publish-action@v1, which decides which files are uploaded and where.
-# nri-docker is only distributed as tarballs, which are then bundlind by the agent. Therefore all other files are stripped.
-# This file is accessible from https://raw.githubusercontent.com/newrelic/nri-docker/$TAG/build/s3-publish-schema.yml
+# nri-docker is only distributed as tarball, so everything else (windows, linux packages) has been removed from this schema.
+# This file is a stripped version of https://github.com/newrelic/infrastructure-publish-action/blob/main/schemas/ohi.yml
 ---
 - src: "{app_name}_linux_{version}_{arch}.tar.gz"
   uploads:
