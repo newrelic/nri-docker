@@ -38,19 +38,13 @@ release/fix-archive:
 	@echo "===> $(INTEGRATION) === [release/fix-archive] fixing tar.gz archives internal structure"
 	@bash $(CURDIR)/build/nix/fix_archives.sh $(CURDIR)
 
-.PHONY : release/sign/nix
-release/sign/nix:
-	@echo "===> $(INTEGRATION) === [release/sign] signing packages"
-	@bash $(CURDIR)/build/nix/sign.sh
-
-
 .PHONY : release/publish
 release/publish:
 	@echo "===> $(INTEGRATION) === [release/publish] publishing artifacts"
 	@bash $(CURDIR)/build/upload_artifacts_gh.sh
 
 .PHONY : release
-release: release/build release/fix-archive release/sign/nix release/publish release/clean
+release: release/build release/fix-archive release/publish release/clean
 	@echo "===> $(INTEGRATION) === [release/publish] full pre-release cycle complete for nix"
 
 OS := $(shell uname -s)
