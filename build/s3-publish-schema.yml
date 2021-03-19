@@ -1,8 +1,6 @@
 # This is a schema for newrelic/infrastructure-publish-action@v1, which decides which files are uploaded and where.
-# Since nri-docker does not have windows packages, it cannot use the "ohi" schema, so this one is used instead.
-# It is essentially an copy of https://github.com/newrelic/infrastructure-publish-action/blob/main/schemas/ohi.yml
-# with the windows-related files (msis and .zip) removed.
-# It is accessible from https://raw.githubusercontent.com/newrelic/nri-docker/$TAG/build/s3-publish-schema.yml
+# nri-docker is only distributed as tarball, so everything else (windows, linux packages) has been removed from this schema.
+# This file is a stripped version of https://github.com/newrelic/infrastructure-publish-action/blob/main/schemas/ohi.yml
 ---
 - src: "{app_name}_linux_{version}_{arch}.tar.gz"
   uploads:
@@ -13,42 +11,3 @@
     - 386
     - arm
     - arm64
-
-- src: "{app_name}_{version}-1_{arch}.deb"
-  arch:
-    - amd64
-  uploads:
-    - type: apt
-      src_repo: "http://download.newrelic.com/infrastructure_agent/linux/apt"
-      dest: "{dest_prefix}linux/apt/"
-      os_version:
-        - focal
-        - bionic
-        - buster
-        - jessie
-        - precise
-        - stretch
-        - trusty
-        - wheezy
-        - xenial
-
-- src: "{app_name}-{version}-1.{arch}.rpm"
-  arch:
-    - x86_64
-  uploads:
-    - type: yum
-      dest: "{dest_prefix}linux/yum/el/{os_version}/{arch}/"
-      os_version:
-        - 5
-        - 6
-        - 7
-        - 8
-
-    - type: zypp
-      dest: "{dest_prefix}linux/zypp/sles/{os_version}/{arch}/"
-      os_version:
-        - 11.4
-        - 12.1
-        - 12.2
-        - 12.3
-        - 12.4
