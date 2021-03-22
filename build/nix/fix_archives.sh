@@ -24,7 +24,7 @@ find dist -regex ".*_dirty\.tar.gz" | while read tarball_dirty; do
   echo "===> Move files inside ${tarball}"
   mv ${TARBALL_CONTENT_PATH}/nri-${INTEGRATION} "${TARBALL_CONTENT_PATH}/var/db/newrelic-infra/newrelic-integrations/bin/"
   mv ${TARBALL_CONTENT_PATH}/${INTEGRATION}-definition.yml ${TARBALL_CONTENT_PATH}/var/db/newrelic-infra/newrelic-integrations/
-  mv ${TARBALL_CONTENT_PATH}/${INTEGRATION}-config.yml.sample ${TARBALL_CONTENT_PATH}/etc/newrelic-infra/integrations.d/
+  mv ${TARBALL_CONTENT_PATH}/${INTEGRATION}-config.yml ${TARBALL_CONTENT_PATH}/etc/newrelic-infra/integrations.d/
 
   echo "===> Creating tarball ${TARBALL_CLEAN}"
   cd ${TARBALL_CONTENT_PATH}

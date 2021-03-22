@@ -19,7 +19,7 @@ archives:
       - nri-nix
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Version }}_{{ .Arch }}_dirty"
     files:
-      - docker-config.yml.sample
+      - docker-config.yml
       - docker-definition.yml
     format: tar.gz
 
