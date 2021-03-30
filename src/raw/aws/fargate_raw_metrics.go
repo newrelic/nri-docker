@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/newrelic/infra-integrations-sdk/log"
-
 	"github.com/newrelic/nri-docker/src/raw"
 )
 
@@ -17,6 +16,7 @@ func fargateRawMetrics(fargateStats FargateStats) map[string]*raw.Metrics {
 			log.Debug("did not find container stats for %s, skipping", containerID)
 			continue
 		}
+		network := computeNetworkStats(stats)
 		rawMetrics[containerID] = &raw.Metrics{
 			Time:        now,
 			ContainerID: containerID,
@@ -27,7 +27,7 @@ func fargateRawMetrics(fargateStats FargateStats) map[string]*raw.Metrics {
 				SwapUsage:  0,
 				FuzzUsage:  0,
 			},
-			Network: raw.Network{},
+			Network: network,
 			CPU: raw.CPU{
 				TotalUsage:        stats.CPUStats.CPUUsage.TotalUsage,
 				UsageInUsermode:   stats.CPUStats.CPUUsage.UsageInUsermode,
@@ -63,4 +63,33 @@ func fargateRawMetrics(fargateStats FargateStats) map[string]*raw.Metrics {
 	}
 
 	return rawMetrics
+}
+
+func computeNetworkStats(stats *timedDockerStats) raw.Network {
+	n := raw.Network{}
+	var RxBytes, RxDropped, RxErrors, RxPackets, TxBytes, TxDropped, TxErrors, TxPackets uint64
+	if len(stats.Networks) > 0 {
+		for _, n := range stats.Networks {
+			RxBytes += n.RxBytes
+			RxDropped += n.RxDropped
+			RxErrors += n.RxErrors
+			RxPackets += n.RxPackets
+			TxBytes += n.TxBytes
+			TxDropped += n.TxDropped
+			TxErrors += n.TxErrors
+			TxPackets += n.TxPackets
+		}
+		n = raw.Network{
+			//Note that for big integers the cast is not safe possibly causing an overflow
+			RxBytes:   int64(RxBytes),
+			RxDropped: int64(RxDropped),
+			RxErrors:  int64(RxErrors),
+			RxPackets: int64(RxPackets),
+			TxBytes:   int64(TxBytes),
+			TxDropped: int64(TxDropped),
+			TxErrors:  int64(TxErrors),
+			TxPackets: int64(TxPackets),
+		}
+	}
+	return n
 }
