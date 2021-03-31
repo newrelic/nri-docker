@@ -82,6 +82,7 @@ func network(filePath string) (Network, error) {
 			continue
 		}
 
+		// we are computing the sum between all network interfaces
 		network.RxBytes += int64(rxBytes)
 		network.RxDropped += int64(rxDropped)
 		network.RxErrors += int64(rxErrors)

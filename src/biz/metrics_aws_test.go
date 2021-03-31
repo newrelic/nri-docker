@@ -34,7 +34,6 @@ func TestFargateMetrics(t *testing.T) {
 	samples, err := metrics.Process(fargateContainerID)
 	require.NoError(t, err)
 
-	assert.Equal(t, float64(2), samples.CPU.LimitCores)
 	assert.Equal(t, uint64(200704), samples.Memory.CacheUsageBytes)
 	assert.Equal(t, uint64(268435456), samples.Memory.MemLimitBytes)
 	assert.Equal(t, uint64(11292672), samples.Memory.RSSUsageBytes)
@@ -52,6 +51,47 @@ func TestFargateMetrics(t *testing.T) {
 	assert.Empty(t, samples.Network)
 }
 
+func TestFargateMetricsV4(t *testing.T) {
+	ts, cleanup := startMetadataEndpointStub(t, fargateTaskID)
+	defer cleanup()
+	baseURL, err := url.Parse(fmt.Sprintf("%s/v4/%s", ts.URL, fargateTaskID))
+	require.NoError(t, err)
+
+	fetcher, err := aws.NewFargateFetcher(baseURL)
+	require.NoError(t, err)
+
+	inspector, err := aws.NewFargateInspector(baseURL)
+	require.NoError(t, err)
+
+	metrics := NewProcessor(persist.NewInMemoryStore(), fetcher, inspector, 0)
+	samples, err := metrics.Process(fargateContainerID)
+	require.NoError(t, err)
+
+	assert.Equal(t, uint64(0), samples.Memory.CacheUsageBytes)
+	assert.Equal(t, uint64(0x8000000), samples.Memory.MemLimitBytes)
+	assert.Equal(t, uint64(606208), samples.Memory.RSSUsageBytes)
+	assert.Equal(t, uint64(606208), samples.Memory.UsageBytes)
+	assert.Equal(t, 0.45166015625, samples.Memory.UsagePercent)
+
+	assert.Equal(t, uint64(0x3), samples.Pids.Current)
+	assert.Equal(t, uint64(0), samples.Pids.Limit)
+
+	assert.Equal(t, float64(0), samples.BlkIO.TotalReadBytes)
+	assert.Equal(t, float64(0), samples.BlkIO.TotalReadCount)
+	assert.Equal(t, float64(0), samples.BlkIO.TotalWriteBytes)
+	assert.Equal(t, float64(0), samples.BlkIO.TotalWriteCount)
+
+	assert.Equal(t, int64(84), samples.Network.RxBytes)
+	assert.Equal(t, int64(0), samples.Network.RxDropped)
+	assert.Equal(t, int64(0), samples.Network.RxErrors)
+	assert.Equal(t, int64(2), samples.Network.RxPackets)
+	assert.Equal(t, int64(89), samples.Network.TxBytes)
+	assert.Equal(t, int64(0), samples.Network.TxDropped)
+	assert.Equal(t, int64(3), samples.Network.TxErrors)
+	assert.Equal(t, int64(2), samples.Network.TxPackets)
+
+}
+
 func startMetadataEndpointStub(t *testing.T, taskID string) (server *httptest.Server, cleanup func()) {
 	t.Helper()
 
@@ -65,6 +105,10 @@ func startMetadataEndpointStub(t *testing.T, taskID string) (server *httptest.Se
 				response, err = ioutil.ReadFile("testdata/task_metadata_response.json")
 			case fmt.Sprintf("/v3/%s/task/stats", taskID):
 				response, err = ioutil.ReadFile("testdata/task_container_stats_response.json")
+			case fmt.Sprintf("/v4/%s/task", taskID):
+				response, err = ioutil.ReadFile("testdata/v4_task_metadata_response.json")
+			case fmt.Sprintf("/v4/%s/task/stats", taskID):
+				response, err = ioutil.ReadFile("testdata/v4_task_container_stats_response.json")
 			}
 			require.NoError(t, err)
 

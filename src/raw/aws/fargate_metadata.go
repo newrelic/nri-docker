@@ -25,9 +25,10 @@ import (
 )
 
 const (
-	containerMetadataEnvVar = "ECS_CONTAINER_METADATA_URI"
-	maxRetries              = 4
-	durationBetweenRetries  = time.Second
+	containerMetadataEnvVar   = "ECS_CONTAINER_METADATA_URI"
+	containerMetadataEnvVarV4 = "ECS_CONTAINER_METADATA_URI_V4"
+	maxRetries                = 4
+	durationBetweenRetries    = time.Second
 )
 
 // TaskResponse defines the schema for the task response JSON object
@@ -154,6 +155,20 @@ func MetadataV3BaseURL() (*url.URL, error) {
 	parsedURL, err := url.Parse(baseURL)
 	if err != nil {
 		return nil, fmt.Errorf("could not parse Metadata V3 API URL (%s): %s", baseURL, err)
+	}
+	return parsedURL, nil
+}
+
+// MetadataV4BaseURL returns the v4 metadata endpoint configured via the ECS_CONTAINER_METADATA_URI environment
+// variable.
+func MetadataV4BaseURL() (*url.URL, error) {
+	baseURL, found := os.LookupEnv(containerMetadataEnvVarV4)
+	if !found {
+		return nil, fmt.Errorf("could not find env var with Metadata V4 API URL: %s", containerMetadataEnvVarV4)
+	}
+	parsedURL, err := url.Parse(baseURL)
+	if err != nil {
+		return nil, fmt.Errorf("could not parse Metadata V4 API URL (%s): %s", baseURL, err)
 	}
 	return parsedURL, nil
 }

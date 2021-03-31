@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"os"
 	"runtime"
 	"strings"
@@ -68,13 +69,19 @@ func main() {
 	var fetcher raw.Fetcher
 	var docker nri.DockerClient
 	if args.Fargate {
-		metadataV3BaseURL, err := aws.MetadataV3BaseURL()
+		var err error
+		var metadataBaseURL *url.URL
+		if metadataBaseURL, err = aws.MetadataV4BaseURL(); err != nil {
+			log.Debug("The Metadata endpoint V4 is not available, falling back to V3: %s", err.Error())
+			//If we do not find V4 we fall back to V3
+			metadataBaseURL, err = aws.MetadataV3BaseURL()
+		}
 		exitOnErr(err)
 
-		fetcher, err = aws.NewFargateFetcher(metadataV3BaseURL)
+		fetcher, err = aws.NewFargateFetcher(metadataBaseURL)
 		exitOnErr(err)
 
-		docker, err = aws.NewFargateInspector(metadataV3BaseURL)
+		docker, err = aws.NewFargateInspector(metadataBaseURL)
 		exitOnErr(err)
 	} else {
 		detectedHostRoot, err := raw.DetectHostRoot(args.HostRoot, raw.CanAccessDir)

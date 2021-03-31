@@ -20,7 +20,8 @@ const fargateTaskStatsCacheKey = "fargate-task-stats"
 var fargateHTTPClient = &http.Client{Timeout: fargateClientTimeout}
 
 type timedDockerStats struct {
-	docker.Stats
+	//StatsJSON inherits all the fields from docker.Stats adding Network info
+	docker.StatsJSON
 	time time.Time
 }
 
@@ -55,6 +56,9 @@ func (e *FargateFetcher) Fetch(container docker.ContainerJSON) (raw.Metrics, err
 		return raw.Metrics{}, err
 	}
 	rawMetrics := fargateRawMetrics(stats)
+	if rawMetrics[container.ID] == nil {
+		return raw.Metrics{}, fmt.Errorf("the raw metric map did nont contain the container with ID: %s, %d", container.ID, len(rawMetrics))
+	}
 	return *rawMetrics[container.ID], nil
 }
 
