@@ -193,11 +193,24 @@ func memory(mem *biz.Memory) []entry {
 		metricMemoryCacheBytes(mem.CacheUsageBytes),
 		metricMemoryUsageBytes(mem.UsageBytes),
 		metricMemoryResidentSizeBytes(mem.RSSUsageBytes),
+		metricMemoryKernelUsageBytes(mem.KernelUsageBytes),
+		metricMemorySwapUsageBytes(mem.SwapUsageBytes),
 	}
 	if mem.MemLimitBytes > 0 {
 		metrics = append(metrics,
 			metricMemorySizeLimitBytes(mem.MemLimitBytes),
 			metricMemoryUsageLimitPercent(mem.UsagePercent),
+		)
+	}
+	if mem.SwapLimitBytes > 0 {
+		metrics = append(metrics,
+			metricMemorySwapLimitBytes(mem.SwapLimitBytes),
+			metricMemorySwapUsagePercent(mem.SwapUsagePercent),
+		)
+	}
+	if mem.SoftLimitBytes > 0 {
+		metrics = append(metrics,
+			metricMemorySoftLimitBytes(mem.SoftLimitBytes),
 		)
 	}
 	return metrics

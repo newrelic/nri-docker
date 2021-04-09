@@ -56,11 +56,16 @@ type CPU struct {
 
 // Memory metrics
 type Memory struct {
-	UsageBytes      uint64
-	CacheUsageBytes uint64
-	RSSUsageBytes   uint64
-	MemLimitBytes   uint64
-	UsagePercent    float64 // Usage percent from the limit, if any
+	UsageBytes       uint64
+	CacheUsageBytes  uint64
+	RSSUsageBytes    uint64
+	MemLimitBytes    uint64
+	UsagePercent     float64 // Usage percent from the limit, if any
+	KernelUsageBytes uint64
+	SwapUsageBytes   uint64
+	SwapLimitBytes   uint64
+	SwapUsagePercent float64
+	SoftLimitBytes   uint64
 }
 
 // Processer defines the most essential interface of an exportable container Processer
@@ -205,8 +210,8 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CP
 
 func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 	memLimits := mem.UsageLimit
-	// negative or ridiculously large memory limits are set to 0 (no limit)
-	if memLimits < 0 || memLimits > math.MaxInt64/2 {
+	// ridiculously large memory limits are set to 0 (no limit)
+	if memLimits > math.MaxInt64/2 {
 		memLimits = 0
 	}
 
@@ -237,12 +242,30 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 		usagePercent = 100 * float64(usage) / float64(memLimits)
 	}
 
+	swapLimit := mem.SwapLimit
+	if mem.SwapLimit > math.MaxInt64/2 {
+		swapLimit = 0
+	}
+	swapUsagePercent := float64(0)
+	if swapLimit > 0 {
+		swapUsagePercent = 100 * float64(mem.SwapUsage+mem.RSS) / float64(swapLimit)
+	}
+	softLimit := mem.SoftLimit
+	if mem.SoftLimit > math.MaxInt64/2 {
+		softLimit = 0
+	}
+
 	return Memory{
-		MemLimitBytes:   memLimits,
-		CacheUsageBytes: mem.Cache,
-		RSSUsageBytes:   mem.RSS,
-		UsageBytes:      usage,
-		UsagePercent:    usagePercent,
+		MemLimitBytes:    memLimits,
+		CacheUsageBytes:  mem.Cache,
+		RSSUsageBytes:    mem.RSS,
+		UsageBytes:       usage,
+		UsagePercent:     usagePercent,
+		KernelUsageBytes: mem.KernelMemoryUsage,
+		SwapUsageBytes:   mem.SwapUsage,
+		SwapLimitBytes:   swapLimit,
+		SoftLimitBytes:   softLimit,
+		SwapUsagePercent: swapUsagePercent,
 	}
 }
 

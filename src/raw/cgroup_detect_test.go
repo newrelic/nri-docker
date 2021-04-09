@@ -297,7 +297,7 @@ func TestGetSingleFileUintStat(t *testing.T) {
 
 	td := t.TempDir()
 	cpuPath := path.Join(td, "cpu/docker/f7bd95ec")
-	assert.NoError(t, os.MkdirAll(cpuPath, fs.FileMode(os.O_RDWR)))
+	assert.NoError(t, os.MkdirAll(cpuPath, fs.FileMode(os.ModePerm)))
 	f, err := os.Create(path.Join(cpuPath, "cpu.shares"))
 	assert.NoError(t, err)
 	fmt.Fprintf(f, "9999\n")

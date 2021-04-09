@@ -99,6 +99,13 @@ func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		log.Error("couldn't read memory stats: %v", err)
 	}
 
+	if stats.Memory.KernelMemoryUsage, err = cgroupInfo.getSingleFileUintStat(cgroups.Memory, "memory.kmem.usage_in_bytes"); err != nil {
+		log.Debug("couldn't read KernelMemoryUsage stats: %v", err)
+	}
+
+	if stats.Memory.SoftLimit, err = cgroupInfo.getSingleFileUintStat(cgroups.Memory, "memory.soft_limit_in_bytes"); err != nil {
+		log.Debug("couldn't read soft_limit_in_bytes stats: %v", err)
+	}
 	stats.ContainerID = containerID
 
 	netMetricsPath := filepath.Join(cg.hostRoot, "/proc", strconv.Itoa(pid), "net", "dev")
@@ -275,6 +282,6 @@ func memory(metric *cgroupsV1.Metrics) (Memory, error) {
 	mem.Cache = metric.Memory.Cache
 	mem.RSS = metric.Memory.RSS
 	mem.SwapUsage = metric.Memory.Swap.Usage
-
+	mem.SwapLimit = metric.Memory.HierarchicalSwapLimit
 	return mem, nil
 }
