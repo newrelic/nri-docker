@@ -255,6 +255,7 @@ func cpu(cpu *biz.CPU) []entry {
 		metricCPUUserPercent(cpu.UserPercent),
 		metricCPUThrottlePeriods(cpu.ThrottlePeriods),
 		metricCPUThrottleTimeMS(cpu.ThrottledTimeMS),
+		metricCPUShares(cpu.Shares),
 	}
 }
 

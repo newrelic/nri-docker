@@ -36,6 +36,7 @@ type CPU struct {
 	ThrottledTimeNS   uint64
 	SystemUsage       uint64
 	OnlineCPUs        uint
+	Shares            uint64
 }
 
 // Pids inside the container

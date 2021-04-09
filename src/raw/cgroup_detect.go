@@ -158,6 +158,18 @@ func (cgi *cgroupPaths) getHierarchyFn() cgroups.Hierarchy {
 	}
 }
 
+func (cgi *cgroupPaths) getSingleFileUintStat(name cgroups.Name, stat string) (uint64, error) {
+	fp, err := cgi.getFullPath(name)
+	if err != nil {
+		return 0, err
+	}
+	c, err := ParseStatFileContentUint64(filepath.Join(fp, stat))
+	if err != nil {
+		return 0, err
+	}
+	return c, nil
+}
+
 func parseCgroupMountPoints(hostRoot string, mountFileInfo io.Reader) (map[string]string, error) {
 	mountPoints := make(map[string]string)
 

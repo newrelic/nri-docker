@@ -3,7 +3,10 @@ package raw
 import (
 	"fmt"
 	"io"
+	"io/fs"
 	"io/ioutil"
+	"os"
+	"path"
 	"strings"
 	"testing"
 
@@ -289,6 +292,29 @@ configfs /sys/kernel/config configfs rw,relatime 0 0`,
 	assert.NoError(t, err)
 
 	assert.ElementsMatch(t, expected, actual)
+}
+func TestGetSingleFileUintStat(t *testing.T) {
+
+	td := t.TempDir()
+	cpuPath := path.Join(td, "cpu/docker/f7bd95ec")
+	assert.NoError(t, os.MkdirAll(cpuPath, fs.FileMode(os.O_RDWR)))
+	f, err := os.Create(path.Join(cpuPath, "cpu.shares"))
+	assert.NoError(t, err)
+	fmt.Fprintf(f, "9999\n")
+
+	cgi := cgroupPaths{
+		mountPoints: map[string]string{
+			"cpu": td,
+		},
+		paths: map[string]string{
+			"cpu": "/docker/f7bd95ec",
+		},
+	}
+
+	actual, err := cgi.getSingleFileUintStat(cgroups.Cpu, "cpu.shares")
+	assert.NoError(t, err)
+
+	assert.Equal(t, uint64(9999), actual)
 }
 
 func createFileOpenFnMock(filesMap map[string]string) func(string) (io.ReadCloser, error) {

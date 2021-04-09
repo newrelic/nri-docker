@@ -51,6 +51,7 @@ type CPU struct {
 	UsedCoresPercent float64
 	ThrottlePeriods  uint64
 	ThrottledTimeMS  float64
+	Shares           uint64
 }
 
 // Memory metrics
@@ -196,6 +197,8 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CP
 	cpu.ThrottledTimeMS = float64(metrics.CPU.ThrottledTimeNS) / 1e9 // nanoseconds to second
 
 	cpu.UsedCoresPercent = 100 * cpu.UsedCores / cpu.LimitCores
+
+	cpu.Shares = metrics.CPU.Shares
 
 	return cpu
 }

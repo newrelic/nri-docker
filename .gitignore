@@ -9,6 +9,8 @@ bin/
 .env
 .envrc
 *.gpg
+.vscode
+.devcontainer
 
 # build files
 src/versioninfo.json

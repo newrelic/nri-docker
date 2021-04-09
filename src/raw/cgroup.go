@@ -91,6 +91,10 @@ func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		log.Error("couldn't read cpu stats: %v", err)
 	}
 
+	if stats.CPU.Shares, err = cgroupInfo.getSingleFileUintStat(cgroups.Cpu, "cpu.shares"); err != nil {
+		log.Error("couldn't read cpu shares: %v", err)
+	}
+
 	if stats.Memory, err = memory(metrics); err != nil {
 		log.Error("couldn't read memory stats: %v", err)
 	}
