@@ -33,20 +33,10 @@
 			"revisionTime": "2021-01-15T19:22:01Z"
 		},
 		{
-			"checksumSHA1": "iG7XQTt+Gy2/yDF4W0lGtYUvUe0=",
+			"checksumSHA1": "YykxL1sZqdRrhEH5s5Hr6VK0geA=",
 			"path": "github.com/containerd/cgroups",
-			"revision": "8a68de567b68b30602948417a7a8e99ccf00ee9b",
-			"revisionTime": "2021-01-14T18:19:51Z",
-			"version": "master",
-			"versionExact": "master"
-		},
-		{
-			"checksumSHA1": "5W62+vLhmGYUmc6yCThoGCRv/bY=",
-			"path": "github.com/containerd/cgroups/stats/v1",
-			"revision": "8a68de567b68b30602948417a7a8e99ccf00ee9b",
-			"revisionTime": "2021-01-14T18:19:51Z",
-			"version": "master",
-			"versionExact": "master"
+			"revision": "fc51bcbe4714807834a6481e609aef94e5e6b917",
+			"revisionTime": "2019-09-11T14:56:53Z"
 		},
 		{
 			"checksumSHA1": "ru5eKWdLzXfpNRL+Mi1bxbmY8DU=",
@@ -59,10 +49,6 @@
 			"path": "github.com/coreos/go-systemd/dbus",
 			"revision": "fd7a80b32e1fc73e890fde45604ed5009dc817a3",
 			"revisionTime": "2019-07-19T11:48:52Z"
-		},
-		{
-			"path": "github.com/coreos/go-systemd/v22/dbus",
-			"revision": ""
 		},
 		{
 			"checksumSHA1": "CSPbwbyzqA6sfORicn4HFtIhF/c=",
@@ -186,10 +172,6 @@
 			"path": "github.com/godbus/dbus",
 			"revision": "6eb4cf171088115fc4f087cb8a302859c601a546",
 			"revisionTime": "2019-07-26T03:53:44Z"
-		},
-		{
-			"path": "github.com/godbus/dbus/v5",
-			"revision": "6eb4cf171088115fc4f087cb8a302859c601a546"
 		},
 		{
 			"checksumSHA1": "NeKpDVhUY91w23M3j6STWeGlvQ8=",

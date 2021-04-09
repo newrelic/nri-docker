@@ -3,13 +3,12 @@ package raw
 import (
 	"bufio"
 	"fmt"
+	"github.com/containerd/cgroups"
+	"github.com/newrelic/infra-integrations-sdk/log"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"github.com/containerd/cgroups"
-	"github.com/newrelic/infra-integrations-sdk/log"
 )
 
 const (
@@ -136,7 +135,7 @@ func (cgi *cgroupPaths) getHierarchyFn() cgroups.Hierarchy {
 		var subsystems []cgroups.Subsystem
 
 		if cpusetMountPoint, ok := cgi.mountPoints[string(cgroups.Cpuset)]; ok {
-			subsystems = append(subsystems, cgroups.NewCpuset(cpusetMountPoint))
+			subsystems = append(subsystems, cgroups.NewCputset(cpusetMountPoint))
 		}
 		if cpuMountPoint, ok := cgi.mountPoints[string(cgroups.Cpu)]; ok {
 			subsystems = append(subsystems, cgroups.NewCpu(cpuMountPoint))

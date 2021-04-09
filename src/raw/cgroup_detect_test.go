@@ -2,6 +2,7 @@ package raw
 
 import (
 	"fmt"
+	"github.com/containerd/cgroups"
 	"io"
 	"io/fs"
 	"io/ioutil"
@@ -9,8 +10,6 @@ import (
 	"path"
 	"strings"
 	"testing"
-
-	"github.com/containerd/cgroups"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -278,7 +277,7 @@ configfs /sys/kernel/config configfs rw,relatime 0 0`,
 	}
 	expected := []cgroups.Subsystem{
 		cgroups.NewPids("/custom/host/sys/fs/cgroup1"),
-		cgroups.NewCpuset("/custom/host/sys/fs/cgroup2"),
+		cgroups.NewCputset("/custom/host/sys/fs/cgroup2"),
 		cgroups.NewCpu("/custom/host/sys/fs/cgroup3"),
 		cgroups.NewCpuacct("/custom/host/sys/fs/cgroup3"),
 		cgroups.NewMemory("/custom/host/sys/fs/cgroup4"),
