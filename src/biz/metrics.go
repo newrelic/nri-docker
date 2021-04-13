@@ -242,13 +242,26 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 		usagePercent = 100 * float64(usage) / float64(memLimits)
 	}
 
+	// swapLimit is always > memLimits and is the total limit (mem+swap)
+	// For example running the following container
+	// docker run --memory-swap=400m --memory=300m --memory-reservation=250m stress stress-ng --vm 1 --vm-bytes 320m
+	// generates the following metrics
+	// "memorySizeLimitBytes": 300m,
+	// "memorySoftLimitBytes": 250m,
+	// "memorySwapLimitBytes": 400m,
+	// "memorySwapUsageBytes": 324m,
+	// "memorySwapUsagePercent": 80.6904296875,
+	// "memoryUsageBytes": 322m,
+	// "memoryUsageLimitPercent": 107.58723958333333,
+
 	swapLimit := mem.SwapLimit
 	if mem.SwapLimit > math.MaxInt64/2 {
 		swapLimit = 0
 	}
 	swapUsagePercent := float64(0)
 	if swapLimit > 0 {
-		swapUsagePercent = 100 * float64(mem.SwapUsage+mem.RSS) / float64(swapLimit)
+		// Percentage of total memory used (memory+swap) over swapLimit
+		swapUsagePercent = 100 * float64(usage) / float64(swapLimit)
 	}
 	softLimit := mem.SoftLimit
 	if mem.SoftLimit > math.MaxInt64/2 {
