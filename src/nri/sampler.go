@@ -69,6 +69,17 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 		return err
 	}
 
+	//TODO Add ff to get this info
+	info, err := cs.docker.Info(context.Background())
+	if err != nil {
+		log.Error("fetching info from docker api: %s", err.Error())
+	}
+	storageStats, err := biz.ParseDeviceMapperStats(info)
+	if err != nil {
+		log.Warn("computing Storage Driver stats: %s", err.Error())
+	}
+	storageEntry := getStorageEntry(storageStats)
+
 	for _, container := range containers {
 		metrics, err := cs.metrics.Process(container.ID)
 		if err != nil {
@@ -121,6 +132,7 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 		populate(ms, pids(&metrics.Pids))
 		populate(ms, blkio(&metrics.BlkIO))
 		populate(ms, cs.networkMetrics(&metrics.Network))
+		populate(ms, storageEntry)
 	}
 	return nil
 }
@@ -276,5 +288,17 @@ func cpu(cpu *biz.CPU) []entry {
 func misc(m *biz.Sample) []entry {
 	return []entry{
 		metricRestartCount(m.RestartCount),
+	}
+}
+
+func getStorageEntry(m biz.DeviceMapperStats) []entry {
+	//TODO return emtpy if DeviceMapperStats si empty
+	return []entry{
+		metricStorageDriverDataUsed(m.DataUsed),
+		metricStorageDriverDataAvailable(m.DataAvailable),
+		metricStorageDriverDataTotal(m.DataTotal),
+		metricStorageDriverMetadataUsed(m.MetadataUsed),
+		metricStorageDriverMetadataAvailable(m.MetadataAvailable),
+		metricStorageDriverMetadataTotal(m.MetadataTotal),
 	}
 }

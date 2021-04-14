@@ -168,6 +168,12 @@
 			"revisionTime": "2019-04-23T14:49:23Z"
 		},
 		{
+			"checksumSHA1": "pJEnVBVrGcu9CkEzmyqEc8nV4Zc=",
+			"path": "github.com/dustin/go-humanize",
+			"revision": "afde56e7acacd811f6c94228c2c61af2b0e93158",
+			"revisionTime": "2020-02-15T20:12:04Z"
+		},
+		{
 			"checksumSHA1": "ogoo3Fatp+IFS6WbaVX4sir4qlA=",
 			"path": "github.com/godbus/dbus",
 			"revision": "6eb4cf171088115fc4f087cb8a302859c601a546",
