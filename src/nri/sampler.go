@@ -296,11 +296,11 @@ func getStorageEntry(m *biz.DeviceMapperStats) []entry {
 		return []entry{}
 	}
 	return []entry{
-		metricStorageDriverDataUsed(m.DataUsed),
-		metricStorageDriverDataAvailable(m.DataAvailable),
-		metricStorageDriverDataTotal(m.DataTotal),
-		metricStorageDriverMetadataUsed(m.MetadataUsed),
-		metricStorageDriverMetadataAvailable(m.MetadataAvailable),
-		metricStorageDriverMetadataTotal(m.MetadataTotal),
+		metricStorageDataUsed(m.DataUsed),
+		metricStorageDataAvailable(m.DataAvailable),
+		metricStorageDataTotal(m.DataTotal),
+		metricStorageMetadataUsed(m.MetadataUsed),
+		metricStorageMetadataAvailable(m.MetadataAvailable),
+		metricStorageMetadataTotal(m.MetadataTotal),
 	}
 }
