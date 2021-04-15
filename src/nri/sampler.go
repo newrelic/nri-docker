@@ -111,6 +111,7 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 		// populating metrics that are common to running and stopped containers
 		populate(ms, attributes(container))
 		populate(ms, labels(container))
+		populate(ms, storageEntry)
 
 		// TODO: this *needs* to be refactored into the call to ContainerList, because different
 		// systems might represent running containers in a slightly different way. This can be tricky
@@ -132,7 +133,6 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 		populate(ms, pids(&metrics.Pids))
 		populate(ms, blkio(&metrics.BlkIO))
 		populate(ms, cs.networkMetrics(&metrics.Network))
-		populate(ms, storageEntry)
 	}
 	return nil
 }
