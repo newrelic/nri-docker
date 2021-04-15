@@ -14,7 +14,7 @@ func Test_ParseDeviceMapperStats(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    DeviceMapperStats
+		want    *DeviceMapperStats
 		wantErr bool
 	}{
 		{
@@ -32,7 +32,7 @@ func Test_ParseDeviceMapperStats(t *testing.T) {
 					},
 				},
 			},
-			want: DeviceMapperStats{
+			want: &DeviceMapperStats{
 				DataUsed:          19920000,
 				DataTotal:         102000000000,
 				DataAvailable:     102000000000,
@@ -48,7 +48,7 @@ func Test_ParseDeviceMapperStats(t *testing.T) {
 					Driver: "overlay2",
 				},
 			},
-			want:    DeviceMapperStats{},
+			want:    nil,
 			wantErr: true,
 		},
 		{
@@ -58,7 +58,7 @@ func Test_ParseDeviceMapperStats(t *testing.T) {
 					Driver: "devicemapper",
 				},
 			},
-			want:    DeviceMapperStats{},
+			want:    nil,
 			wantErr: true,
 		},
 	}

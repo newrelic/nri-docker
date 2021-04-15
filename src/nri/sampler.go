@@ -291,8 +291,10 @@ func misc(m *biz.Sample) []entry {
 	}
 }
 
-func getStorageEntry(m biz.DeviceMapperStats) []entry {
-	//TODO return emtpy if DeviceMapperStats si empty
+func getStorageEntry(m *biz.DeviceMapperStats) []entry {
+	if m == nil {
+		return []entry{}
+	}
 	return []entry{
 		metricStorageDriverDataUsed(m.DataUsed),
 		metricStorageDriverDataAvailable(m.DataAvailable),

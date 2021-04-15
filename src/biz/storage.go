@@ -19,17 +19,17 @@ type DeviceMapperStats struct {
 
 // ParseDeviceMapperStats parses the output from the info DriverStatus info Array. This information is not consider stable by
 // Docker and could change anytime according to API the docs.
-func ParseDeviceMapperStats(info types.Info) (DeviceMapperStats, error) {
+func ParseDeviceMapperStats(info types.Info) (*DeviceMapperStats, error) {
 
 	if info.Driver != "devicemapper" {
-		return DeviceMapperStats{}, fmt.Errorf("only devicemapper is supported")
+		return nil, fmt.Errorf("only devicemapper is supported")
 	}
 
 	if len(info.DriverStatus) == 0 {
-		return DeviceMapperStats{}, fmt.Errorf("DriverStatus not found")
+		return nil, fmt.Errorf("DriverStatus not found")
 	}
 
-	stats := DeviceMapperStats{}
+	stats := &DeviceMapperStats{}
 	for _, status := range info.DriverStatus {
 		value, err := humanize.ParseBytes(status[1])
 		if err != nil {
