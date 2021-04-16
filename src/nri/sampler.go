@@ -205,7 +205,7 @@ func memory(mem *biz.Memory) []entry {
 	if mem.SwapLimitBytes > 0 {
 		metrics = append(metrics,
 			metricMemorySwapLimitBytes(mem.SwapLimitBytes),
-			metricMemorySwapUsagePercent(mem.SwapUsagePercent),
+			metricMemorySwapLimitUsagePercent(mem.SwapLimitUsagePercent),
 		)
 	}
 	if mem.SoftLimitBytes > 0 {
