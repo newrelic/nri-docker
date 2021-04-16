@@ -23,9 +23,9 @@ func Test_ParseDeviceMapperStats(t *testing.T) {
 				info: types.Info{
 					Driver: "devicemapper",
 					DriverStatus: [][2]string{
-						{"Data Space Used", "19.92 MB"},
+						{"Data Space Used", "1920.92 MB"},
 						{"Data Space Total", "102 GB"},
-						{"Data Space Available", "102 GB"},
+						{"Data Space Available", "100.13 GB"},
 						{"Metadata Space Used", "147.5 kB"},
 						{"Metadata Space Total", "1.07 GB"},
 						{"Metadata Space Available", "1.069 GB"},
@@ -33,12 +33,36 @@ func Test_ParseDeviceMapperStats(t *testing.T) {
 				},
 			},
 			want: &DeviceMapperStats{
-				DataUsed:          19920000,
-				DataTotal:         102000000000,
-				DataAvailable:     102000000000,
-				MetadataUsed:      147500,
-				MetadataTotal:     1070000000,
-				MetadataAvailable: 1069000000,
+				DataUsed:             1920920000,
+				DataTotal:            102000000000,
+				DataAvailable:        100130000000,
+				DataUsagePercent:     1.8832549019607843,
+				MetadataUsed:         147500,
+				MetadataTotal:        1070000000,
+				MetadataAvailable:    1069000000,
+				MetadataUsagePercent: 0.013785046728971963,
+			},
+		},
+		{
+			name: "missing metrics",
+			args: args{
+				info: types.Info{
+					Driver: "devicemapper",
+					DriverStatus: [][2]string{
+						{"Data Space Used", "1920.92 MB"},
+						{"Data Space Available", "100.13 GB"},
+						{"Metadata Space Used", "147.5 kB"},
+						{"Metadata Space Available", "1.069 GB"},
+					},
+				},
+			},
+			want: &DeviceMapperStats{
+				DataUsed:             1920920000,
+				DataAvailable:        100130000000,
+				DataUsagePercent:     0.0,
+				MetadataUsed:         147500,
+				MetadataAvailable:    1069000000,
+				MetadataUsagePercent: 0.0,
 			},
 		},
 		{

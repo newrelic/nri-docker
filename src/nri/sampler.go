@@ -11,6 +11,7 @@ import (
 	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/infra-integrations-sdk/persist"
 	"github.com/newrelic/nri-docker/src/biz"
+	"github.com/newrelic/nri-docker/src/config"
 	"github.com/newrelic/nri-docker/src/raw"
 )
 
@@ -28,6 +29,7 @@ type ContainerSampler struct {
 	metrics biz.Processer
 	store   persist.Storer
 	docker  DockerClient
+	config  config.ArgumentList
 }
 
 // DockerClient is an abstraction of the Docker client.
@@ -37,7 +39,7 @@ type DockerClient interface {
 }
 
 // NewSampler returns a ContainerSampler instance.
-func NewSampler(fetcher raw.Fetcher, docker DockerClient, exitedContainerTTL time.Duration) (*ContainerSampler, error) {
+func NewSampler(fetcher raw.Fetcher, docker DockerClient, exitedContainerTTL time.Duration, config config.ArgumentList) (*ContainerSampler, error) {
 	// SDK Storer to keep metric values between executions (e.g. for rates and deltas)
 	store, err := persist.NewFileStore( // TODO: make the following options configurable
 		persist.DefaultPath("container_cpus"),
@@ -51,6 +53,7 @@ func NewSampler(fetcher raw.Fetcher, docker DockerClient, exitedContainerTTL tim
 		metrics: biz.NewProcessor(store, fetcher, docker, exitedContainerTTL),
 		docker:  docker,
 		store:   store,
+		config:  config,
 	}, nil
 }
 
@@ -69,7 +72,6 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 		return err
 	}
 
-	//TODO Add ff to get this info
 	info, err := cs.docker.Info(context.Background())
 	if err != nil {
 		log.Error("fetching info from docker api: %s", err.Error())
@@ -299,8 +301,10 @@ func getStorageEntry(m *biz.DeviceMapperStats) []entry {
 		metricStorageDataUsed(m.DataUsed),
 		metricStorageDataAvailable(m.DataAvailable),
 		metricStorageDataTotal(m.DataTotal),
+		metricStorageDataUsagePercent(m.DataUsagePercent),
 		metricStorageMetadataUsed(m.MetadataUsed),
 		metricStorageMetadataAvailable(m.MetadataAvailable),
 		metricStorageMetadataTotal(m.MetadataTotal),
+		metricStorageMetadataUsagePercent(m.MetadataUsagePercent),
 	}
 }

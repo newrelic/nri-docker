@@ -9,12 +9,14 @@ import (
 
 // DeviceMapperStats contains the stats of devicemapper storages driver type
 type DeviceMapperStats struct {
-	DataAvailable     uint64
-	DataUsed          uint64
-	DataTotal         uint64
-	MetadataAvailable uint64
-	MetadataUsed      uint64
-	MetadataTotal     uint64
+	DataAvailable        uint64
+	DataUsed             uint64
+	DataTotal            uint64
+	DataUsagePercent     float64
+	MetadataAvailable    uint64
+	MetadataUsed         uint64
+	MetadataTotal        uint64
+	MetadataUsagePercent float64
 }
 
 // ParseDeviceMapperStats parses the output from the info DriverStatus info Array. This information is not consider stable by
@@ -50,5 +52,13 @@ func ParseDeviceMapperStats(info types.Info) (*DeviceMapperStats, error) {
 			stats.MetadataTotal = value
 		}
 	}
+
+	if stats.DataTotal != 0 {
+		stats.DataUsagePercent = 100 * float64(stats.DataUsed) / float64(stats.DataTotal)
+	}
+	if stats.MetadataTotal != 0 {
+		stats.MetadataUsagePercent = 100 * float64(stats.MetadataUsed) / float64(stats.MetadataTotal)
+	}
+
 	return stats, nil
 }
