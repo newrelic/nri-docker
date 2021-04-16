@@ -72,15 +72,18 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 		return err
 	}
 
-	info, err := cs.docker.Info(context.Background())
-	if err != nil {
-		log.Error("fetching info from docker api: %s", err.Error())
+	var storageEntry []entry
+	if !cs.config.DisableStorageMetrics {
+		info, err := cs.docker.Info(context.Background())
+		if err != nil {
+			log.Error("fetching info from docker api: %s", err.Error())
+		}
+		storageStats, err := biz.ParseDeviceMapperStats(info)
+		if err != nil {
+			log.Warn("computing Storage Driver stats: %s", err.Error())
+		}
+		storageEntry = getStorageEntry(storageStats)
 	}
-	storageStats, err := biz.ParseDeviceMapperStats(info)
-	if err != nil {
-		log.Warn("computing Storage Driver stats: %s", err.Error())
-	}
-	storageEntry := getStorageEntry(storageStats)
 
 	for _, container := range containers {
 		metrics, err := cs.metrics.Process(container.ID)

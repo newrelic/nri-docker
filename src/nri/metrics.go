@@ -30,7 +30,7 @@ var (
 	metricMemorySwapUsageBytes        = metricFunc("memorySwapUsageBytes", metric.GAUGE)
 	metricMemorySwapOnlyUsageBytes    = metricFunc("memorySwapOnlyUsageBytes", metric.GAUGE)
 	metricMemorySwapLimitBytes        = metricFunc("memorySwapLimitBytes", metric.GAUGE)
-	metricMemorySwapUsagePercent      = metricFunc("memorySwapUsagePercent", metric.GAUGE)
+	metricMemorySwapLimitUsagePercent = metricFunc("memorySwapLimitUsagePercent", metric.GAUGE)
 	metricMemorySoftLimitBytes        = metricFunc("memorySoftLimitBytes", metric.GAUGE)
 	metricIOReadCountPerSecond        = metricFunc("ioReadCountPerSecond", metric.RATE)
 	metricIOWriteCountPerSecond       = metricFunc("ioWriteCountPerSecond", metric.RATE)
