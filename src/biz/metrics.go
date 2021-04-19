@@ -63,6 +63,7 @@ type Memory struct {
 	UsagePercent          float64 // Usage percent from the limit, if any
 	KernelUsageBytes      uint64
 	SwapUsageBytes        uint64
+	SwapOnlyUsageBytes    uint64
 	SwapLimitBytes        uint64
 	SwapLimitUsagePercent float64
 	SoftLimitBytes        uint64
@@ -215,8 +216,12 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 		memLimits = 0
 	}
 
-	/* Calculating usage instead of `memory.usage_in_bytes` file contents.
-	https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
+	usagePercent := float64(0)
+	if memLimits > 0 {
+		usagePercent = 100 * float64(mem.RSS) / float64(memLimits)
+	}
+
+	/* https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
 	For efficiency, as other kernel components, memory cgroup uses some optimization
 	to avoid unnecessary cacheline false sharing. usage_in_bytes is affected by the
 	method and doesn't show 'exact' value of memory (and swap) usage, it's a fuzz
@@ -225,39 +230,16 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 	value in memory.stat(see 5.2).
 	However, as the `docker stats` cli tool does, page cache is intentionally
 	excluded to avoid misinterpretation of the output.
-	Also the Swap usage is parsed from memory.memsw.usage_in_bytes, which
+	Also mem.SwapUsage is parsed from memory.memsw.usage_in_bytes, which
 	according to the documentation reports the sum of current memory usage
 	plus swap space used by processes in the cgroup (in bytes). That's why
 	Usage is subtracted from the Swap: to get the actual swap.
 	*/
-	var usage uint64
 	var swapOnlyUsage uint64
-	if mem.SwapUsage == 0 { // for systems that have swap disabled
-		usage = mem.RSS
-	} else {
+	if mem.SwapUsage != 0 { // for systems that have swap disabled
 		swapOnlyUsage = mem.SwapUsage - mem.FuzzUsage
-		usage = mem.RSS + swapOnlyUsage
 	}
-
-	usagePercent := float64(0)
-	if memLimits > 0 {
-		usagePercent = 100 * float64(mem.RSS) / float64(memLimits)
-	}
-
-	// Dockers includes non-swap memory into the swap limit (https://docs.docker.com/config/containers/resource_constraints/#--memory-swap-details)
-	// For example running the following container
-	// docker run --memory-swap=400m --memory=300m --memory-reservation=250m stress stress-ng --vm 1 --vm-bytes 350m
-	// memory metrics:
-	// "memoryCacheBytes": 52 kb,
-	// "memoryKernelUsageBytes": 1.47 m,
-	// "memoryResidentSizeBytes": 298.26 m,
-	// "memorySizeLimitBytes": 300 m,
-	// "memorySoftLimitBytes": 250 m,
-	// "memorySwapLimitBytes": 400 m,
-	// "memorySwapLimitUsagePercent": 88.27 %,
-	// "memorySwapUsageBytes": 54.83 m,
-	// "memoryUsageBytes": 353.10 m,
-	// "memoryUsageLimitPercent": 99.42 %,
+	swapUsage := mem.RSS + swapOnlyUsage
 
 	swapLimit := mem.SwapLimit
 	if mem.SwapLimit > math.MaxInt64/2 {
@@ -265,9 +247,32 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 	}
 	swapLimitUsagePercent := float64(0)
 	if swapLimit > 0 {
-		// Percentage of total memory used (memory+swap) over swapLimit
-		swapLimitUsagePercent = 100 * float64(usage) / float64(swapLimit)
+		swapLimitUsagePercent = 100 * float64(swapUsage) / float64(swapLimit)
 	}
+
+	/* Dockers includes non-swap memory into the swap limit
+	(https://docs.docker.com/config/containers/resource_constraints/#--memory-swap-details)
+	For example running the following container
+	docker run --memory-swap=400m --memory=300m --memory-reservation=250m stress stress-ng --vm 1 --vm-bytes 350m
+	will generate the following memory metrics:
+	"memoryCacheBytes": 0.3mb,
+	"memoryResidentSizeBytes": 298.4 m,
+	"memorySizeLimitBytes": 300 m,
+
+	"memorySoftLimitBytes": 250 m,
+	"memorySwapLimitBytes": 400 m,
+	"memorySwapLimitUsagePercent": 88.27 %,
+	"memorySwapUsageBytes": 354.83 m,
+	"memorySwapOnlyUsageBytes": 54.83 m,
+
+	"memoryUsageBytes": 298.4 m,
+	"memoryUsageLimitPercent": 99.42 %,
+
+	Reference:
+	* Metrics with no swap reference in the name have no swap components
+	* Metrics with swap reference have memory+swap unless the contrary is specified like in memorySwapOnlyUsageBytes
+	*/
+
 	softLimit := mem.SoftLimit
 	if mem.SoftLimit > math.MaxInt64/2 {
 		softLimit = 0
@@ -277,10 +282,11 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 		MemLimitBytes:         memLimits,
 		CacheUsageBytes:       mem.Cache,
 		RSSUsageBytes:         mem.RSS,
-		UsageBytes:            usage,
+		UsageBytes:            mem.RSS,
 		UsagePercent:          usagePercent,
 		KernelUsageBytes:      mem.KernelMemoryUsage,
-		SwapUsageBytes:        swapOnlyUsage,
+		SwapUsageBytes:        swapUsage,
+		SwapOnlyUsageBytes:    swapOnlyUsage,
 		SwapLimitBytes:        swapLimit,
 		SoftLimitBytes:        softLimit,
 		SwapLimitUsagePercent: swapLimitUsagePercent,

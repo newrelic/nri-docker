@@ -195,6 +195,7 @@ func memory(mem *biz.Memory) []entry {
 		metricMemoryResidentSizeBytes(mem.RSSUsageBytes),
 		metricMemoryKernelUsageBytes(mem.KernelUsageBytes),
 		metricMemorySwapUsageBytes(mem.SwapUsageBytes),
+		metricMemorySwapOnlyUsageBytes(mem.SwapOnlyUsageBytes),
 	}
 	if mem.MemLimitBytes > 0 {
 		metrics = append(metrics,
