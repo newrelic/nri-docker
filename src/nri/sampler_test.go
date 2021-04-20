@@ -211,5 +211,5 @@ func TestSampleAll(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, i.Entities, 1)
 	assert.Equal(t, i.Entities[0].Metadata.Name, "containerid")
-	assert.Equal(t, i.Entities[0].Metrics[0].Metrics["StorageDataTotalBytes"], 102e9)
+	assert.Equal(t, i.Entities[0].Metrics[0].Metrics["storageDataTotalBytes"], 102e9)
 }
