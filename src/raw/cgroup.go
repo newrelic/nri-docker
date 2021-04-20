@@ -277,7 +277,7 @@ func memory(metric *cgroups.Metrics) (Memory, error) {
 	mem.Cache = metric.Memory.Cache
 	mem.RSS = metric.Memory.RSS
 	mem.SwapUsage = metric.Memory.Swap.Usage
-	mem.SwapLimit = metric.Memory.HierarchicalSwapLimit
+	mem.SwapLimit = metric.Memory.Swap.Limit
 	mem.KernelMemoryUsage = metric.Memory.Kernel.Usage
 	return mem, nil
 }
