@@ -253,23 +253,7 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 
 	/* Dockers includes non-swap memory into the swap limit
 	(https://docs.docker.com/config/containers/resource_constraints/#--memory-swap-details)
-	For example running the following container
-	docker run --memory-swap=400m --memory=300m --memory-reservation=250m stress stress-ng --vm 1 --vm-bytes 350m
-	will generate the following memory metrics:
-	"memoryCacheBytes": 0.3mb,
-	"memoryResidentSizeBytes": 298.4 m,
-	"memorySizeLimitBytes": 300 m,
-
-	"memorySoftLimitBytes": 250 m,
-	"memorySwapLimitBytes": 400 m,
-	"memorySwapLimitUsagePercent": 88.27 %,
-	"memorySwapUsageBytes": 354.83 m,
-	"memorySwapOnlyUsageBytes": 54.83 m,
-
-	"memoryUsageBytes": 298.4 m,
-	"memoryUsageLimitPercent": 99.42 %,
-
-	Reference:
+	convention followed for metric naming:
 	* Metrics with no swap reference in the name have no swap components
 	* Metrics with swap reference have memory+swap unless the contrary is specified like in memorySwapOnlyUsageBytes
 	*/
