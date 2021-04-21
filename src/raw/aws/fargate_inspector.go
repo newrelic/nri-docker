@@ -54,6 +54,11 @@ func (i *FargateInspector) ContainerList(_ context.Context, _ types.ContainerLis
 	return containers, nil
 }
 
+// Info is currently used to get the Storage Driver stats that is not present on Fargate.
+func (i *FargateInspector) Info(_ context.Context) (types.Info, error) {
+	return types.Info{}, nil
+}
+
 // taskResponseFromCacheOrNew wraps the access to Fargate task metadata with a caching layer.
 func (i *FargateInspector) taskResponseFromCacheOrNew(response *TaskResponse) error {
 	defer func() {

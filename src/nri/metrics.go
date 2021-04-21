@@ -59,6 +59,14 @@ var (
 	metricTxDroppedPerSecond          = metricFunc("networkTxDroppedPerSecond", metric.RATE)
 	metricTxErrorsPerSecond           = metricFunc("networkTxErrorsPerSecond", metric.RATE)
 	metricTxPacketsPerSecond          = metricFunc("networkTxPacketsPerSecond", metric.RATE)
+	metricStorageDataUsed             = metricFunc("storageDataUsedBytes", metric.GAUGE)
+	metricStorageDataAvailable        = metricFunc("storageDataAvailableBytes", metric.GAUGE)
+	metricStorageDataTotal            = metricFunc("storageDataTotalBytes", metric.GAUGE)
+	metricStorageDataUsagePercent     = metricFunc("storageDataUsagePercent", metric.GAUGE)
+	metricStorageMetadataUsed         = metricFunc("storageMetadataUsedBytes", metric.GAUGE)
+	metricStorageMetadataAvailable    = metricFunc("storageMetadataAvailableBytes", metric.GAUGE)
+	metricStorageMetadataTotal        = metricFunc("storageMetadataTotalBytes", metric.GAUGE)
+	metricStorageMetadataUsagePercent = metricFunc("storageMetadataUsagePercent", metric.GAUGE)
 )
 
 type entry struct {

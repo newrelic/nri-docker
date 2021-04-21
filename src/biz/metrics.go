@@ -86,6 +86,7 @@ type MetricsFetcher struct {
 // Inspector is the abstraction of the only method that we require from the docker go client
 type Inspector interface {
 	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
+	Info(ctx context.Context) (types.Info, error)
 }
 
 // NewProcessor creates a MetricsFetcher from implementations of its required components

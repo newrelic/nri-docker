@@ -30,6 +30,10 @@ func (m *mocker) ContainerInspect(ctx context.Context, containerID string) (type
 	args := m.Called(ctx, containerID)
 	return args.Get(0).(types.ContainerJSON), args.Error(1)
 }
+func (m *mocker) Info(ctx context.Context) (types.Info, error) {
+	args := m.Called(ctx)
+	return args.Get(0).(types.Info), args.Error(1)
+}
 
 type mockStorer struct {
 	mock.Mock
@@ -98,6 +102,8 @@ func TestECSLabelRename(t *testing.T) {
 	}, nil)
 	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{}, nil)
 
+	mocker.On("Info", mock.Anything, mock.Anything).Return(types.Info{}, nil)
+
 	mStore := &mockStorer{}
 	mStore.On("Save").Return(nil)
 
@@ -141,7 +147,7 @@ func TestExitedContainerTTLExpired(t *testing.T) {
 			},
 		},
 	}, nil)
-
+	mocker.On("Info", mock.Anything, mock.Anything).Return(types.Info{}, nil)
 	mStore := &mockStorer{}
 	mStore.On("Save").Return(nil)
 
@@ -177,6 +183,13 @@ func TestSampleAll(t *testing.T) {
 		},
 	}, nil)
 
+	mocker.On("Info", mock.Anything, mock.Anything).Return(types.Info{
+		Driver: "devicemapper",
+		DriverStatus: [][2]string{
+			{"Data Space Total", "102 GB"},
+		},
+	}, nil)
+
 	mStore := &mockStorer{}
 	mStore.On("Save").Return(nil)
 	mStore.On("Get", mock.Anything, mock.Anything).Return(int64(0), nil)
@@ -198,4 +211,5 @@ func TestSampleAll(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Len(t, i.Entities, 1)
 	assert.Equal(t, i.Entities[0].Metadata.Name, "containerid")
+	assert.Equal(t, i.Entities[0].Metrics[0].Metrics["storageDataTotalBytes"], 102e9)
 }

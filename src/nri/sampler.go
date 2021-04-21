@@ -11,6 +11,7 @@ import (
 	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/infra-integrations-sdk/persist"
 	"github.com/newrelic/nri-docker/src/biz"
+	"github.com/newrelic/nri-docker/src/config"
 	"github.com/newrelic/nri-docker/src/raw"
 )
 
@@ -28,6 +29,7 @@ type ContainerSampler struct {
 	metrics biz.Processer
 	store   persist.Storer
 	docker  DockerClient
+	config  config.ArgumentList
 }
 
 // DockerClient is an abstraction of the Docker client.
@@ -37,7 +39,7 @@ type DockerClient interface {
 }
 
 // NewSampler returns a ContainerSampler instance.
-func NewSampler(fetcher raw.Fetcher, docker DockerClient, exitedContainerTTL time.Duration) (*ContainerSampler, error) {
+func NewSampler(fetcher raw.Fetcher, docker DockerClient, exitedContainerTTL time.Duration, config config.ArgumentList) (*ContainerSampler, error) {
 	// SDK Storer to keep metric values between executions (e.g. for rates and deltas)
 	store, err := persist.NewFileStore( // TODO: make the following options configurable
 		persist.DefaultPath("container_cpus"),
@@ -51,6 +53,7 @@ func NewSampler(fetcher raw.Fetcher, docker DockerClient, exitedContainerTTL tim
 		metrics: biz.NewProcessor(store, fetcher, docker, exitedContainerTTL),
 		docker:  docker,
 		store:   store,
+		config:  config,
 	}, nil
 }
 
@@ -67,6 +70,19 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 	containers, err := cs.docker.ContainerList(ctx, types.ContainerListOptions{All: true})
 	if err != nil {
 		return err
+	}
+
+	var storageEntry []entry
+	if !cs.config.DisableStorageMetrics {
+		info, err := cs.docker.Info(context.Background())
+		if err != nil {
+			log.Error("fetching info from docker api: %s", err.Error())
+		}
+		storageStats, err := biz.ParseDeviceMapperStats(info)
+		if err != nil {
+			log.Warn("computing Storage Driver stats: %s", err.Error())
+		}
+		storageEntry = getStorageEntry(storageStats)
 	}
 
 	for _, container := range containers {
@@ -100,6 +116,7 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 		// populating metrics that are common to running and stopped containers
 		populate(ms, attributes(container))
 		populate(ms, labels(container))
+		populate(ms, storageEntry)
 
 		// TODO: this *needs* to be refactored into the call to ContainerList, because different
 		// systems might represent running containers in a slightly different way. This can be tricky
@@ -276,5 +293,21 @@ func cpu(cpu *biz.CPU) []entry {
 func misc(m *biz.Sample) []entry {
 	return []entry{
 		metricRestartCount(m.RestartCount),
+	}
+}
+
+func getStorageEntry(m *biz.DeviceMapperStats) []entry {
+	if m == nil {
+		return []entry{}
+	}
+	return []entry{
+		metricStorageDataUsed(m.DataUsed),
+		metricStorageDataAvailable(m.DataAvailable),
+		metricStorageDataTotal(m.DataTotal),
+		metricStorageDataUsagePercent(m.DataUsagePercent),
+		metricStorageMetadataUsed(m.MetadataUsed),
+		metricStorageMetadataAvailable(m.MetadataAvailable),
+		metricStorageMetadataTotal(m.MetadataTotal),
+		metricStorageMetadataUsagePercent(m.MetadataUsagePercent),
 	}
 }
