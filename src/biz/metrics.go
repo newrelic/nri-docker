@@ -51,15 +51,22 @@ type CPU struct {
 	UsedCoresPercent float64
 	ThrottlePeriods  uint64
 	ThrottledTimeMS  float64
+	Shares           uint64
 }
 
 // Memory metrics
 type Memory struct {
-	UsageBytes      uint64
-	CacheUsageBytes uint64
-	RSSUsageBytes   uint64
-	MemLimitBytes   uint64
-	UsagePercent    float64 // Usage percent from the limit, if any
+	UsageBytes            uint64
+	CacheUsageBytes       uint64
+	RSSUsageBytes         uint64
+	MemLimitBytes         uint64
+	UsagePercent          float64 // Usage percent from the limit, if any
+	KernelUsageBytes      uint64
+	SwapUsageBytes        uint64
+	SwapOnlyUsageBytes    uint64
+	SwapLimitBytes        uint64
+	SwapLimitUsagePercent float64
+	SoftLimitBytes        uint64
 }
 
 // Processer defines the most essential interface of an exportable container Processer
@@ -197,18 +204,24 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CP
 
 	cpu.UsedCoresPercent = 100 * cpu.UsedCores / cpu.LimitCores
 
+	cpu.Shares = metrics.CPU.Shares
+
 	return cpu
 }
 
 func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 	memLimits := mem.UsageLimit
-	// negative or ridiculously large memory limits are set to 0 (no limit)
-	if memLimits < 0 || memLimits > math.MaxInt64/2 {
+	// ridiculously large memory limits are set to 0 (no limit)
+	if memLimits > math.MaxInt64/2 {
 		memLimits = 0
 	}
 
-	/* Calculating usage instead of `memory.usage_in_bytes` file contents.
-	https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
+	usagePercent := float64(0)
+	if memLimits > 0 {
+		usagePercent = 100 * float64(mem.RSS) / float64(memLimits)
+	}
+
+	/* https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
 	For efficiency, as other kernel components, memory cgroup uses some optimization
 	to avoid unnecessary cacheline false sharing. usage_in_bytes is affected by the
 	method and doesn't show 'exact' value of memory (and swap) usage, it's a fuzz
@@ -217,29 +230,50 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 	value in memory.stat(see 5.2).
 	However, as the `docker stats` cli tool does, page cache is intentionally
 	excluded to avoid misinterpretation of the output.
-	Also the Swap usage is parsed from memory.memsw.usage_in_bytes, which
+	Also mem.SwapUsage is parsed from memory.memsw.usage_in_bytes, which
 	according to the documentation reports the sum of current memory usage
 	plus swap space used by processes in the cgroup (in bytes). That's why
 	Usage is subtracted from the Swap: to get the actual swap.
 	*/
-	var usage uint64
-	if mem.SwapUsage == 0 { // for systems that have swap disabled
-		usage = mem.RSS
-	} else {
-		usage = mem.RSS + mem.SwapUsage - mem.FuzzUsage
+	var swapOnlyUsage uint64
+	if mem.SwapUsage != 0 { // for systems that have swap disabled
+		swapOnlyUsage = mem.SwapUsage - mem.FuzzUsage
+	}
+	swapUsage := mem.RSS + swapOnlyUsage
+
+	swapLimit := mem.SwapLimit
+	if mem.SwapLimit > math.MaxInt64/2 {
+		swapLimit = 0
+	}
+	swapLimitUsagePercent := float64(0)
+	if swapLimit > 0 {
+		swapLimitUsagePercent = 100 * float64(swapUsage) / float64(swapLimit)
 	}
 
-	usagePercent := float64(0)
-	if memLimits > 0 {
-		usagePercent = 100 * float64(usage) / float64(memLimits)
+	/* Dockers includes non-swap memory into the swap limit
+	(https://docs.docker.com/config/containers/resource_constraints/#--memory-swap-details)
+	convention followed for metric naming:
+	* Metrics with no swap reference in the name have no swap components
+	* Metrics with swap reference have memory+swap unless the contrary is specified like in memorySwapOnlyUsageBytes
+	*/
+
+	softLimit := mem.SoftLimit
+	if mem.SoftLimit > math.MaxInt64/2 {
+		softLimit = 0
 	}
 
 	return Memory{
-		MemLimitBytes:   memLimits,
-		CacheUsageBytes: mem.Cache,
-		RSSUsageBytes:   mem.RSS,
-		UsageBytes:      usage,
-		UsagePercent:    usagePercent,
+		MemLimitBytes:         memLimits,
+		CacheUsageBytes:       mem.Cache,
+		RSSUsageBytes:         mem.RSS,
+		UsageBytes:            mem.RSS,
+		UsagePercent:          usagePercent,
+		KernelUsageBytes:      mem.KernelMemoryUsage,
+		SwapUsageBytes:        swapUsage,
+		SwapOnlyUsageBytes:    swapOnlyUsage,
+		SwapLimitBytes:        swapLimit,
+		SoftLimitBytes:        softLimit,
+		SwapLimitUsagePercent: swapLimitUsagePercent,
 	}
 }
 

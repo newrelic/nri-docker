@@ -193,11 +193,25 @@ func memory(mem *biz.Memory) []entry {
 		metricMemoryCacheBytes(mem.CacheUsageBytes),
 		metricMemoryUsageBytes(mem.UsageBytes),
 		metricMemoryResidentSizeBytes(mem.RSSUsageBytes),
+		metricMemoryKernelUsageBytes(mem.KernelUsageBytes),
+		metricMemorySwapUsageBytes(mem.SwapUsageBytes),
+		metricMemorySwapOnlyUsageBytes(mem.SwapOnlyUsageBytes),
 	}
 	if mem.MemLimitBytes > 0 {
 		metrics = append(metrics,
 			metricMemorySizeLimitBytes(mem.MemLimitBytes),
 			metricMemoryUsageLimitPercent(mem.UsagePercent),
+		)
+	}
+	if mem.SwapLimitBytes > 0 {
+		metrics = append(metrics,
+			metricMemorySwapLimitBytes(mem.SwapLimitBytes),
+			metricMemorySwapLimitUsagePercent(mem.SwapLimitUsagePercent),
+		)
+	}
+	if mem.SoftLimitBytes > 0 {
+		metrics = append(metrics,
+			metricMemorySoftLimitBytes(mem.SoftLimitBytes),
 		)
 	}
 	return metrics
@@ -255,6 +269,7 @@ func cpu(cpu *biz.CPU) []entry {
 		metricCPUUserPercent(cpu.UserPercent),
 		metricCPUThrottlePeriods(cpu.ThrottlePeriods),
 		metricCPUThrottleTimeMS(cpu.ThrottledTimeMS),
+		metricCPUShares(cpu.Shares),
 	}
 }
 
