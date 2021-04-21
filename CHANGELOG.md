@@ -5,6 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## 1.6.0 (2021-04-21)
+
+## Breaking
+* All swap memory has been removed from `memoryUsageBytes` and `memoryUsageLimitPercent`. `memoryUsageBytes` shows non swap memory only and `memoryUsageLimitPercent` is calculated as a percentage of `memoryUsageBytes` over `memorySizeLimitBytes`
+
+### Added
+* Adds `cpuShares` metrics
+* Adds memory swap metrics:
+    `memoryKernelUsageBytes`
+    `memorySwapUsageBytes`
+    `memorySwapOnlyUsageBytes`
+    `memorySwapLimitBytes`
+    `memorySwapLimitUsagePercent`
+    `memorySoftLimitBytes`
+* Adds storage driver metrics:
+    `storageDataUsedBytes`
+    `storageDataAvailableBytes`
+    `storageDataTotalBytes`
+    `storageDataUsagePercent`
+    `storageMetadataUsedBytes`
+    `storageMetadataAvailableBytes`
+    `storageMetadataTotalBytes`
+    `storageMetadataUsagePercent`
+
+## 1.5.0 (2021-04-15)
+
+### Added
+* Adding support for Task metadata endpoint v4 to include networking metrics for fargate
+
+## 1.4.3 (2021-03-22)
+
+### Fixed
+* Bundles the correct config file into the tarball docker-config.yml (ready for infra agent bundle)
+
+## 1.4.2 (2021-03-19)
+
+### Changed
+* Includes arm binaries using GHA pipeline.
+
+### Fixed
+* Fixed a bug where an error type assertion would not work correctly and "exited"
+  containers could still be reported by nri-docker even after their TTL has passed.
+  
 ## 1.4.1 (2020-11-26)
 
 ### Fixed
