@@ -2,13 +2,11 @@ INTEGRATION     := docker
 BINARY_NAME      = nri-$(INTEGRATION)
 SRC_DIR          = ./src/
 VALIDATE_DEPS    = golang.org/x/lint/golint
-TEST_DEPS        = github.com/axw/gocov/gocov github.com/AlekSi/gocov-xml
 INTEGRATIONS_DIR = /var/db/newrelic-infra/newrelic-integrations/
 CONFIG_DIR       = /etc/newrelic-infra/integrations.d
 GO_FILES        := ./src/
 GOOS             = GOOS=linux
 GO               = $(GOOS) go
-GOCOV            = $(GOOS) gocov
 
 all: build
 
@@ -29,15 +27,6 @@ validate-only:
 		echo "passed." ;\
 	else \
 		echo "failed. Incorrect syntax in the following files:" ;\
-		echo "$$OUTPUT" ;\
-		exit 1 ;\
-	fi
-	@printf "=== $(INTEGRATION) === [ validate ]: running golint... "
-	@OUTPUT="$(shell golint $(SRC_DIR)...)" ;\
-	if [ -z "$$OUTPUT" ]; then \
-		echo "passed." ;\
-	else \
-		echo "failed. Issues found:" ;\
 		echo "$$OUTPUT" ;\
 		exit 1 ;\
 	fi
@@ -63,21 +52,15 @@ bin/$(BINARY_NAME):
 
 compile: compile-deps bin/$(BINARY_NAME)
 
-test-deps: compile-deps
-	@echo "=== $(INTEGRATION) === [ test-deps ]: installing testing dependencies..."
-	@$(GO) get -v $(TEST_DEPS)
-
-test-only:
+test:
 	@echo "=== $(INTEGRATION) === [ test ]: running unit tests..."
-	@$(GOCOV) test $(SRC_DIR)/... | gocov-xml > coverage.xml
-
-test: test-deps test-only
+	@go test -race $(SRC_DIR)/...
 
 integration-test-deps: compile-deps
 	@echo "=== $(INTEGRATION) === [ integration-test-deps ]: installing testing dependencies..."
 	@docker build -t stress:latest src/biz/
 
-integration-test: integration-test-deps test-deps
+integration-test: integration-test-deps
 	@echo "=== $(INTEGRATION) === [ test ]: running integration tests..."
 	@$(GO) test -v -tags=integration ./tests/integration/.
 
