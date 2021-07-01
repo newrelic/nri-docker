@@ -159,9 +159,8 @@ func TestMemory(t *testing.T) {
 
 func newDocker(t *testing.T) *client.Client {
 	t.Helper()
-	docker, err := client.NewEnvClient()
+	docker, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion(testDockerClientVersion))
 	require.NoError(t, err)
-	docker.UpdateClientVersion(testDockerClientVersion)
 	return docker
 }
 
