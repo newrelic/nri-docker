@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/newrelic/infra-integrations-sdk/data/attribute"
 	"github.com/newrelic/infra-integrations-sdk/data/metric"
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/newrelic/infra-integrations-sdk/log"
@@ -109,8 +110,8 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 		}
 
 		ms := entity.NewMetricSet(containerSampleName,
-			metric.Attr(attrContainerID, container.ID),
-			metric.Attr(attrShortContainerID, shortContainerID),
+			attribute.Attr(attrContainerID, container.ID),
+			attribute.Attr(attrShortContainerID, shortContainerID),
 		)
 
 		// populating metrics that are common to running and stopped containers
