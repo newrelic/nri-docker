@@ -277,7 +277,7 @@ configfs /sys/kernel/config configfs rw,relatime 0 0`,
 	}
 	expected := []cgroups.Subsystem{
 		cgroups.NewPids("/custom/host/sys/fs/cgroup1"),
-		cgroups.NewCputset("/custom/host/sys/fs/cgroup2"),
+		cgroups.NewCpuset("/custom/host/sys/fs/cgroup2"),
 		cgroups.NewCpu("/custom/host/sys/fs/cgroup3"),
 		cgroups.NewCpuacct("/custom/host/sys/fs/cgroup3"),
 		cgroups.NewMemory("/custom/host/sys/fs/cgroup4"),
