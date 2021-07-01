@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/containerd/cgroups"
+	cgroupstats "github.com/containerd/cgroups/stats/v1"
 	"github.com/docker/docker/api/types"
 	"github.com/newrelic/infra-integrations-sdk/log"
 )
@@ -117,7 +118,7 @@ func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	return stats, nil
 }
 
-func pids(metrics *cgroups.Metrics) (Pids, error) {
+func pids(metrics *cgroupstats.Metrics) (Pids, error) {
 	if metrics.Pids == nil {
 		return Pids{}, errors.New("no PIDs information")
 	}
@@ -244,7 +245,7 @@ func readSystemCPUUsage() (uint64, error) {
 	return 0, fmt.Errorf("invalid stat format. Error trying to parse the '/proc/stat' file")
 }
 
-func cpu(metric *cgroups.Metrics) (CPU, error) {
+func cpu(metric *cgroupstats.Metrics) (CPU, error) {
 	if metric.CPU == nil || metric.CPU.Usage == nil {
 		return CPU{}, errors.New("no CPU metrics information")
 	}
@@ -265,7 +266,7 @@ func cpu(metric *cgroups.Metrics) (CPU, error) {
 	return cpu, err
 }
 
-func memory(metric *cgroups.Metrics) (Memory, error) {
+func memory(metric *cgroupstats.Metrics) (Memory, error) {
 	mem := Memory{}
 	if metric.Memory == nil {
 		return mem, errors.New("no Memory metrics information")

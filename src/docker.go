@@ -81,10 +81,9 @@ func main() {
 		)
 		exitOnErr(err)
 		var tmpDocker *client.Client
-		tmpDocker, err = client.NewEnvClient()
+		tmpDocker, err = client.NewClientWithOpts(client.FromEnv, client.WithVersion(args.DockerClientVersion))
 		exitOnErr(err)
 		defer tmpDocker.Close()
-		tmpDocker.UpdateClientVersion(args.DockerClientVersion)
 		docker = tmpDocker
 	}
 	sampler, err := nri.NewSampler(fetcher, docker, exitedContainerTTL, args)

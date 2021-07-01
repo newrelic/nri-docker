@@ -135,7 +135,7 @@ func (cgi *cgroupPaths) getHierarchyFn() cgroups.Hierarchy {
 		var subsystems []cgroups.Subsystem
 
 		if cpusetMountPoint, ok := cgi.mountPoints[string(cgroups.Cpuset)]; ok {
-			subsystems = append(subsystems, cgroups.NewCputset(cpusetMountPoint))
+			subsystems = append(subsystems, cgroups.NewCpuset(cpusetMountPoint))
 		}
 		if cpuMountPoint, ok := cgi.mountPoints[string(cgroups.Cpu)]; ok {
 			subsystems = append(subsystems, cgroups.NewCpu(cpuMountPoint))
