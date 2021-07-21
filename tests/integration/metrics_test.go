@@ -3,13 +3,14 @@ package biz
 import (
 	"bytes"
 	"fmt"
-	"github.com/newrelic/nri-docker/src/biz"
-	"github.com/newrelic/nri-docker/test"
 	"log"
 	"os/exec"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/newrelic/nri-docker/src/biz"
+	"github.com/newrelic/nri-docker/test"
 
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/persist"
