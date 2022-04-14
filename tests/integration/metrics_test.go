@@ -264,7 +264,7 @@ func TestAllMetricsPresent(t *testing.T) {
 			UserPercent:      100,
 			UsedCores:        2.8546433726,
 			LimitCores:       2,
-			UsedCoresPercent: 285.46433726,
+			UsedCoresPercent: 142.73216863,
 			ThrottlePeriods:  2384,
 			ThrottledTimeMS:  96.578349164,
 			Shares:           1024,
