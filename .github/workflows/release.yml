@@ -12,6 +12,7 @@ env:
   INTEGRATION: "docker"
   ORIGINAL_REPO_NAME: ${{ github.event.repository.full_name }}
   TAG: ${{ github.event.release.tag_name }}
+  GO111MODULE: "off"
 
 jobs:
   publish-to-s3:

@@ -13,6 +13,7 @@ env:
   ORIGINAL_REPO_NAME: "newrelic/nri-docker"
   GO_VERSION: '1.18'
   DOCKER_LOGIN_AVAILABLE: ${{ secrets.OHAI_DOCKER_HUB_ID }}
+  GO111MODULE: "off"
 
 jobs:
   validate:
