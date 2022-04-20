@@ -235,12 +235,18 @@ func TestExitedContainersWithoutTTL(t *testing.T) {
 	})
 }
 
-const relativePathToTestdataFileystem = "testdata/cgroupsV1_host/"
+const (
+	relativePathToTestdataFileystem = "testdata/cgroupsV1_host/"
+	InspectorContainerID            = "my-container"
+	InspectorPID                    = 666
+)
+
+var mockedTimeForAllMetricsTest = time.Date(2022, time.January, 1, 4, 3, 2, 0, time.UTC)
 
 func TestAllMetricsPresent(t *testing.T) {
 	expectedSample := biz.Sample{
 		Pids: biz.Pids{
-			Current: pid,
+			Current: InspectorPID,
 			Limit:   8000,
 		},
 		Network: biz.Network{
@@ -313,15 +319,16 @@ func TestAllMetricsPresent(t *testing.T) {
 
 	// CgroupsFetcherMock is the raw CgroupsFetcher with mocked cpu.systemUsage and time
 	// The hostRoot is our mocked filesystem
-	cgroupFetcher, err := NewCgroupsFetcherMock(hostRoot, "cgroupfs", "")
+	cgroupFetcher, err := NewCgroupsFetcherMock(hostRoot, "cgroupfs", "", mockedTimeForAllMetricsTest, 19026130000000)
 	require.NoError(t, err)
 
 	storer := generateInMemoryStorerWithPreviousCPUState()
+	inspector := NewInspectorMock(InspectorContainerID, InspectorPID, 2)
 
 	t.Run("Given a mockedFilesystem and previous CPU state Then processed metrics are as expected", func(t *testing.T) {
-		metrics := biz.NewProcessor(storer, cgroupFetcher, InspectorMock{}, 0)
+		metrics := biz.NewProcessor(storer, cgroupFetcher, inspector, 0)
 
-		sample, err := metrics.Process(containerID)
+		sample, err := metrics.Process(InspectorContainerID)
 		require.NoError(t, err)
 		assert.Equal(t, expectedSample, sample)
 	})
@@ -337,7 +344,7 @@ func generateInMemoryStorerWithPreviousCPUState() persist.Storer {
 
 	storer := persist.NewInMemoryStore()
 	// We set the time as 10 seconds before the timestamp for the metrics
-	previous.Time = mockedTime.Add(-time.Second * 10).Unix()
+	previous.Time = mockedTimeForAllMetricsTest.Add(-time.Second * 10).Unix()
 	previous.CPU = raw.CPU{
 		TotalUsage:        1,
 		UsageInUsermode:   1,
@@ -349,7 +356,7 @@ func generateInMemoryStorerWithPreviousCPUState() persist.Storer {
 		OnlineCPUs:        1,
 		Shares:            1,
 	}
-	storer.Set(containerID, previous)
+	storer.Set(InspectorContainerID, previous)
 	return storer
 }
 
@@ -365,7 +372,7 @@ cgroup <HOST_ROOT>/memory cgroup rw,nosuid,nodev,noexec,relatime,memory 0 0
 }
 
 func generateMockedProcPIDCGroupFile(hostRoot string) error {
-	err := os.Mkdir(filepath.Join(hostRoot, "proc", strconv.Itoa(pid)), 0755)
+	err := os.Mkdir(filepath.Join(hostRoot, "proc", strconv.Itoa(InspectorPID)), 0755)
 	if err != nil {
 		return err
 	}
@@ -375,11 +382,11 @@ func generateMockedProcPIDCGroupFile(hostRoot string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(filepath.Join(hostRoot, "proc", strconv.Itoa(pid), "cgroup"), inputCgroups, 0755)
+	return ioutil.WriteFile(filepath.Join(hostRoot, "proc", strconv.Itoa(InspectorPID), "cgroup"), inputCgroups, 0755)
 }
 
 func genereateMockedProcNetDevFile(hostRoot string) error {
-	err := os.Mkdir(filepath.Join(hostRoot, "proc", strconv.Itoa(pid), "net"), 0755)
+	err := os.Mkdir(filepath.Join(hostRoot, "proc", strconv.Itoa(InspectorPID), "net"), 0755)
 	if err != nil {
 		return err
 	}
@@ -389,5 +396,5 @@ func genereateMockedProcNetDevFile(hostRoot string) error {
 		return err
 	}
 
-	return ioutil.WriteFile(filepath.Join(hostRoot, "proc", strconv.Itoa(pid), "net", "dev"), inputNetDev, 0755)
+	return ioutil.WriteFile(filepath.Join(hostRoot, "proc", strconv.Itoa(InspectorPID), "net", "dev"), inputNetDev, 0755)
 }
