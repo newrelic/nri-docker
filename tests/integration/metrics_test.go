@@ -296,6 +296,27 @@ func TestAllMetricsPresent(t *testing.T) {
 	// Create a tempDir that will be the root of our mocked filsystem
 	hostRoot := t.TempDir()
 
+	// Create all the mocked fileSystem for the test
+	err := mockedFileSystem(t, hostRoot)
+
+	// CgroupsFetcherMock is the raw CgroupsFetcher with mocked cpu.systemUsage and time
+	// The hostRoot is our mocked filesystem
+	cgroupFetcher, err := NewCgroupsFetcherMock(hostRoot, "cgroupfs", "", mockedTimeForAllMetricsTest, 19026130000000)
+	require.NoError(t, err)
+
+	storer := inMemoryStorerWithPreviousCPUState()
+	inspector := NewInspectorMock(InspectorContainerID, InspectorPID, 2)
+
+	t.Run("Given a mockedFilesystem and previous CPU state Then processed metrics are as expected", func(t *testing.T) {
+		metrics := biz.NewProcessor(storer, cgroupFetcher, inspector, 0)
+
+		sample, err := metrics.Process(InspectorContainerID)
+		require.NoError(t, err)
+		assert.Equal(t, expectedSample, sample)
+	})
+}
+
+func mockedFileSystem(t *testing.T, hostRoot string) error {
 	// Create our mocked container cgroups filesystem in the tempDir directory
 	// that will be a symLink to our cgroups testdata
 	cgroupsFolder := filepath.Join(hostRoot, "cgroup")
@@ -317,22 +338,7 @@ func TestAllMetricsPresent(t *testing.T) {
 
 	err = mockedProcNetDevFile(hostRoot)
 	require.NoError(t, err)
-
-	// CgroupsFetcherMock is the raw CgroupsFetcher with mocked cpu.systemUsage and time
-	// The hostRoot is our mocked filesystem
-	cgroupFetcher, err := NewCgroupsFetcherMock(hostRoot, "cgroupfs", "", mockedTimeForAllMetricsTest, 19026130000000)
-	require.NoError(t, err)
-
-	storer := inMemoryStorerWithPreviousCPUState()
-	inspector := NewInspectorMock(InspectorContainerID, InspectorPID, 2)
-
-	t.Run("Given a mockedFilesystem and previous CPU state Then processed metrics are as expected", func(t *testing.T) {
-		metrics := biz.NewProcessor(storer, cgroupFetcher, inspector, 0)
-
-		sample, err := metrics.Process(InspectorContainerID)
-		require.NoError(t, err)
-		assert.Equal(t, expectedSample, sample)
-	})
+	return err
 }
 
 // inMemoryStorerWithPreviousCPUState creates a storere with a previous CPU state
