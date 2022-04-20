@@ -266,10 +266,11 @@ func TestAllMetricsPresent(t *testing.T) {
 			TotalWriteBytes: 50,
 		},
 		CPU: biz.CPU{
-			CPUPercent:       0.15003804623431827,
-			KernelPercent:    1.19999999,
-			UserPercent:      100,
-			UsedCores:        2.8546433726,
+			CPUPercent:    0.15003804623431827,
+			KernelPercent: 1.19999999,
+			UserPercent:   100,
+			UsedCores:     2.8546433726,
+			// This is calculated with this call in biz.metrics
 			LimitCores:       float64(runtime.NumCPU()),
 			UsedCoresPercent: float64(100) * 2.8546433726 / float64(runtime.NumCPU()),
 			ThrottlePeriods:  2384,
@@ -308,13 +309,13 @@ func TestAllMetricsPresent(t *testing.T) {
 	err = os.Mkdir(filepath.Join(hostRoot, "proc"), 0755)
 	require.NoError(t, err)
 
-	err = generateMockedProcMountsFile(cgroupsFolder, hostRoot)
+	err = mockedProcMountsFile(cgroupsFolder, hostRoot)
 	require.NoError(t, err)
 
-	err = generateMockedProcPIDCGroupFile(hostRoot)
+	err = mockedProcPIDCGroupFile(hostRoot)
 	require.NoError(t, err)
 
-	err = genereateMockedProcNetDevFile(hostRoot)
+	err = mockedProcNetDevFile(hostRoot)
 	require.NoError(t, err)
 
 	// CgroupsFetcherMock is the raw CgroupsFetcher with mocked cpu.systemUsage and time
@@ -322,7 +323,7 @@ func TestAllMetricsPresent(t *testing.T) {
 	cgroupFetcher, err := NewCgroupsFetcherMock(hostRoot, "cgroupfs", "", mockedTimeForAllMetricsTest, 19026130000000)
 	require.NoError(t, err)
 
-	storer := generateInMemoryStorerWithPreviousCPUState()
+	storer := inMemoryStorerWithPreviousCPUState()
 	inspector := NewInspectorMock(InspectorContainerID, InspectorPID, 2)
 
 	t.Run("Given a mockedFilesystem and previous CPU state Then processed metrics are as expected", func(t *testing.T) {
@@ -334,9 +335,9 @@ func TestAllMetricsPresent(t *testing.T) {
 	})
 }
 
-// generateInMemoryStorerWithPreviousCPUState creates a storere with a previous CPU state
+// inMemoryStorerWithPreviousCPUState creates a storere with a previous CPU state
 // in order to make the processor calculate a Cpu Delta
-func generateInMemoryStorerWithPreviousCPUState() persist.Storer {
+func inMemoryStorerWithPreviousCPUState() persist.Storer {
 	var previous struct {
 		Time int64
 		CPU  raw.CPU
@@ -360,7 +361,7 @@ func generateInMemoryStorerWithPreviousCPUState() persist.Storer {
 	return storer
 }
 
-func generateMockedProcMountsFile(cgroupsFolder, hostRoot string) error {
+func mockedProcMountsFile(cgroupsFolder, hostRoot string) error {
 	mountsContent := `cgroup <HOST_ROOT>/blkio cgroup rw,nosuid,nodev,noexec,relatime,blkio 0 0
 cgroup <HOST_ROOT>/pids cgroup rw,nosuid,nodev,noexec,relatime,pids 0 0
 cgroup <HOST_ROOT>/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,relatime,cpu,cpuacct 0 0
@@ -371,7 +372,7 @@ cgroup <HOST_ROOT>/memory cgroup rw,nosuid,nodev,noexec,relatime,memory 0 0
 	return os.WriteFile(filepath.Join(hostRoot, "proc", "mounts"), []byte(mountsContent), 0755)
 }
 
-func generateMockedProcPIDCGroupFile(hostRoot string) error {
+func mockedProcPIDCGroupFile(hostRoot string) error {
 	err := os.Mkdir(filepath.Join(hostRoot, "proc", strconv.Itoa(InspectorPID)), 0755)
 	if err != nil {
 		return err
@@ -385,7 +386,7 @@ func generateMockedProcPIDCGroupFile(hostRoot string) error {
 	return ioutil.WriteFile(filepath.Join(hostRoot, "proc", strconv.Itoa(InspectorPID), "cgroup"), inputCgroups, 0755)
 }
 
-func genereateMockedProcNetDevFile(hostRoot string) error {
+func mockedProcNetDevFile(hostRoot string) error {
 	err := os.Mkdir(filepath.Join(hostRoot, "proc", strconv.Itoa(InspectorPID), "net"), 0755)
 	if err != nil {
 		return err
