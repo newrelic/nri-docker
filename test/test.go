@@ -26,7 +26,7 @@ func Eventually(t *testing.T, timeout time.Duration, testFunc func(_ require.Tes
 			result := testResult{failed: false, errorCh: errorCh, failCh: failCh}
 			// Executing the function to test
 			testFunc(&result)
-			// If the function didn't reported failure and didn't reached timeout
+			// If the function didn't report failure and didn't reach the timeout
 			if !result.failed && ctx.Err() == nil {
 				success <- 1
 				break

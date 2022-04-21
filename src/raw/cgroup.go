@@ -206,6 +206,7 @@ const nanoSecondsPerSecond = 1e9
 // statistics line and then sums up the first seven fields
 // provided. See `man 5 proc` for details on specific field
 // information.
+// TODO: we should inject the route of /proc/stat in order to be able to mock the file and test the method
 func readSystemCPUUsage() (uint64, error) {
 	f, err := os.Open("/proc/stat")
 	if err != nil {
