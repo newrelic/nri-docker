@@ -3,12 +3,13 @@ package raw
 import (
 	"bufio"
 	"fmt"
-	"github.com/containerd/cgroups"
-	"github.com/newrelic/infra-integrations-sdk/log"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/containerd/cgroups"
+	"github.com/newrelic/infra-integrations-sdk/log"
 )
 
 const (
@@ -135,7 +136,7 @@ func (cgi *cgroupPaths) getHierarchyFn() cgroups.Hierarchy {
 		var subsystems []cgroups.Subsystem
 
 		if cpusetMountPoint, ok := cgi.mountPoints[string(cgroups.Cpuset)]; ok {
-			subsystems = append(subsystems, cgroups.NewCputset(cpusetMountPoint))
+			subsystems = append(subsystems, cgroups.NewCpuset(cpusetMountPoint))
 		}
 		if cpuMountPoint, ok := cgi.mountPoints[string(cgroups.Cpu)]; ok {
 			subsystems = append(subsystems, cgroups.NewCpu(cpuMountPoint))
@@ -178,7 +179,7 @@ func parseCgroupMountPoints(hostRoot string, mountFileInfo io.Reader) (map[strin
 		fields := strings.Fields(line)
 
 		// Filter mount points if the type is not 'cgroup' or not mounted under </host>/sys
-		if len(fields) < 3 || fields[2] != "cgroup" || !strings.HasPrefix(fields[1], hostRoot) {
+		if len(fields) < 3 || !strings.HasPrefix(fields[2], "cgroup") || !strings.HasPrefix(fields[1], hostRoot) {
 			continue
 		}
 
