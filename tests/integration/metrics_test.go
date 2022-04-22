@@ -43,7 +43,7 @@ func TestHighCPU(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/")
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(
@@ -90,7 +90,7 @@ func TestLowCPU(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/")
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(
@@ -128,7 +128,7 @@ func TestMemory(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/")
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(
@@ -203,7 +203,7 @@ func TestExitedContainersWithTTL(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/")
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 1*time.Second)
@@ -222,7 +222,7 @@ func TestExitedContainersWithoutTTL(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/", "cgroupfs", "")
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/")
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
@@ -300,7 +300,7 @@ func TestAllMetricsPresent(t *testing.T) {
 
 	// CgroupsFetcherMock is the raw CgroupsFetcher with mocked cpu.systemUsage and time
 	// The hostRoot is our mocked filesystem
-	cgroupFetcher, err := NewCgroupsFetcherMock(hostRoot, "cgroupfs", "", mockedTimeForAllMetricsTest, 19026130000000)
+	cgroupFetcher, err := NewCgroupsFetcherMock(hostRoot, mockedTimeForAllMetricsTest, 19026130000000)
 	require.NoError(t, err)
 
 	storer := inMemoryStorerWithPreviousCPUState()
