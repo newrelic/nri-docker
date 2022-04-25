@@ -17,12 +17,12 @@ const (
 	cgroupFilePathTpl = "/proc/%d/cgroup"
 )
 
-// getCgroupPaths will detect the cgroup paths for a container pid.
-func getCgroupPaths(hostRoot string, pid int) (*cgroupPaths, error) {
-	return cgroupPathsFetch(hostRoot, pid, fileOpenFn)
+// getCgroupV1Paths will detect the cgroup paths for a container pid.
+func getCgroupV1Paths(hostRoot string, pid int) (*cgroupV1Paths, error) {
+	return cgroupV1PathsFetch(hostRoot, pid, fileOpenFn)
 }
 
-func cgroupPathsFetch(hostRoot string, pid int, fileOpenFn func(filePath string) (io.ReadCloser, error)) (*cgroupPaths, error) {
+func cgroupV1PathsFetch(hostRoot string, pid int, fileOpenFn func(filePath string) (io.ReadCloser, error)) (*cgroupV1Paths, error) {
 
 	mountsFilePath := filepath.Join(hostRoot, mountsFilePath)
 	mountsFile, err := fileOpenFn(mountsFilePath)
@@ -36,7 +36,7 @@ func cgroupPathsFetch(hostRoot string, pid int, fileOpenFn func(filePath string)
 		}
 	}()
 
-	mountPoints, err := parseCgroupMountPoints(hostRoot, mountsFile)
+	mountPoints, err := parseCgroupV1MountPoints(hostRoot, mountsFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse cgroup mountpoints error: %v", err)
 	}
@@ -52,23 +52,23 @@ func cgroupPathsFetch(hostRoot string, pid int, fileOpenFn func(filePath string)
 			log.Error("Error occurred while closing the file: %v", closeErr)
 		}
 	}()
-	paths, err := parseCgroupPaths(cgroupFile)
+	paths, err := parseCgroupV1Paths(cgroupFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse cgroup paths error: %v", err)
 	}
 
-	return &cgroupPaths{
+	return &cgroupV1Paths{
 		mountPoints: mountPoints,
 		paths:       paths,
 	}, nil
 }
 
-type cgroupPaths struct {
+type cgroupV1Paths struct {
 	mountPoints map[string]string
 	paths       map[string]string
 }
 
-func (cgi *cgroupPaths) getPath(name cgroups.Name) (string, error) {
+func (cgi *cgroupV1Paths) getPath(name cgroups.Name) (string, error) {
 
 	if result, ok := cgi.paths[string(name)]; ok {
 		return result, nil
@@ -77,7 +77,7 @@ func (cgi *cgroupPaths) getPath(name cgroups.Name) (string, error) {
 	return "", fmt.Errorf("cgroup path not found for subsystem %s", name)
 }
 
-func (cgi *cgroupPaths) getMountPoint(name cgroups.Name) (string, error) {
+func (cgi *cgroupV1Paths) getMountPoint(name cgroups.Name) (string, error) {
 
 	if result, ok := cgi.mountPoints[string(name)]; ok {
 		return result, nil
@@ -86,7 +86,7 @@ func (cgi *cgroupPaths) getMountPoint(name cgroups.Name) (string, error) {
 	return "", fmt.Errorf("cgroup mount point not found for subsystem %s", name)
 }
 
-func (cgi *cgroupPaths) getFullPath(name cgroups.Name) (string, error) {
+func (cgi *cgroupV1Paths) getFullPath(name cgroups.Name) (string, error) {
 
 	cgroupMountPoint, err := cgi.getMountPoint(name)
 	if err != nil {
@@ -103,7 +103,7 @@ func (cgi *cgroupPaths) getFullPath(name cgroups.Name) (string, error) {
 
 // returns the subsystems where cgroups library has to look for, attaching the
 // hostContainerPath prefix to the folder if the integration is running inside a container
-func (cgi *cgroupPaths) getHierarchyFn() cgroups.Hierarchy {
+func (cgi *cgroupV1Paths) getHierarchyFn() cgroups.Hierarchy {
 	return func() ([]cgroups.Subsystem, error) {
 		var subsystems []cgroups.Subsystem
 
@@ -130,7 +130,7 @@ func (cgi *cgroupPaths) getHierarchyFn() cgroups.Hierarchy {
 	}
 }
 
-func (cgi *cgroupPaths) getSingleFileUintStat(name cgroups.Name, stat string) (uint64, error) {
+func (cgi *cgroupV1Paths) getSingleFileUintStat(name cgroups.Name, stat string) (uint64, error) {
 	fp, err := cgi.getFullPath(name)
 	if err != nil {
 		return 0, err
@@ -142,7 +142,7 @@ func (cgi *cgroupPaths) getSingleFileUintStat(name cgroups.Name, stat string) (u
 	return c, nil
 }
 
-func parseCgroupMountPoints(hostRoot string, mountFileInfo io.Reader) (map[string]string, error) {
+func parseCgroupV1MountPoints(hostRoot string, mountFileInfo io.Reader) (map[string]string, error) {
 	mountPoints := make(map[string]string)
 
 	sc := bufio.NewScanner(mountFileInfo)
@@ -168,7 +168,7 @@ func parseCgroupMountPoints(hostRoot string, mountFileInfo io.Reader) (map[strin
 	return mountPoints, nil
 }
 
-func parseCgroupPaths(cgroupFile io.Reader) (map[string]string, error) {
+func parseCgroupV1Paths(cgroupFile io.Reader) (map[string]string, error) {
 	cgroupPaths := make(map[string]string)
 
 	sc := bufio.NewScanner(cgroupFile)
