@@ -14,67 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetStaticCgroupPaths(t *testing.T) {
-
-	testCases := map[string]struct {
-		cgroupDriver string
-		expected     *cgroupPaths
-	}{
-		"CgroupDriver_SystemD": {
-			cgroupDriver: "cgroupfs",
-			expected: &cgroupPaths{
-				mountPoints: map[string]string{
-					"cpu":     "/sys/fs/cgroup",
-					"cpuset":  "/sys/fs/cgroup",
-					"cpuacct": "/sys/fs/cgroup",
-					"memory":  "/sys/fs/cgroup",
-					"blkio":   "/sys/fs/cgroup",
-					"pids":    "/sys/fs/cgroup",
-				},
-				paths: map[string]string{
-					"cpu":     "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
-					"cpuset":  "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
-					"cpuacct": "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
-					"memory":  "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
-					"blkio":   "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
-					"pids":    "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
-				},
-			},
-		},
-		"CgroupDriver_Cgroupfs": {
-			cgroupDriver: "systemd",
-			expected: &cgroupPaths{
-				mountPoints: map[string]string{
-					"cpu":     "/sys/fs/cgroup",
-					"cpuset":  "/sys/fs/cgroup",
-					"cpuacct": "/sys/fs/cgroup",
-					"memory":  "/sys/fs/cgroup",
-					"blkio":   "/sys/fs/cgroup",
-					"pids":    "/sys/fs/cgroup",
-				},
-				paths: map[string]string{
-					"cpu":     "/system.slice/docker-f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0.scope",
-					"cpuset":  "/system.slice/docker-f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0.scope",
-					"cpuacct": "/system.slice/docker-f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0.scope",
-					"memory":  "/system.slice/docker-f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0.scope",
-					"blkio":   "/system.slice/docker-f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0.scope",
-					"pids":    "/system.slice/docker-f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0.scope",
-				},
-			},
-		},
-	}
-
-	for testName, testCase := range testCases {
-		t.Run(testName, func(t *testing.T) {
-			actual, err := getStaticCgroupPaths(testCase.cgroupDriver, "/sys/fs/cgroup", "docker", "f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0")
-
-			assert.NoError(t, err)
-			assert.Equal(t, testCase.expected, actual)
-		})
-	}
-
-}
-
 func TestParseCgroupMountPoints(t *testing.T) {
 
 	testCases := map[string]struct {

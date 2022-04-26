@@ -17,34 +17,6 @@ const (
 	cgroupFilePathTpl = "/proc/%d/cgroup"
 )
 
-// TODO: This keeps the previous behavior if specified by configuration. Should be removed in future versions together with config arguments.
-func getStaticCgroupPaths(cgroupDriver, cgroupMountPoint, cgroupParent, containerID string) (*cgroupPaths, error) {
-
-	mountPoints := make(map[string]string)
-	paths := make(map[string]string)
-
-	for _, subsystem := range []string{
-		string(cgroups.Cpuset),
-		string(cgroups.Cpu),
-		string(cgroups.Cpuacct),
-		string(cgroups.Memory),
-		string(cgroups.Blkio),
-		string(cgroups.Pids),
-	} {
-		mountPoints[subsystem] = cgroupMountPoint
-		if cgroupDriver == "systemd" {
-			paths[subsystem] = fmt.Sprintf("/system.slice/%s-%s.scope", cgroupParent, containerID)
-		} else {
-			paths[subsystem] = fmt.Sprintf("/%s/%s", cgroupParent, containerID)
-		}
-	}
-
-	return &cgroupPaths{
-		mountPoints: mountPoints,
-		paths:       paths,
-	}, nil
-}
-
 // getCgroupPaths will detect the cgroup paths for a container pid.
 func getCgroupPaths(hostRoot string, pid int) (*cgroupPaths, error) {
 	return cgroupPathsFetch(hostRoot, pid, fileOpenFn)

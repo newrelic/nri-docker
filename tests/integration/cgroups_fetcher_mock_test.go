@@ -1,9 +1,10 @@
 package biz
 
 import (
+	"time"
+
 	"github.com/docker/docker/api/types"
 	"github.com/newrelic/nri-docker/src/raw"
-	"time"
 )
 
 // CgroupsFetcherMock is a wrapper of CgroupsFetcher to mock:
@@ -16,8 +17,8 @@ type CgroupsFetcherMock struct {
 }
 
 // NewCgroupsFetcherMock creates a new cgroups data fetcher.
-func NewCgroupsFetcherMock(hostRoot, cgroupDriver, cgroupMountPoint string, time time.Time, systemUsage uint64) (*CgroupsFetcherMock, error) {
-	cgroupsFetcher, err := raw.NewCgroupsFetcher(hostRoot, cgroupDriver, cgroupMountPoint)
+func NewCgroupsFetcherMock(hostRoot string, time time.Time, systemUsage uint64) (*CgroupsFetcherMock, error) {
+	cgroupsFetcher, err := raw.NewCgroupsFetcher(hostRoot)
 	if err != nil {
 		return nil, err
 	}

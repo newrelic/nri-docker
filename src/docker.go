@@ -74,11 +74,7 @@ func main() {
 	} else {
 		detectedHostRoot, err := raw.DetectHostRoot(args.HostRoot, raw.CanAccessDir)
 		exitOnErr(err)
-		fetcher, err = raw.NewCgroupsFetcher(
-			detectedHostRoot,
-			args.CgroupDriver,
-			args.CgroupPath,
-		)
+		fetcher, err = raw.NewCgroupsFetcher(detectedHostRoot)
 		exitOnErr(err)
 		var tmpDocker *client.Client
 		tmpDocker, err = client.NewClientWithOpts(client.FromEnv, client.WithVersion(args.DockerClientVersion))

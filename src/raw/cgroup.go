@@ -20,17 +20,13 @@ import (
 
 // CgroupsFetcher fetches the metrics that can be found in cgroups file system
 type CgroupsFetcher struct {
-	hostRoot         string
-	cgroupDriver     string
-	cgroupMountPoint string
+	hostRoot string
 }
 
 // NewCgroupsFetcher creates a new cgroups data fetcher.
-func NewCgroupsFetcher(hostRoot, cgroupDriver, cgroupMountPoint string) (*CgroupsFetcher, error) {
+func NewCgroupsFetcher(hostRoot string) (*CgroupsFetcher, error) {
 	return &CgroupsFetcher{
-		hostRoot:         hostRoot,
-		cgroupDriver:     cgroupDriver,
-		cgroupMountPoint: cgroupMountPoint,
+		hostRoot: hostRoot,
 	}, nil
 }
 
@@ -46,17 +42,7 @@ func (cg *CgroupsFetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		cgroupInfo *cgroupPaths
 		err        error
 	)
-	if cg.cgroupMountPoint == "" {
-		cgroupInfo, err = getCgroupPaths(cg.hostRoot, pid)
-	} else {
-		var parent string
-		if c.HostConfig == nil || c.HostConfig.CgroupParent == "" {
-			parent = "docker"
-		} else {
-			parent = c.HostConfig.CgroupParent
-		}
-		cgroupInfo, err = getStaticCgroupPaths(cg.cgroupDriver, filepath.Join(cg.hostRoot, cg.cgroupMountPoint), parent, containerID)
-	}
+	cgroupInfo, err = getCgroupPaths(cg.hostRoot, pid)
 
 	if err != nil {
 		return stats, err
