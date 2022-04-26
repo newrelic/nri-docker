@@ -55,7 +55,7 @@ func main() {
 	exitOnErr(err)
 
 	var fetcher raw.Fetcher
-	var docker nri.DockerClient
+	var docker raw.DockerClient
 	if args.Fargate {
 		var err error
 		var metadataBaseURL *url.URL

@@ -29,18 +29,12 @@ const (
 type ContainerSampler struct {
 	metrics biz.Processer
 	store   persist.Storer
-	docker  DockerClient
+	docker  raw.DockerClient
 	config  config.ArgumentList
 }
 
-// DockerClient is an abstraction of the Docker client.
-type DockerClient interface {
-	biz.Inspector
-	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
-}
-
 // NewSampler returns a ContainerSampler instance.
-func NewSampler(fetcher raw.Fetcher, docker DockerClient, exitedContainerTTL time.Duration, config config.ArgumentList) (*ContainerSampler, error) {
+func NewSampler(fetcher raw.Fetcher, docker raw.DockerClient, exitedContainerTTL time.Duration, config config.ArgumentList) (*ContainerSampler, error) {
 	// SDK Storer to keep metric values between executions (e.g. for rates and deltas)
 	store, err := persist.NewFileStore( // TODO: make the following options configurable
 		persist.DefaultPath("container_cpus"),
