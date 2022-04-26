@@ -2,6 +2,7 @@ package raw
 
 import (
 	"context"
+	"sync"
 
 	"github.com/docker/docker/api/types"
 )
@@ -21,4 +22,25 @@ type DockerInspector interface {
 type DockerClient interface {
 	DockerInspector
 	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
+}
+
+// CachedInfoDockerClient Wraps a DockerClient indefinitely caching Info method first call.
+type CachedInfoDockerClient struct {
+	DockerClient
+
+	once         sync.Once
+	infoResponse types.Info
+	infoError    error
+}
+
+func (c *CachedInfoDockerClient) Info(ctx context.Context) (types.Info, error) {
+	c.once.Do(func() {
+		c.infoResponse, c.infoError = c.DockerClient.Info(ctx)
+	})
+	return c.infoResponse, c.infoError
+}
+
+// NewCachedInfoDockerClient returns a client wrapper using the provided one.
+func NewCachedInfoDockerClient(c DockerClient) *CachedInfoDockerClient {
+	return &CachedInfoDockerClient{DockerClient: c}
 }
