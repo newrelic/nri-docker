@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -13,19 +12,18 @@ import (
 )
 
 const (
-	mountsFilePath    = "/proc/mounts"
 	cgroupFilePathTpl = "/proc/%d/cgroup"
 )
 
 // getCgroupV1Paths will detect the cgroup paths for a container pid.
 func getCgroupV1Paths(hostRoot string, pid int) (*cgroupV1Paths, error) {
-	return cgroupV1PathsFetch(hostRoot, pid, fileOpenFn)
+	return cgroupV1PathsFetch(hostRoot, pid, defaultFileOpenFn)
 }
 
-func cgroupV1PathsFetch(hostRoot string, pid int, fileOpenFn func(filePath string) (io.ReadCloser, error)) (*cgroupV1Paths, error) {
+func cgroupV1PathsFetch(hostRoot string, pid int, fileOpen fileOpenFn) (*cgroupV1Paths, error) {
 
 	mountsFilePath := filepath.Join(hostRoot, mountsFilePath)
-	mountsFile, err := fileOpenFn(mountsFilePath)
+	mountsFile, err := fileOpen(mountsFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %s, while detecting cgroup mountpoints error: %v",
 			mountsFilePath, err)
@@ -42,7 +40,7 @@ func cgroupV1PathsFetch(hostRoot string, pid int, fileOpenFn func(filePath strin
 	}
 
 	cgroupFilePath := filepath.Join(hostRoot, fmt.Sprintf(cgroupFilePathTpl, pid))
-	cgroupFile, err := fileOpenFn(cgroupFilePath)
+	cgroupFile, err := fileOpen(cgroupFilePath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %s, while detecting cgroup paths error: %v",
 			cgroupFilePath, err)
@@ -190,8 +188,4 @@ func parseCgroupV1Paths(cgroupFile io.Reader) (map[string]string, error) {
 	}
 
 	return cgroupPaths, nil
-}
-
-func fileOpenFn(filePath string) (io.ReadCloser, error) {
-	return os.Open(filePath)
 }
