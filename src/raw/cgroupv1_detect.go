@@ -11,10 +11,6 @@ import (
 	"github.com/newrelic/infra-integrations-sdk/log"
 )
 
-const (
-	cgroupFilePathTpl = "/proc/%d/cgroup"
-)
-
 // getCgroupV1Paths will detect the cgroup paths for a container pid.
 func getCgroupV1Paths(hostRoot string, pid int) (*cgroupV1Paths, error) {
 	return cgroupV1PathsFetch(hostRoot, pid, defaultFileOpenFn)

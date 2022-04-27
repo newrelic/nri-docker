@@ -5,7 +5,10 @@ import (
 	"os"
 )
 
-const mountsFilePath = "/proc/mounts"
+const (
+	mountsFilePath    = "/proc/mounts"
+	cgroupFilePathTpl = "/proc/%d/cgroup"
+)
 
 type fileOpenFn func(string) (io.ReadCloser, error)
 
