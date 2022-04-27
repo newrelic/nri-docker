@@ -13,6 +13,7 @@ require (
 
 require (
 	github.com/Microsoft/go-winio v0.4.17 // indirect
+	github.com/cilium/ebpf v0.4.0 // indirect
 	github.com/containerd/containerd v1.5.2 // indirect
 	github.com/coreos/go-systemd/v22 v22.1.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
