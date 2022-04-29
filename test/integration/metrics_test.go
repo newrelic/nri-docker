@@ -43,7 +43,7 @@ func TestHighCPU(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/", raw.NewPosixSystemCPUReader(""))
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/", raw.NewPosixSystemCPUReader())
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(
@@ -90,7 +90,7 @@ func TestLowCPU(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/", raw.NewPosixSystemCPUReader(""))
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/", raw.NewPosixSystemCPUReader())
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(
@@ -128,7 +128,7 @@ func TestMemory(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/", raw.NewPosixSystemCPUReader(""))
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/", raw.NewPosixSystemCPUReader())
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(
@@ -203,7 +203,7 @@ func TestExitedContainersWithTTL(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/", raw.NewPosixSystemCPUReader(""))
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/", raw.NewPosixSystemCPUReader())
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 1*time.Second)
@@ -222,7 +222,7 @@ func TestExitedContainersWithoutTTL(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/", raw.NewPosixSystemCPUReader(""))
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/", raw.NewPosixSystemCPUReader())
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)

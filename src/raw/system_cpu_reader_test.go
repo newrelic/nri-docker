@@ -44,13 +44,10 @@ func TestPosixSystemCPUReader_ReadUsage(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			cpuReader := raw.NewPosixSystemCPUReader(tt.statFilePath)
+			cpuReader := raw.NewPosixSystemCPUReader(raw.CPUReaderWithStatFilePath(tt.statFilePath))
 			cpuUsage, err := cpuReader.ReadUsage()
 
-			if tt.errorExpected != nil {
-				require.ErrorIs(t, err, tt.errorExpected)
-			}
-
+			require.ErrorIs(t, err, tt.errorExpected)
 			require.Equal(t, tt.expected, cpuUsage)
 		})
 	}

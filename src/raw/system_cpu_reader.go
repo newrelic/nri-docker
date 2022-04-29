@@ -24,11 +24,20 @@ var (
 
 const StatFileDefaultPath = "/proc/stat"
 
-func NewPosixSystemCPUReader(statFilePath string) PosixSystemCPUReader {
-	if statFilePath == "" {
-		statFilePath = StatFileDefaultPath
+type CPUReaderOption func(*PosixSystemCPUReader)
+
+func NewPosixSystemCPUReader(opts ...CPUReaderOption) PosixSystemCPUReader {
+	posixSystemCPUReader := PosixSystemCPUReader{statsFilePath: StatFileDefaultPath}
+	for _, opt := range opts {
+		opt(&posixSystemCPUReader)
 	}
-	return PosixSystemCPUReader{statsFilePath: statFilePath}
+	return posixSystemCPUReader
+}
+
+func CPUReaderWithStatFilePath(statFilePath string) CPUReaderOption {
+	return func(r *PosixSystemCPUReader) {
+		r.statsFilePath = statFilePath
+	}
 }
 
 // ReadUsage returns the host system's cpu usage in
