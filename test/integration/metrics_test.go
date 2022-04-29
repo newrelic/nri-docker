@@ -1,4 +1,4 @@
-package biz
+package integration_test
 
 import (
 	"bytes"
@@ -43,7 +43,7 @@ func TestHighCPU(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/")
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/", raw.NewPosixSystemCPUReader())
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(
@@ -90,7 +90,7 @@ func TestLowCPU(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/")
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/", raw.NewPosixSystemCPUReader())
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(
@@ -128,7 +128,7 @@ func TestMemory(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/")
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/", raw.NewPosixSystemCPUReader())
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(
@@ -203,7 +203,7 @@ func TestExitedContainersWithTTL(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/")
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/", raw.NewPosixSystemCPUReader())
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 1*time.Second)
@@ -222,7 +222,7 @@ func TestExitedContainersWithoutTTL(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/")
+	cgroupFetcher, err := raw.NewCgroupsFetcher("/", raw.NewPosixSystemCPUReader())
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
@@ -265,7 +265,7 @@ func TestAllMetricsPresent(t *testing.T) {
 			TotalWriteBytes: 50,
 		},
 		CPU: biz.CPU{
-			CPUPercent:    0.15003804623431827,
+			CPUPercent:    28.546433726285464,
 			KernelPercent: 1.19999999,
 			UserPercent:   100,
 			UsedCores:     2.8546433726,
@@ -300,7 +300,7 @@ func TestAllMetricsPresent(t *testing.T) {
 
 	// CgroupsFetcherMock is the raw CgroupsFetcher with mocked cpu.systemUsage and time
 	// The hostRoot is our mocked filesystem
-	cgroupFetcher, err := NewCgroupsFetcherMock(hostRoot, mockedTimeForAllMetricsTest, 19026130000000)
+	cgroupFetcher, err := NewCgroupsFetcherMock(hostRoot, mockedTimeForAllMetricsTest, uint64(100000000000))
 	require.NoError(t, err)
 
 	storer := inMemoryStorerWithPreviousCPUState()

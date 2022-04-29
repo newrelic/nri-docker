@@ -62,7 +62,7 @@ integration-test-deps: compile-deps
 
 integration-test: integration-test-deps
 	@echo "=== $(INTEGRATION) === [ test ]: running integration tests..."
-	@$(GO) test -v -tags=integration ./tests/integration/.
+	@$(GO) test -v -tags=integration ./test/integration/.
 
 install: bin/$(BINARY_NAME)
 	@echo "=== $(INTEGRATION) === [ install ]: installing bin/$(BINARY_NAME)..."
