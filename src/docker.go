@@ -72,15 +72,17 @@ func main() {
 		docker, err = aws.NewFargateInspector(metadataBaseURL)
 		exitOnErr(err)
 	} else {
-		detectedHostRoot, err := raw.DetectHostRoot(args.HostRoot, raw.CanAccessDir)
-		exitOnErr(err)
-		fetcher, err = raw.NewCgroupsFetcher(detectedHostRoot)
-		exitOnErr(err)
 		var tmpDocker *client.Client
 		tmpDocker, err = client.NewClientWithOpts(client.FromEnv, client.WithVersion(args.DockerClientVersion))
 		exitOnErr(err)
 		defer tmpDocker.Close()
-		docker = tmpDocker
+		docker = raw.NewCachedInfoDockerClient(tmpDocker)
+
+		detectedHostRoot, err := raw.DetectHostRoot(args.HostRoot, raw.CanAccessDir)
+		exitOnErr(err)
+		cgroupInfo, err := raw.GetCgroupInfo(context.Background(), docker)
+		fetcher, err = raw.NewCgroupsFetcher(detectedHostRoot, cgroupInfo)
+		exitOnErr(err)
 	}
 	sampler, err := nri.NewSampler(fetcher, docker, exitedContainerTTL, args)
 	exitOnErr(err)
