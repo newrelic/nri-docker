@@ -11,7 +11,7 @@ import (
 // The cpu SystemUsage metrics got from /proc/stat
 // the timestamp of the metric
 type CgroupsFetcherMock struct {
-	cgroupsFetcher *raw.CgroupsFetcher
+	cgroupsFetcher raw.Fetcher
 	time           time.Time
 	systemUsage    uint64
 }
