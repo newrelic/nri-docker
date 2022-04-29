@@ -1,4 +1,4 @@
-package biz
+package integration_test
 
 type SystemCPUReaderMock struct {
 	systemUsage uint64
