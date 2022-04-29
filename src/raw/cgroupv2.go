@@ -15,13 +15,15 @@ import (
 
 // CgroupsV2Fetcher fetches the metrics that can be found in cgroups (v2) file system
 type CgroupsV2Fetcher struct {
-	hostRoot string
+	hostRoot        string
+	systemCPUReader SystemCPUReader
 }
 
 // NewCgroupsV2Fetcher creates a new cgroups data fetcher.
-func NewCgroupsV2Fetcher(hostRoot string) (*CgroupsFetcher, error) {
-	return &CgroupsFetcher{
-		hostRoot: hostRoot,
+func NewCgroupsV2Fetcher(hostRoot string, systemCPUReader SystemCPUReader) (*CgroupsV2Fetcher, error) {
+	return &CgroupsV2Fetcher{
+		hostRoot:        hostRoot,
+		systemCPUReader: systemCPUReader,
 	}, nil
 }
 
@@ -33,8 +35,19 @@ func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 
 	pid := c.State.Pid
 	containerID := c.ID
+	driver := c.Driver
 
-	manager, err := cgroupsV2.LoadManager(mountsFilePath, cg.hostRoot)
+	var (
+		cgroupInfo *cgroupV2Paths
+		err        error
+	)
+
+	cgroupInfo, err = getCgroupV2Paths(cg.hostRoot, pid, driver, containerID)
+	if err != nil {
+		return stats, err
+	}
+
+	manager, err := cgroupsV2.LoadManager(cgroupInfo.MountPoint, cgroupInfo.Group)
 	if err != nil {
 		return stats, err
 	}
@@ -107,7 +120,7 @@ func (cg *CgroupsV2Fetcher) cpu(metric *cgroupstatsV2.Metrics) (CPU, error) {
 	}
 
 	var err error
-	cpu.SystemUsage, err = readSystemCPUUsage()
+	cpu.SystemUsage, err = cg.systemCPUReader.ReadUsage()
 	cpu.Shares = metric.Memory.Shmem
 
 	return cpu, err
