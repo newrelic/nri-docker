@@ -1,4 +1,4 @@
-package biz
+package integration_test
 
 import (
 	"time"
@@ -18,7 +18,7 @@ type CgroupsFetcherMock struct {
 
 // NewCgroupsFetcherMock creates a new cgroups data fetcher.
 func NewCgroupsFetcherMock(hostRoot string, time time.Time, systemUsage uint64) (*CgroupsFetcherMock, error) {
-	cgroupsFetcher, err := raw.NewCgroupsV1Fetcher(hostRoot)
+	cgroupsFetcher, err := raw.NewCgroupsV1Fetcher(hostRoot, NewSystemCPUReaderMock(systemUsage))
 	if err != nil {
 		return nil, err
 	}
@@ -30,14 +30,13 @@ func NewCgroupsFetcherMock(hostRoot string, time time.Time, systemUsage uint64) 
 	}, nil
 }
 
-// Fetch calls the wrapped fetcher and overrides the CPU.SystemUsage and the Time
+// Fetch calls the wrapped fetcher and overrides the Time
 func (cgf *CgroupsFetcherMock) Fetch(c types.ContainerJSON) (raw.Metrics, error) {
 	metrics, err := cgf.cgroupsFetcher.Fetch(c)
 	if err != nil {
 		return raw.Metrics{}, err
 	}
 
-	metrics.CPU.SystemUsage = cgf.systemUsage
 	metrics.Time = cgf.time
 	return metrics, nil
 }

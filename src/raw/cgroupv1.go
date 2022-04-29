@@ -22,11 +22,12 @@ const nanoSecondsPerSecond = 1e9
 
 // CgroupsV1Fetcher fetches the metrics that can be found in cgroups (v1) file system
 type CgroupsV1Fetcher struct {
-	hostRoot string
+	hostRoot        string
+	systemCPUReader SystemCPUReader
 }
 
-func NewCgroupsV1Fetcher(hostrRoot string) (*CgroupsV1Fetcher, error) {
-	return &CgroupsV1Fetcher{hostRoot: hostrRoot}, nil
+func NewCgroupsV1Fetcher(hostrRoot string, systemCPUReader SystemCPUReader) (*CgroupsV1Fetcher, error) {
+	return &CgroupsV1Fetcher{hostRoot: hostrRoot, systemCPUReader: systemCPUReader}, nil
 }
 
 // Fetch get the metrics that can be found in cgroups file system:
@@ -182,53 +183,6 @@ func (cg *CgroupsV1Fetcher) blkio(cpath string) (Blkio, error) {
 	return stats, err
 }
 
-// readSystemCPUUsage returns the host system's cpu usage in
-// nanoseconds. An error is returned if the format of the underlying
-// file does not match.
-//
-// Uses /proc/stat defined by POSIX. Looks for the cpu
-// statistics line and then sums up the first seven fields
-// provided. See `man 5 proc` for details on specific field
-// information.
-// TODO: we should inject the route of /proc/stat in order to be able to mock the file and test the method
-func readSystemCPUUsage() (uint64, error) {
-	f, err := os.Open("/proc/stat")
-	if err != nil {
-		return 0, err
-	}
-
-	bufReader := bufio.NewReaderSize(nil, 128)
-	defer func() {
-		bufReader.Reset(nil)
-		f.Close()
-	}()
-	bufReader.Reset(f)
-
-	for {
-		line, err := bufReader.ReadString('\n')
-		if err != nil {
-			break
-		}
-		parts := strings.Fields(line)
-		switch parts[0] {
-		case "cpu":
-			if len(parts) < 8 {
-				return 0, fmt.Errorf("invalid number of cpu fields")
-			}
-			var totalClockTicks uint64
-			for _, i := range parts[1:8] {
-				v, err := strconv.ParseUint(i, 10, 64)
-				if err != nil {
-					return 0, fmt.Errorf("Unable to convert value %s to int: %s", i, err)
-				}
-				totalClockTicks += v
-			}
-			return (totalClockTicks * nanoSecondsPerSecond) / 100, nil
-		}
-	}
-	return 0, fmt.Errorf("invalid stat format. Error trying to parse the '/proc/stat' file")
-}
-
 func (cg *CgroupsV1Fetcher) cpu(metric *cgroupstats.Metrics) (CPU, error) {
 	if metric.CPU == nil || metric.CPU.Usage == nil {
 		return CPU{}, errors.New("no CPU metrics information")
@@ -246,7 +200,7 @@ func (cg *CgroupsV1Fetcher) cpu(metric *cgroupstats.Metrics) (CPU, error) {
 	}
 
 	var err error
-	cpu.SystemUsage, err = readSystemCPUUsage()
+	cpu.SystemUsage, err = cg.systemCPUReader.ReadUsage()
 	return cpu, err
 }
 
