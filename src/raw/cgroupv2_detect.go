@@ -12,6 +12,8 @@ import (
 )
 
 const (
+	// cgroup2 group names patterns for systemd and cgroupfs, where the parameter is the long container ID.
+	// check <https://docs.docker.com/config/containers/runmetrics/#find-the-cgroup-for-a-given-container> for details
 	cgroupV2SystemdTemplate  = "/docker-%s.scope"
 	cgroupV2CgroupfsTemplate = "/%s"
 )
@@ -19,9 +21,10 @@ const (
 var cgroupV2MountPointNotFoundErr = errors.New("cgroups2 mountpoint was not found")
 
 type cgroupV2Paths struct {
-	// MountPoint is the cgroup2 mount point, Eg: /sys/fs/cgroup/system.slice/docker.service
+	// MountPoint is the cgroup2 mount point, Eg: /sys/fs/cgroup
 	MountPoint string
 	// Group is the group path, with the same format that the third parameter in /proc/<pid>/cgroup.
+	// Eg: /system.slice/docker.service
 	Group string
 }
 
@@ -47,6 +50,8 @@ func cgroupV2GroupPath(driver string, containerID string) (string, error) {
 	return "", fmt.Errorf("invalid cgroup2 driver %q", driver)
 }
 
+// cgroupV2MountPoint returns the cgroup mount point which is built joining info from mountsFile (Eg: /proc/mounts)
+// and pid's cgroup file (Eg: /proc/<pid>/cgroup)
 func cgroupV2MountPoint(hostRoot string, pid int, fileOpen fileOpenFn) (string, error) {
 	path := filepath.Join(hostRoot, mountsFilePath)
 	mountsFile, err := fileOpen(path)
