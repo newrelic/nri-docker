@@ -203,11 +203,7 @@ func TestExitedContainersWithTTL(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-<<<<<<< HEAD:tests/integration/metrics_test.go
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher("/")
-=======
-	cgroupFetcher, err := raw.NewCgroupsFetcher("/", raw.NewPosixSystemCPUReader())
->>>>>>> master:test/integration/metrics_test.go
+	cgroupFetcher, err := raw.NewCgroupsV1Fetcher("/", raw.NewPosixSystemCPUReader())
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 1*time.Second)
