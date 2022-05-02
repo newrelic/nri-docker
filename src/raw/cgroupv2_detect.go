@@ -28,6 +28,18 @@ type cgroupV2Paths struct {
 	Group string
 }
 
+func getSingleFileUintStat(cGroupV2Paths *cgroupV2Paths, stat string) (uint64, error) {
+	// get full path
+	// /sys/fs/cgroup/system.slice/cpu.weight
+	fp := filepath.Join(cGroupV2Paths.MountPoint, cGroupV2Paths.Group, stat)
+
+	c, err := ParseStatFileContentUint64(filepath.Join(fp, stat))
+	if err != nil {
+		return 0, err
+	}
+	return c, nil
+}
+
 func getCgroupV2Paths(hostRoot string, pid int, driver string, containerID string) (*cgroupV2Paths, error) {
 	mountPoint, err := cgroupV2MountPoint(hostRoot, pid, defaultFileOpenFn)
 	if err != nil {

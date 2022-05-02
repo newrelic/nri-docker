@@ -78,10 +78,9 @@ func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	//	log.Error("couldn't read blkio stats: %v", err)
 	//}
 
-	// TODO: missing metric
-	//if stats.CPU.Shares, err = cgroupInfo.getSingleFileUintStat(cgroups.Cpu, "cpu.shares"); err != nil {
-	//	log.Error("couldn't read cpu shares: %v", err)
-	//}
+	if stats.CPU.Shares, err = getSingleFileUintStat(cgroupInfo, "cpu.weight"); err != nil {
+		log.Error("couldn't read cpu weight: %v", err)
+	}
 
 	if stats.Memory, err = cg.memory(metrics); err != nil {
 		log.Error("couldn't read memory stats: %v", err)
@@ -112,8 +111,8 @@ func (cg *CgroupsV2Fetcher) cpu(metric *cgroupstatsV2.Metrics) (CPU, error) {
 		TotalUsage:        metric.CPU.UsageUsec * uint64(time.Microsecond),
 		UsageInUsermode:   metric.CPU.UserUsec * uint64(time.Microsecond),
 		UsageInKernelmode: metric.CPU.SystemUsec * uint64(time.Microsecond),
-		// PercpuUsage:       metric.CPU.Usage.PerCPU, // TODO: missing metric
 	}
+
 	if metric.CPU.NrThrottled != 0 {
 		cpu.ThrottledPeriods = metric.CPU.NrThrottled
 		cpu.ThrottledTimeNS = metric.CPU.ThrottledUsec * uint64(time.Microsecond)
@@ -121,7 +120,6 @@ func (cg *CgroupsV2Fetcher) cpu(metric *cgroupstatsV2.Metrics) (CPU, error) {
 
 	var err error
 	cpu.SystemUsage, err = cg.systemCPUReader.ReadUsage()
-	cpu.Shares = metric.Memory.Shmem
 
 	return cpu, err
 }
