@@ -15,13 +15,15 @@ import (
 
 // CgroupsV2Fetcher fetches the metrics that can be found in cgroups (v2) file system
 type CgroupsV2Fetcher struct {
+	cgroupDriver    string
 	hostRoot        string
 	systemCPUReader SystemCPUReader
 }
 
 // NewCgroupsV2Fetcher creates a new cgroups data fetcher.
-func NewCgroupsV2Fetcher(hostRoot string, systemCPUReader SystemCPUReader) (*CgroupsV2Fetcher, error) {
+func NewCgroupsV2Fetcher(hostRoot string, systemCPUReader SystemCPUReader, cgroupDriver string) (*CgroupsV2Fetcher, error) {
 	return &CgroupsV2Fetcher{
+		cgroupDriver:    cgroupDriver,
 		hostRoot:        hostRoot,
 		systemCPUReader: systemCPUReader,
 	}, nil
@@ -35,14 +37,13 @@ func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 
 	pid := c.State.Pid
 	containerID := c.ID
-	driver := c.Driver
 
 	var (
 		cgroupInfo *cgroupV2Paths
 		err        error
 	)
 
-	cgroupInfo, err = getCgroupV2Paths(cg.hostRoot, pid, driver, containerID)
+	cgroupInfo, err = getCgroupV2Paths(cg.hostRoot, pid, cg.cgroupDriver, containerID)
 	if err != nil {
 		return stats, err
 	}
@@ -66,17 +67,6 @@ func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	if stats.CPU, err = cg.cpu(metrics); err != nil {
 		log.Error("couldn't read cpu stats: %v", err)
 	}
-
-	// TODO: missing metric
-	//cgroupFullPathBlkio, err := cgroupInfo.getFullPath(cgroups.Blkio)
-	//
-	//if err == nil {
-	//	if stats.Blkio, err = blkio(cgroupFullPathBlkio); err != nil {
-	//		log.Error("couldn't read blkio stats: %v", err)
-	//	}
-	//} else {
-	//	log.Error("couldn't read blkio stats: %v", err)
-	//}
 
 	if stats.CPU.Shares, err = getSingleFileUintStat(cgroupInfo, "cpu.weight"); err != nil {
 		log.Error("couldn't read cpu weight: %v", err)
