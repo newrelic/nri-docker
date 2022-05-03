@@ -79,18 +79,12 @@ type Processer interface {
 type MetricsFetcher struct {
 	store              persist.Storer
 	fetcher            raw.Fetcher
-	inspector          Inspector
+	inspector          raw.DockerInspector
 	exitedContainerTTL time.Duration
 }
 
-// Inspector is the abstraction of the only method that we require from the docker go client
-type Inspector interface {
-	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
-	Info(ctx context.Context) (types.Info, error)
-}
-
 // NewProcessor creates a MetricsFetcher from implementations of its required components
-func NewProcessor(store persist.Storer, fetcher raw.Fetcher, inspector Inspector, exitedContainerTTL time.Duration) *MetricsFetcher {
+func NewProcessor(store persist.Storer, fetcher raw.Fetcher, inspector raw.DockerInspector, exitedContainerTTL time.Duration) *MetricsFetcher {
 	return &MetricsFetcher{
 		store:              store,
 		fetcher:            fetcher,

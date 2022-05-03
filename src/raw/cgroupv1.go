@@ -26,6 +26,10 @@ type CgroupsV1Fetcher struct {
 	systemCPUReader SystemCPUReader
 }
 
+func NewCgroupsV1Fetcher(hostrRoot string, systemCPUReader SystemCPUReader) (*CgroupsV1Fetcher, error) {
+	return &CgroupsV1Fetcher{hostRoot: hostrRoot, systemCPUReader: systemCPUReader}, nil
+}
+
 // Fetch get the metrics that can be found in cgroups file system:
 //TODO: populate also network from libcgroups
 func (cg *CgroupsV1Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {

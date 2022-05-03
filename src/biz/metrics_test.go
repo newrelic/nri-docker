@@ -14,7 +14,7 @@ func TestMetricsFetcher_memory(t *testing.T) {
 	type fields struct {
 		store              persist.Storer
 		fetcher            raw.Fetcher
-		inspector          Inspector
+		inspector          raw.DockerInspector
 		exitedContainerTTL time.Duration
 	}
 	type args struct {

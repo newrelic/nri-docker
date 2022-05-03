@@ -18,7 +18,7 @@ type CgroupsFetcherMock struct {
 
 // NewCgroupsFetcherMock creates a new cgroups data fetcher.
 func NewCgroupsFetcherMock(hostRoot string, time time.Time, systemUsage uint64) (*CgroupsFetcherMock, error) {
-	cgroupsFetcher, err := raw.NewCgroupsFetcher(hostRoot, NewSystemCPUReaderMock(systemUsage))
+	cgroupsFetcher, err := raw.NewCgroupsV1Fetcher(hostRoot, NewSystemCPUReaderMock(systemUsage))
 	if err != nil {
 		return nil, err
 	}

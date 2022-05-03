@@ -2,8 +2,6 @@ package raw
 
 import (
 	"fmt"
-	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -253,14 +251,4 @@ func TestGetSingleFileUintStat(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, uint64(9999), actual)
-}
-
-func createFileOpenFnMock(filesMap map[string]string) func(string) (io.ReadCloser, error) {
-	return func(filePath string) (io.ReadCloser, error) {
-		if fileContent, ok := filesMap[filePath]; ok {
-			return ioutil.NopCloser(strings.NewReader(fileContent)), nil
-		}
-
-		return nil, fmt.Errorf("file not found by path: %s", filePath)
-	}
 }
