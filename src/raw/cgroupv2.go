@@ -76,6 +76,10 @@ func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		log.Error("couldn't read memory stats: %v", err)
 	}
 
+	if stats.Blkio, err = cg.io(metrics); err != nil {
+		log.Error("couldn't read io stats: %v", err)
+	}
+
 	stats.ContainerID = containerID
 
 	netMetricsPath := filepath.Join(cg.hostRoot, "/proc", strconv.Itoa(pid), "net", "dev")
@@ -143,4 +147,24 @@ func (cg *CgroupsV2Fetcher) pids(metrics *cgroupstatsV2.Metrics) (Pids, error) {
 		Current: metrics.Pids.Current,
 		Limit:   metrics.Pids.Limit,
 	}, nil
+}
+
+func (cg *CgroupsV2Fetcher) io(metrics *cgroupstatsV2.Metrics) (Blkio, error) {
+	stats := Blkio{}
+	if metrics.Io == nil {
+		return stats, errors.New("no IO information")
+	}
+	for _, m := range metrics.Io.Usage {
+		stats.IoServiceBytesRecursive = append(
+			stats.IoServiceBytesRecursive,
+			BlkioEntry{Op: blkioReadOp, Value: m.Rbytes},
+			BlkioEntry{Op: blkioWriteOp, Value: m.Wbytes},
+		)
+		stats.IoServicedRecursive = append(
+			stats.IoServicedRecursive,
+			BlkioEntry{Op: blkioReadOp, Value: m.Rios},
+			BlkioEntry{Op: blkioWriteOp, Value: m.Wios},
+		)
+	}
+	return stats, nil
 }
