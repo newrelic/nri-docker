@@ -11,13 +11,6 @@ import (
 	"github.com/newrelic/infra-integrations-sdk/log"
 )
 
-const (
-	// cgroup2 group names patterns for systemd and cgroupfs, where the parameter is the long container ID.
-	// check <https://docs.docker.com/config/containers/runmetrics/#find-the-cgroup-for-a-given-container> for details
-	cgroupV2SystemdTemplate  = "/docker-%s.scope"
-	cgroupV2CgroupfsTemplate = "/%s"
-)
-
 var cgroupV2MountPointNotFoundErr = errors.New("cgroups2 mountpoint was not found")
 
 type cgroupV2Paths struct {
@@ -41,30 +34,24 @@ func getSingleFileUintStat(cGroupV2Paths *cgroupV2Paths, stat string) (uint64, e
 }
 
 func getCgroupV2Paths(hostRoot string, pid int, driver string, containerID string) (*cgroupV2Paths, error) {
-	mountPoint, err := cgroupV2MountPoint(hostRoot, pid, defaultFileOpenFn)
+	fullpath, err := cgroupV2FullPath(hostRoot, pid, defaultFileOpenFn)
 	if err != nil {
 		return nil, err
 	}
-	cgroupPath, err := cgroupV2GroupPath(driver, containerID)
-	if err != nil {
-		return nil, err
-	}
-	return &cgroupV2Paths{MountPoint: mountPoint, Group: cgroupPath}, nil
+	mountPoint, group := splitMountPointAndGroup(fullpath)
+	return &cgroupV2Paths{MountPoint: mountPoint, Group: group}, nil
 }
 
-func cgroupV2GroupPath(driver string, containerID string) (string, error) {
-	switch driver {
-	case CgroupSystemd:
-		return fmt.Sprintf(cgroupV2SystemdTemplate, containerID), nil
-	case CgroupGroupfs:
-		return fmt.Sprintf(cgroupV2CgroupfsTemplate, containerID), nil
-	}
-	return "", fmt.Errorf("invalid cgroup2 driver %q", driver)
+func splitMountPointAndGroup(fullpath string) (string, string) {
+	mountPoint := filepath.Dir(fullpath)
+	group := filepath.Base(fullpath)
+	group = "/" + group
+	return mountPoint, group
 }
 
-// cgroupV2MountPoint returns the cgroup mount point which is built joining info from mountsFile (Eg: /proc/mounts)
+// cgroupV2FullPath returns the cgroup mount point which is built joining info from mountsFile (Eg: /proc/mounts)
 // and pid's cgroup file (Eg: /proc/<pid>/cgroup)
-func cgroupV2MountPoint(hostRoot string, pid int, fileOpen fileOpenFn) (string, error) {
+func cgroupV2FullPath(hostRoot string, pid int, fileOpen fileOpenFn) (string, error) {
 	path := filepath.Join(hostRoot, mountsFilePath)
 	mountsFile, err := fileOpen(path)
 	if err != nil {
