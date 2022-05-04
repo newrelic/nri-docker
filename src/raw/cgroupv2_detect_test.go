@@ -1,46 +1,39 @@
 package raw
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestCgroupV2GroupPath(t *testing.T) {
+func TestSplitMountPointAndGroup(t *testing.T) {
 	cases := []struct {
-		Driver        string
-		ContainerID   string
-		Expected      string
-		ExpectedError error
+		fullPath          string
+		group, mountPoint string
 	}{
 		{
-			Driver:      "systemd",
-			ContainerID: "<long-id>",
-			Expected:    "/docker-<long-id>.scope",
+			fullPath:   "/sys/fs/cgroup/system.slice/docker-c0bfac5c77c9f363977d5dace337293e91efae8995b5a5b84287702a8d377c0e.scope",
+			mountPoint: "/sys/fs/cgroup/system.slice",
+			group:      "/docker-c0bfac5c77c9f363977d5dace337293e91efae8995b5a5b84287702a8d377c0e.scope",
 		},
 		{
-			Driver:      "cgroupfs",
-			ContainerID: "<long-id>",
-			Expected:    "/<long-id>",
-		},
-		{
-			Driver:        "invalid-driver",
-			ExpectedError: errors.New(`invalid cgroup2 driver "invalid-driver"`),
+			fullPath:   "/sys/fs/cgroup/docker/c0bfac5c77c9f363977d5dace337293e91efae8995b5a5b84287702a8d377c0e",
+			mountPoint: "/sys/fs/cgroup/docker",
+			group:      "/c0bfac5c77c9f363977d5dace337293e91efae8995b5a5b84287702a8d377c0e",
 		},
 	}
 
 	for _, c := range cases {
-		t.Run("With driver "+c.Driver, func(t *testing.T) {
-			path, err := cgroupV2GroupPath(c.Driver, c.ContainerID)
-			assert.Equal(t, c.ExpectedError, err)
-			assert.Equal(t, c.Expected, path)
+		t.Run("check "+c.fullPath, func(t *testing.T) {
+			mountpoint, group := splitMountPointAndGroup(c.fullPath)
+			assert.Equal(t, c.mountPoint, mountpoint)
+			assert.Equal(t, c.group, group)
 		})
 	}
 }
 
-func TestGetCgroupV2MountPoint(t *testing.T) {
+func TestGetCgroupV2FullPath(t *testing.T) {
 	cgroup2MountfileContent := `sysfs /sys sysfs rw,nosuid,nodev,noexec,relatime 0 0
 proc /proc proc rw,nosuid,nodev,noexec,relatime 0 0
 tmpfs /run tmpfs rw,nosuid,nodev,noexec,relatime,size=99460k,mode=755,inode64 0 0
@@ -103,14 +96,14 @@ tmpfs /run/user/1000 tmpfs rw,nosuid,nodev,relatime,size=99456k,nr_inodes=24864,
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			fn := createFileOpenFnMock(c.FilesContent)
-			mountPoint, err := cgroupV2MountPoint(c.HostRoot, c.Pid, fn)
+			mountPoint, err := cgroupV2FullPath(c.HostRoot, c.Pid, fn)
 			require.NoError(t, err)
 			assert.Equal(t, c.Expected, mountPoint)
 		})
 	}
 }
 
-func TestGetCgroupV2MountPointErrors(t *testing.T) {
+func TestGetCgroupV2FullPathErrors(t *testing.T) {
 	cgroup2MountfileContentNoCgroup2 := `sysfs /sys sysfs rw,nosuid,nodev,noexec,relatime 0 0
 proc /proc proc rw,nosuid,nodev,noexec,relatime 0 0
 tmpfs /run tmpfs rw,nosuid,nodev,noexec,relatime,size=99460k,mode=755,inode64 0 0
@@ -190,7 +183,7 @@ tmpfs /run/user/1000 tmpfs rw,nosuid,nodev,relatime,size=99456k,nr_inodes=24864,
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
 			fn := createFileOpenFnMock(c.FilesContent)
-			_, err := cgroupV2MountPoint(c.HostRoot, c.Pid, fn)
+			_, err := cgroupV2FullPath(c.HostRoot, c.Pid, fn)
 			require.Error(t, err)
 		})
 	}
