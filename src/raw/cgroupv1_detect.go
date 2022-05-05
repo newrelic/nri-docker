@@ -71,20 +71,10 @@ func (cgi *cgroupV1Paths) getPath(name cgroups.Name) (string, error) {
 	return "", fmt.Errorf("cgroup path not found for subsystem %s", name)
 }
 
-func (cgi *cgroupV1Paths) getMountPoint(name cgroups.Name) (string, error) {
-
-	if result, ok := cgi.mountPoints[string(name)]; ok {
-		return result, nil
-	}
-
-	return "", fmt.Errorf("cgroup mount point not found for subsystem %s", name)
-}
-
 func (cgi *cgroupV1Paths) getFullPath(name cgroups.Name) (string, error) {
-
-	cgroupMountPoint, err := cgi.getMountPoint(name)
-	if err != nil {
-		return "", err
+	cgroupMountPoint, exists := cgi.mountPoints[string(name)]
+	if !exists {
+		return "", fmt.Errorf("cgroup mount point not found for subsystem %s", name)
 	}
 
 	cgroupPath, err := cgi.getPath(name)
