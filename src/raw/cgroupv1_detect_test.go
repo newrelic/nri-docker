@@ -127,20 +127,6 @@ func TestCgroupPathsGetFullPath(t *testing.T) {
 	assert.Equal(t, "/custom/host/sys/fs/cgroup/cpuacct/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0", fullPathCpuacct)
 }
 
-func TestCgroupPathsGetMountPoint(t *testing.T) {
-	cgroupInfo := &cgroupV1Paths{
-		mountPoints: map[string]string{
-			"cpu":     "/custom/host/sys/fs/cgroup",
-			"systemd": "/custom/host/sys/fs/cgroup",
-			"cpuacct": "/custom/host/sys/fs/cgroup",
-		},
-	}
-
-	mountPoint, err := cgroupInfo.getMountPoint(cgroups.Cpu)
-	assert.NoError(t, err)
-	assert.Equal(t, "/custom/host/sys/fs/cgroup", mountPoint)
-}
-
 func TestCgroupPathsFetcherParse(t *testing.T) {
 
 	filesMap := map[string]string{
