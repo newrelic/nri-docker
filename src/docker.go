@@ -84,7 +84,12 @@ func main() {
 		cgroupInfo, err := raw.GetCgroupInfo(context.Background(), docker)
 		exitOnErr(err)
 
-		fetcher, err = raw.NewCgroupsFetcher(detectedHostRoot, cgroupInfo, raw.NewPosixSystemCPUReader())
+		fetcher, err = raw.NewCgroupsFetcher(
+			detectedHostRoot,
+			cgroupInfo,
+			raw.NewPosixSystemCPUReader(),
+			raw.NetDevNetworkStatsGetter{},
+		)
 		exitOnErr(err)
 	}
 	sampler, err := nri.NewSampler(fetcher, docker, exitedContainerTTL, args)
