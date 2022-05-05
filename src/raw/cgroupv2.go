@@ -3,7 +3,6 @@ package raw
 
 import (
 	"errors"
-	"path/filepath"
 	"strconv"
 	"time"
 
@@ -15,19 +14,26 @@ import (
 
 // CgroupsV2Fetcher fetches the metrics that can be found in cgroups (v2) file system
 type CgroupsV2Fetcher struct {
-	cgroupDriver    string
-	hostRoot        string
-	systemCPUReader SystemCPUReader
+	cgroupDriver       string
+	hostRoot           string
+	systemCPUReader    SystemCPUReader
+	networkStatsGetter NetworkStatsGetter
 	cpuCounter      func(effectiveCPUsPath string) (uint, error)
 }
 
 // NewCgroupsV2Fetcher creates a new cgroups data fetcher.
-func NewCgroupsV2Fetcher(hostRoot string, systemCPUReader SystemCPUReader, cgroupDriver string) (*CgroupsV2Fetcher, error) {
+func NewCgroupsV2Fetcher(
+	hostRoot string,
+	cgroupDriver string,
+	systemCPUReader SystemCPUReader,
+	networkStatsGetter NetworkStatsGetter,
+) (*CgroupsV2Fetcher, error) {
 	return &CgroupsV2Fetcher{
-		cgroupDriver:    cgroupDriver,
-		hostRoot:        hostRoot,
-		systemCPUReader: systemCPUReader,
-		cpuCounter:      countCpusetCPUsFromPath,
+		cgroupDriver:       cgroupDriver,
+		hostRoot:           hostRoot,
+		systemCPUReader:    systemCPUReader,
+		networkStatsGetter: networkStatsGetter,
+		puCounter:      countCpusetCPUsFromPath,
 	}, nil
 }
 
@@ -88,19 +94,9 @@ func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	}
 
 	stats.ContainerID = containerID
+	stats.Network, err = cg.networkStatsGetter.GetForContainer(cg.hostRoot, strconv.Itoa(pid), containerID)
 
-	netMetricsPath := filepath.Join(cg.hostRoot, "/proc", strconv.Itoa(pid), "net", "dev")
-	stats.Network, err = network(netMetricsPath)
-	if err != nil {
-		log.Error(
-			"couldn't fetch network stats for container %s from cgroups: %v",
-			containerID,
-			err,
-		)
-		return stats, err
-	}
-
-	return stats, nil
+	return stats, err
 }
 
 func (cg *CgroupsV2Fetcher) cpu(metric *cgroupstatsV2.Metrics) (CPU, error) {
