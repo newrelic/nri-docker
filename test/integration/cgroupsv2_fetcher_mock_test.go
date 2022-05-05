@@ -1,9 +1,10 @@
 package integration_test
 
 import (
+	"time"
+
 	"github.com/docker/docker/api/types"
 	"github.com/newrelic/nri-docker/src/raw"
-	"time"
 )
 
 // CgroupsFetcherV2Mock is a wrapper of CgroupsFetcher to mock:

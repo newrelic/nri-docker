@@ -1,9 +1,6 @@
 package integration_test
 
 import (
-	"github.com/newrelic/nri-docker/src/biz"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -11,6 +8,10 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/newrelic/nri-docker/src/biz"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -34,6 +35,12 @@ func TestCgroupsv2AllMetricsPresent(t *testing.T) {
 			TxDropped: 1,
 			TxErrors:  2,
 			TxPackets: 3,
+		},
+		BlkIO: biz.BlkIO{
+			TotalReadCount:  14203,
+			TotalWriteCount: 40554,
+			TotalReadBytes:  135932,
+			TotalWriteBytes: 207296,
 		},
 		CPU: biz.CPU{
 			CPUPercent:    0,
