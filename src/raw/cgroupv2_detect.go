@@ -22,9 +22,7 @@ type cgroupV2Paths struct {
 }
 
 func getSingleFileUintStat(cGroupV2Paths *cgroupV2Paths, stat string) (uint64, error) {
-	// get full path
-	// /sys/fs/cgroup/system.slice/cpu.weight
-	fp := filepath.Join(cGroupV2Paths.MountPoint, cGroupV2Paths.Group, stat)
+	fp := filepath.Join(cGroupV2Paths.MountPoint, cGroupV2Paths.Group)
 
 	c, err := ParseStatFileContentUint64(filepath.Join(fp, stat))
 	if err != nil {
