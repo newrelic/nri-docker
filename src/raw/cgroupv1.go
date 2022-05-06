@@ -22,17 +22,20 @@ const nanoSecondsPerSecond = 1e9
 // CgroupsV1Fetcher fetches the metrics that can be found in cgroups (v1) file system
 type CgroupsV1Fetcher struct {
 	hostRoot           string
+	cgroupDetector     CgroupDetector
 	systemCPUReader    SystemCPUReader
 	networkStatsGetter NetworkStatsGetter
 }
 
 func NewCgroupsV1Fetcher(
 	hostRoot string,
+	cgroupDetector CgroupDetector,
 	systemCPUReader SystemCPUReader,
 	networkStatsGetter NetworkStatsGetter,
 ) (*CgroupsV1Fetcher, error) {
 	return &CgroupsV1Fetcher{
 		hostRoot:           hostRoot,
+		cgroupDetector:     cgroupDetector,
 		systemCPUReader:    systemCPUReader,
 		networkStatsGetter: networkStatsGetter,
 	}, nil
@@ -46,20 +49,17 @@ func (cg *CgroupsV1Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	pid := c.State.Pid
 	containerID := c.ID
 
-	var (
-		cgroupInfo *cgroupV1Paths
-		err        error
-	)
-	cgroupInfo, err = getCgroupV1Paths(cg.hostRoot, pid)
+	cgroupInfo, err := cg.cgroupDetector.GetPaths(cg.hostRoot, pid)
 
 	if err != nil {
 		return stats, err
 	}
 
-	control, err := cgroups.Load(cgroupInfo.getHierarchyFn(), cgroupInfo.getPath)
+	control, err := cgroups.Load(cgroupInfo.(*CgroupV1Paths).getHierarchyFn(), cgroupInfo.(*CgroupV1Paths).getPathCgroupFiltered)
 	if err != nil {
 		return stats, err
 	}
+
 	metrics, err := control.Stat(cgroups.IgnoreNotExist)
 	if err != nil {
 		return stats, err
@@ -71,7 +71,7 @@ func (cg *CgroupsV1Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		log.Error("couldn't read pids stats: %v", err)
 	}
 
-	cgroupFullPathBlkio, err := cgroupInfo.getFullPath(cgroups.Blkio)
+	cgroupFullPathBlkio, err := cgroupInfo.(*CgroupV1Paths).getFullPath(cgroups.Blkio)
 
 	if err == nil {
 		if stats.Blkio, err = cg.blkio(cgroupFullPathBlkio); err != nil {
@@ -85,7 +85,7 @@ func (cg *CgroupsV1Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		log.Error("couldn't read cpu stats: %v", err)
 	}
 
-	if stats.CPU.Shares, err = cgroupInfo.getSingleFileUintStat(cgroups.Cpu, "cpu.shares"); err != nil {
+	if stats.CPU.Shares, err = cgroupInfo.GetSingleFileUintStat(string(cgroups.Cpu), "cpu.shares"); err != nil {
 		log.Error("couldn't read cpu shares: %v", err)
 	}
 
@@ -93,7 +93,7 @@ func (cg *CgroupsV1Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		log.Error("couldn't read memory stats: %v", err)
 	}
 
-	if stats.Memory.SoftLimit, err = cgroupInfo.getSingleFileUintStat(cgroups.Memory, "memory.soft_limit_in_bytes"); err != nil {
+	if stats.Memory.SoftLimit, err = cgroupInfo.GetSingleFileUintStat(string(cgroups.Memory), "memory.soft_limit_in_bytes"); err != nil {
 		log.Debug("couldn't read soft_limit_in_bytes stats: %v", err)
 	}
 

@@ -8,125 +8,34 @@ import (
 	"strings"
 
 	"github.com/containerd/cgroups"
-	"github.com/newrelic/infra-integrations-sdk/log"
 )
 
-// getCgroupV1Paths will detect the cgroup paths for a container pid.
-func getCgroupV1Paths(hostRoot string, pid int) (*cgroupV1Paths, error) {
-	return cgroupV1PathsFetch(hostRoot, pid, defaultFileOpenFn)
+type CgoupsV1Detector struct {
+	openFn fileOpenFn
 }
 
-func cgroupV1PathsFetch(hostRoot string, pid int, fileOpen fileOpenFn) (*cgroupV1Paths, error) {
+func NewCgroupsV1Detector() CgoupsV1Detector {
+	return CgoupsV1Detector{openFn: defaultFileOpenFn}
+}
 
-	mountsFilePath := filepath.Join(hostRoot, mountsFilePath)
-	mountsFile, err := fileOpen(mountsFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %s, while detecting cgroup mountpoints error: %v",
-			mountsFilePath, err)
-	}
-	defer func() {
-		if closeErr := mountsFile.Close(); closeErr != nil {
-			log.Error("Error occurred while closing the file: %v", closeErr)
-		}
-	}()
-
-	mountPoints, err := parseCgroupV1MountPoints(hostRoot, mountsFile)
+func (cgd CgoupsV1Detector) GetPaths(hostRoot string, pid int) (CgroupPaths, error) {
+	mountPoints, err := getMountsFile(hostRoot, cgd.parseCgroupV1MountPoints, cgd.openFn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse cgroup mountpoints error: %v", err)
 	}
 
-	cgroupFilePath := filepath.Join(hostRoot, fmt.Sprintf(cgroupFilePathTpl, pid))
-	cgroupFile, err := fileOpen(cgroupFilePath)
-	if err != nil {
-		return nil, fmt.Errorf("failed to open file: %s, while detecting cgroup paths error: %v",
-			cgroupFilePath, err)
-	}
-	defer func() {
-		if closeErr := cgroupFile.Close(); closeErr != nil {
-			log.Error("Error occurred while closing the file: %v", closeErr)
-		}
-	}()
-	paths, err := parseCgroupV1Paths(cgroupFile)
+	paths, err := getCgroupFilePath(hostRoot, pid, cgd.parseCgroupV1Paths, cgd.openFn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse cgroup paths error: %v", err)
 	}
 
-	return &cgroupV1Paths{
+	return &CgroupV1Paths{
 		mountPoints: mountPoints,
 		paths:       paths,
 	}, nil
 }
 
-type cgroupV1Paths struct {
-	mountPoints map[string]string
-	paths       map[string]string
-}
-
-func (cgi *cgroupV1Paths) getPath(name cgroups.Name) (string, error) {
-
-	if result, ok := cgi.paths[string(name)]; ok {
-		return result, nil
-	}
-
-	return "", fmt.Errorf("cgroup path not found for subsystem %s", name)
-}
-
-func (cgi *cgroupV1Paths) getFullPath(name cgroups.Name) (string, error) {
-	cgroupMountPoint, exists := cgi.mountPoints[string(name)]
-	if !exists {
-		return "", fmt.Errorf("cgroup mount point not found for subsystem %s", name)
-	}
-
-	cgroupPath, err := cgi.getPath(name)
-	if err != nil {
-		return "", err
-	}
-
-	return filepath.Join(cgroupMountPoint, string(name), cgroupPath), nil
-}
-
-// returns the subsystems where cgroups library has to look for, attaching the
-// hostContainerPath prefix to the folder if the integration is running inside a container
-func (cgi *cgroupV1Paths) getHierarchyFn() cgroups.Hierarchy {
-	return func() ([]cgroups.Subsystem, error) {
-		var subsystems []cgroups.Subsystem
-
-		if cpusetMountPoint, ok := cgi.mountPoints[string(cgroups.Cpuset)]; ok {
-			subsystems = append(subsystems, cgroups.NewCpuset(cpusetMountPoint))
-		}
-		if cpuMountPoint, ok := cgi.mountPoints[string(cgroups.Cpu)]; ok {
-			subsystems = append(subsystems, cgroups.NewCpu(cpuMountPoint))
-		}
-		if cpuacctMountPoint, ok := cgi.mountPoints[string(cgroups.Cpuacct)]; ok {
-			subsystems = append(subsystems, cgroups.NewCpuacct(cpuacctMountPoint))
-		}
-		if memoryMountPoint, ok := cgi.mountPoints[string(cgroups.Memory)]; ok {
-			subsystems = append(subsystems, cgroups.NewMemory(memoryMountPoint))
-		}
-		if blkioMountPoint, ok := cgi.mountPoints[string(cgroups.Blkio)]; ok {
-			subsystems = append(subsystems, cgroups.NewBlkio(blkioMountPoint))
-		}
-		if pidsMountPoint, ok := cgi.mountPoints[string(cgroups.Pids)]; ok {
-			subsystems = append(subsystems, cgroups.NewPids(pidsMountPoint))
-		}
-
-		return subsystems, nil
-	}
-}
-
-func (cgi *cgroupV1Paths) getSingleFileUintStat(name cgroups.Name, stat string) (uint64, error) {
-	fp, err := cgi.getFullPath(name)
-	if err != nil {
-		return 0, err
-	}
-	c, err := ParseStatFileContentUint64(filepath.Join(fp, stat))
-	if err != nil {
-		return 0, err
-	}
-	return c, nil
-}
-
-func parseCgroupV1MountPoints(hostRoot string, mountFileInfo io.Reader) (map[string]string, error) {
+func (cgd CgoupsV1Detector) parseCgroupV1MountPoints(hostRoot string, mountFileInfo io.Reader) (map[string]string, error) {
 	mountPoints := make(map[string]string)
 
 	sc := bufio.NewScanner(mountFileInfo)
@@ -152,7 +61,7 @@ func parseCgroupV1MountPoints(hostRoot string, mountFileInfo io.Reader) (map[str
 	return mountPoints, nil
 }
 
-func parseCgroupV1Paths(cgroupFile io.Reader) (map[string]string, error) {
+func (cgd CgoupsV1Detector) parseCgroupV1Paths(cgroupFile io.Reader) (map[string]string, error) {
 	cgroupPaths := make(map[string]string)
 
 	sc := bufio.NewScanner(cgroupFile)
@@ -174,4 +83,84 @@ func parseCgroupV1Paths(cgroupFile io.Reader) (map[string]string, error) {
 	}
 
 	return cgroupPaths, nil
+}
+
+type CgroupV1Paths struct {
+	mountPoints map[string]string
+	paths       map[string]string
+}
+
+func (cgi *CgroupV1Paths) MountPoint(system string) (string, error) {
+	if result, ok := cgi.mountPoints[system]; ok {
+		return result, nil
+	}
+
+	return "", fmt.Errorf("cgroup mount point not found for subsystem %s", system)
+}
+
+func (cgi *CgroupV1Paths) Path(path string) (string, error) {
+	if result, ok := cgi.paths[path]; ok {
+		return result, nil
+	}
+
+	return "", fmt.Errorf("cgroup path not found for subsystem %s", path)
+}
+
+func (cgi *CgroupV1Paths) GetSingleFileUintStat(system string, stat string) (uint64, error) {
+	fp, err := cgi.getFullPath(cgroups.Name(system))
+	if err != nil {
+		return 0, err
+	}
+	c, err := ParseStatFileContentUint64(filepath.Join(fp, stat))
+	if err != nil {
+		return 0, err
+	}
+	return c, nil
+}
+
+func (cgi *CgroupV1Paths) getPathCgroupFiltered(name cgroups.Name) (string, error) {
+	return cgi.Path(string(name))
+}
+
+func (cgi *CgroupV1Paths) getFullPath(name cgroups.Name) (string, error) {
+	cgroupMountPoint, err := cgi.MountPoint(string(name))
+	if err != nil {
+		return "", err
+	}
+
+	cgroupPath, err := cgi.Path(string(name))
+	if err != nil {
+		return "", err
+	}
+
+	return filepath.Join(cgroupMountPoint, string(name), cgroupPath), nil
+}
+
+// returns the subsystems where cgroups library has to look for, attaching the
+// hostContainerPath prefix to the folder if the integration is running inside a container
+func (cgi *CgroupV1Paths) getHierarchyFn() cgroups.Hierarchy {
+	return func() ([]cgroups.Subsystem, error) {
+		var subsystems []cgroups.Subsystem
+
+		if cpusetMountPoint, err := cgi.MountPoint(string(cgroups.Cpuset)); err != nil {
+			subsystems = append(subsystems, cgroups.NewCpuset(cpusetMountPoint))
+		}
+		if cpuMountPoint, err := cgi.MountPoint(string(cgroups.Cpu)); err != nil {
+			subsystems = append(subsystems, cgroups.NewCpu(cpuMountPoint))
+		}
+		if cpuacctMountPoint, err := cgi.MountPoint(string(cgroups.Cpuacct)); err != nil {
+			subsystems = append(subsystems, cgroups.NewCpuacct(cpuacctMountPoint))
+		}
+		if memoryMountPoint, err := cgi.MountPoint(string(cgroups.Memory)); err != nil {
+			subsystems = append(subsystems, cgroups.NewMemory(memoryMountPoint))
+		}
+		if blkioMountPoint, err := cgi.MountPoint(string(cgroups.Blkio)); err != nil {
+			subsystems = append(subsystems, cgroups.NewBlkio(blkioMountPoint))
+		}
+		if pidsMountPoint, err := cgi.MountPoint(string(cgroups.Pids)); err != nil {
+			subsystems = append(subsystems, cgroups.NewPids(pidsMountPoint))
+		}
+
+		return subsystems, nil
+	}
 }

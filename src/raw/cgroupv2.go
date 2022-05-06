@@ -16,6 +16,7 @@ import (
 type CgroupsV2Fetcher struct {
 	cgroupDriver       string
 	hostRoot           string
+	cgroupDetector     CgroupDetector
 	systemCPUReader    SystemCPUReader
 	networkStatsGetter NetworkStatsGetter
 	cpuCounter      func(effectiveCPUsPath string) (uint, error)
@@ -25,12 +26,14 @@ type CgroupsV2Fetcher struct {
 func NewCgroupsV2Fetcher(
 	hostRoot string,
 	cgroupDriver string,
+	cgroupDetector CgroupDetector,
 	systemCPUReader SystemCPUReader,
 	networkStatsGetter NetworkStatsGetter,
 ) (*CgroupsV2Fetcher, error) {
 	return &CgroupsV2Fetcher{
 		cgroupDriver:       cgroupDriver,
 		hostRoot:           hostRoot,
+		cgroupDetector:     cgroupDetector,
 		systemCPUReader:    systemCPUReader,
 		networkStatsGetter: networkStatsGetter,
 		puCounter:      countCpusetCPUsFromPath,
@@ -46,17 +49,14 @@ func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	pid := c.State.Pid
 	containerID := c.ID
 
-	var (
-		cgroupInfo *cgroupV2Paths
-		err        error
-	)
-
-	cgroupInfo, err = getCgroupV2Paths(cg.hostRoot, pid, cg.cgroupDriver, containerID)
+	cgroupInfo, err := cg.cgroupDetector.GetPaths(cg.hostRoot, pid)
 	if err != nil {
 		return stats, err
 	}
 
-	manager, err := cgroupsV2.LoadManager(cgroupInfo.MountPoint, cgroupInfo.Group)
+	mountPoint, _ := cgroupInfo.MountPoint(cgroupsV2UnifiedPath)
+	group, _ := cgroupInfo.Path(cgroupsV2UnifiedPath)
+	manager, err := cgroupsV2.LoadManager(mountPoint, group)
 	if err != nil {
 		return stats, err
 	}
@@ -76,7 +76,7 @@ func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		log.Error("couldn't read cpu stats: %v", err)
 	}
 
-	if stats.CPU.Shares, err = getSingleFileUintStat(cgroupInfo, "cpu.weight"); err != nil {
+	if stats.CPU.Shares, err = cgroupInfo.GetSingleFileUintStat(cgroupsV2UnifiedPath, "cpu.weight"); err != nil {
 		log.Error("couldn't read cpu weight: %v", err)
 	}
 

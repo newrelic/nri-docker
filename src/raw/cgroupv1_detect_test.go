@@ -13,7 +13,6 @@ import (
 )
 
 func TestParseCgroupMountPoints(t *testing.T) {
-
 	testCases := map[string]struct {
 		hostRoot    string
 		fileContent string
@@ -69,10 +68,12 @@ cgroup /sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,relatime,cpu,cpu
 		},
 	}
 
+	cgroupDetector := NewCgroupsV1Detector()
+
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
 			mountFileInfo := strings.NewReader(testCase.fileContent)
-			actual, err := parseCgroupV1MountPoints(testCase.hostRoot, mountFileInfo)
+			actual, err := cgroupDetector.parseCgroupV1MountPoints(testCase.hostRoot, mountFileInfo)
 			assert.NoError(t, err)
 
 			assert.Equal(t, testCase.expected, actual)
@@ -95,7 +96,8 @@ func TestParseCgroupPaths(t *testing.T) {
 		"name=systemd": "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
 	}
 
-	actual, err := parseCgroupV1Paths(cgroupPaths)
+	cgroupDetector := NewCgroupsV1Detector()
+	actual, err := cgroupDetector.parseCgroupV1Paths(cgroupPaths)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expected, actual)
@@ -103,7 +105,7 @@ func TestParseCgroupPaths(t *testing.T) {
 
 func TestCgroupPathsGetFullPath(t *testing.T) {
 
-	cgroupInfo := &cgroupV1Paths{
+	cgroupInfo := &CgroupV1Paths{
 		mountPoints: map[string]string{
 			"cpu":     "/sys/fs/cgroup",
 			"systemd": "/custom/host/sys/fs/cgroup",
@@ -141,9 +143,10 @@ cgroup /custom/host/sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,rela
 1:name=systemd:/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0`,
 	}
 
-	cgroupInfo, err := cgroupV1PathsFetch("/custom/host", 123, createFileOpenFnMock(filesMap))
+	cgroupDetector := CgoupsV1Detector{openFn: createFileOpenFnMock(filesMap)}
+	cgroupInfo, err := cgroupDetector.GetPaths("/custom/host", 123)
 
-	expected := &cgroupV1Paths{
+	expected := &CgroupV1Paths{
 		mountPoints: map[string]string{
 			"cpu":     "/custom/host/sys/fs/cgroup",
 			"systemd": "/custom/host/sys/fs/cgroup",
@@ -207,10 +210,11 @@ configfs /sys/kernel/config configfs rw,relatime 0 0`,
 		cgroups.NewBlkio("/custom/host/sys/fs/cgroup5"),
 	}
 
-	cgroupInfo, err := cgroupV1PathsFetch("/custom/host", 123, createFileOpenFnMock(filesMap))
+	cgroupDetector := CgoupsV1Detector{openFn: createFileOpenFnMock(filesMap)}
+	cgroupInfo, err := cgroupDetector.GetPaths("/custom/host", 123)
 	assert.NoError(t, err)
 
-	actual, err := cgroupInfo.getHierarchyFn()()
+	actual, err := cgroupInfo.(*CgroupV1Paths).getHierarchyFn()()
 	assert.NoError(t, err)
 
 	assert.ElementsMatch(t, expected, actual)
@@ -224,7 +228,7 @@ func TestGetSingleFileUintStat(t *testing.T) {
 	assert.NoError(t, err)
 	fmt.Fprintf(f, "9999\n")
 
-	cgi := cgroupV1Paths{
+	cgi := CgroupV1Paths{
 		mountPoints: map[string]string{
 			"cpu": td,
 		},
@@ -233,7 +237,7 @@ func TestGetSingleFileUintStat(t *testing.T) {
 		},
 	}
 
-	actual, err := cgi.getSingleFileUintStat(cgroups.Cpu, "cpu.shares")
+	actual, err := cgi.GetSingleFileUintStat(string(cgroups.Cpu), "cpu.shares")
 	assert.NoError(t, err)
 
 	assert.Equal(t, uint64(9999), actual)

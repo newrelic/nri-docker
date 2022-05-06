@@ -16,10 +16,10 @@ func NewCgroupsFetcher(
 	networkStatsGetter NetworkStatsGetter,
 ) (Fetcher, error) {
 	if cgroupInfo.Version == CgroupV2 {
-		return NewCgroupsV2Fetcher(hostRoot, cgroupInfo.Driver, systemCPUReader, networkStatsGetter)
+		return NewCgroupsV2Fetcher(hostRoot, cgroupInfo.Driver, NewCgroupsV2Detector(), systemCPUReader, networkStatsGetter)
 	}
 
-	return NewCgroupsV1Fetcher(hostRoot, systemCPUReader, networkStatsGetter)
+	return NewCgroupsV1Fetcher(hostRoot, NewCgroupsV1Detector(), systemCPUReader, networkStatsGetter)
 }
 
 func countCpusetCPUsFromPath(path string) (uint, error) {
