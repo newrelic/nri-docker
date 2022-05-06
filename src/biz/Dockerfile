@@ -1,6 +1,3 @@
-FROM alpine:3.14
+FROM alpine:3.15.4
 
 RUN apk add stress-ng
-
-
-
