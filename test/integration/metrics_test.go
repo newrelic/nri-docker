@@ -36,7 +36,7 @@ const (
 
 func TestHighCPU(t *testing.T) {
 	// GIVEN a container consuming a lot of CPU
-	containerID, dockerRM := stress(t, "stress-ng", "-c", "4", "-l 100", "-t", "5m")
+	containerID, dockerRM := stress(t, "stress-ng", "-c", "4", "-l", "100", "-t", "5m")
 	defer dockerRM()
 
 	// WHEN its metrics are sampled and processed
