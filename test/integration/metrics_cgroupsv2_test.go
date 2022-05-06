@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -43,13 +42,11 @@ func TestCgroupsv2AllMetricsPresent(t *testing.T) {
 			TotalWriteBytes: 207296,
 		},
 		CPU: biz.CPU{
-			CPUPercent:    0,
-			KernelPercent: 0,
-			UserPercent:   0,
-			UsedCores:     95.1638064999,
-			// This is calculated with this call in biz.metrics
-			LimitCores:       float64(runtime.NumCPU()),
-			UsedCoresPercent: 4758.190324995,
+			KernelPercent:    0,
+			UserPercent:      0,
+			UsedCores:        95.1638064999,
+			LimitCores:       3,
+			UsedCoresPercent: 3172.12688333,
 			ThrottlePeriods:  0,
 			ThrottledTimeMS:  0,
 			Shares:           100,
@@ -86,6 +83,14 @@ func TestCgroupsv2AllMetricsPresent(t *testing.T) {
 
 		sample, err := metrics.Process(InspectorContainerID)
 		require.NoError(t, err)
+
+		// A value cannot be set for CPUPercent as it isn't deterministic.
+		// It's just checked that in fact is set with some value > 0.
+		assert.True(t, sample.CPU.CPUPercent > 0)
+
+		// Manually set the expected field to the result to make the test pass.
+		expectedSample.CPU.CPUPercent = sample.CPU.CPUPercent
+
 		assert.Equal(t, expectedSample, sample)
 	})
 }

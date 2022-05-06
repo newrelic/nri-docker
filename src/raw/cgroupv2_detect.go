@@ -26,9 +26,9 @@ func (c *cgroupV2Paths) FullPath() string {
 }
 
 func getSingleFileUintStat(cGroupV2Paths *cgroupV2Paths, stat string) (uint64, error) {
-	fp := filepath.Join(cGroupV2Paths.MountPoint, cGroupV2Paths.Group)
+	fp := filepath.Join(cGroupV2Paths.MountPoint, cGroupV2Paths.Group, stat)
 
-	c, err := ParseStatFileContentUint64(filepath.Join(fp, stat))
+	c, err := ParseStatFileContentUint64(fp)
 	if err != nil {
 		return 0, err
 	}
