@@ -21,6 +21,10 @@ type cgroupV2Paths struct {
 	Group string
 }
 
+func (c *cgroupV2Paths) FullPath() string {
+	return filepath.Join(c.MountPoint, c.Group)
+}
+
 func getSingleFileUintStat(cGroupV2Paths *cgroupV2Paths, stat string) (uint64, error) {
 	fp := filepath.Join(cGroupV2Paths.MountPoint, cGroupV2Paths.Group)
 

@@ -36,7 +36,6 @@ func fargateRawMetrics(fargateStats FargateStats) map[string]*raw.Metrics {
 				ThrottledPeriods:  stats.CPUStats.ThrottlingData.ThrottledPeriods,
 				ThrottledTimeNS:   stats.CPUStats.ThrottlingData.ThrottledTime,
 				SystemUsage:       stats.CPUStats.SystemUsage,
-				OnlineCPUs:        uint(stats.CPUStats.OnlineCPUs),
 			},
 			Pids: raw.Pids{
 				Current: stats.PidsStats.Current,
