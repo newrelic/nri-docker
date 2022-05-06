@@ -3,6 +3,7 @@ package raw
 
 import (
 	"errors"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -19,7 +20,7 @@ type CgroupsV2Fetcher struct {
 	cgroupDetector     CgroupDetector
 	systemCPUReader    SystemCPUReader
 	networkStatsGetter NetworkStatsGetter
-	cpuCounter      func(effectiveCPUsPath string) (uint, error)
+	cpuCounter         func(effectiveCPUsPath string) (uint, error)
 }
 
 // NewCgroupsV2Fetcher creates a new cgroups data fetcher.
@@ -36,7 +37,7 @@ func NewCgroupsV2Fetcher(
 		cgroupDetector:     cgroupDetector,
 		systemCPUReader:    systemCPUReader,
 		networkStatsGetter: networkStatsGetter,
-		puCounter:      countCpusetCPUsFromPath,
+		cpuCounter:         countCpusetCPUsFromPath,
 	}, nil
 }
 
@@ -80,7 +81,7 @@ func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		log.Error("couldn't read cpu weight: %v", err)
 	}
 
-	cpusetPath := filepath.Join(cgroupInfo.FullPath(), "cpuset.cpus.effective")
+	cpusetPath := filepath.Join(cgroupInfo.(*CgroupV2Paths).FullPath(), "cpuset.cpus.effective")
 	if stats.CPU.OnlineCPUs, err = cg.cpuCounter(cpusetPath); err != nil {
 		log.Error("couldn't get cpu count: %v", err)
 	}

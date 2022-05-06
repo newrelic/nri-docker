@@ -110,8 +110,8 @@ func (cgi *CgroupV2Paths) Path(path string) (string, error) {
 	return "", fmt.Errorf("cgroupV2 path not found %s", path)
 }
 
-func (c *cgroupV2Paths) FullPath() string {
-	return filepath.Join(c.MountPoint, c.Group)
+func (cgi *CgroupV2Paths) FullPath() string {
+	return filepath.Join(cgi.mountPoints[cgroupsV2UnifiedPath], cgi.paths[cgroupsV2UnifiedPath])
 }
 
 func (cgi *CgroupV2Paths) GetSingleFileUintStat(system, stat string) (uint64, error) {
