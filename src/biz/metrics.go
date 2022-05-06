@@ -163,11 +163,16 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CP
 	}()
 
 	cpu := CPU{}
-	// TODO: if newrelic-infra is in a limited cpus container, this may report the number of cpus of the
-	// newrelic-infra container if the container has no CPU quota
-	cpu.LimitCores = float64(runtime.NumCPU())
-	if json.HostConfig != nil && json.HostConfig.NanoCPUs != 0 {
-		cpu.LimitCores = float64(json.HostConfig.NanoCPUs) / 1e9
+
+	if metrics.CPU.OnlineCPUs != 0 {
+		cpu.LimitCores = float64(metrics.CPU.OnlineCPUs)
+	} else { // fallback if OnlineCPUs info is not available
+		// TODO: if newrelic-infra is in a limited cpus container, this may report the number of cpus of the
+		// newrelic-infra container if the container has no CPU quota
+		cpu.LimitCores = float64(runtime.NumCPU())
+		if json.HostConfig != nil && json.HostConfig.NanoCPUs != 0 {
+			cpu.LimitCores = float64(json.HostConfig.NanoCPUs) / 1e9
+		}
 	}
 
 	// Reading previous CPU stats
@@ -306,8 +311,11 @@ func cpuPercent(previous, current raw.CPU) float64 {
 		cpuDelta = float64(current.TotalUsage - previous.TotalUsage)
 		// calculate the change for the entire system between readings
 		systemDelta = float64(current.SystemUsage - previous.SystemUsage)
-		onlineCPUs  = float64(len(current.PercpuUsage))
+		onlineCPUs  = float64(current.OnlineCPUs)
 	)
+	if onlineCPUs == 0 { // fallback in case OnlineCPUs is not defined
+		onlineCPUs = float64(len(current.PercpuUsage))
+	}
 
 	if systemDelta > 0.0 && cpuDelta > 0.0 {
 		cpuPercent = (cpuDelta / systemDelta) * onlineCPUs * 100.0

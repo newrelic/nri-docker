@@ -18,6 +18,7 @@ type CgroupsV2Fetcher struct {
 	cgroupDriver    string
 	hostRoot        string
 	systemCPUReader SystemCPUReader
+	cpuCounter      func(effectiveCPUsPath string) (uint, error)
 }
 
 // NewCgroupsV2Fetcher creates a new cgroups data fetcher.
@@ -26,6 +27,7 @@ func NewCgroupsV2Fetcher(hostRoot string, systemCPUReader SystemCPUReader, cgrou
 		cgroupDriver:    cgroupDriver,
 		hostRoot:        hostRoot,
 		systemCPUReader: systemCPUReader,
+		cpuCounter:      countCpusetCPUsFromPath,
 	}, nil
 }
 
@@ -70,6 +72,11 @@ func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 
 	if stats.CPU.Shares, err = getSingleFileUintStat(cgroupInfo, "cpu.weight"); err != nil {
 		log.Error("couldn't read cpu weight: %v", err)
+	}
+
+	cpusetPath := filepath.Join(cgroupInfo.FullPath(), "cpuset.cpus.effective")
+	if stats.CPU.OnlineCPUs, err = cg.cpuCounter(cpusetPath); err != nil {
+		log.Error("couldn't get cpu count: %v", err)
 	}
 
 	if stats.Memory, err = cg.memory(metrics); err != nil {
