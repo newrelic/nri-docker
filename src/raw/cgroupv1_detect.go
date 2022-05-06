@@ -142,22 +142,22 @@ func (cgi *CgroupV1Paths) getHierarchyFn() cgroups.Hierarchy {
 	return func() ([]cgroups.Subsystem, error) {
 		var subsystems []cgroups.Subsystem
 
-		if cpusetMountPoint, err := cgi.MountPoint(string(cgroups.Cpuset)); err != nil {
+		if cpusetMountPoint, err := cgi.MountPoint(string(cgroups.Cpuset)); err == nil {
 			subsystems = append(subsystems, cgroups.NewCpuset(cpusetMountPoint))
 		}
-		if cpuMountPoint, err := cgi.MountPoint(string(cgroups.Cpu)); err != nil {
+		if cpuMountPoint, err := cgi.MountPoint(string(cgroups.Cpu)); err == nil {
 			subsystems = append(subsystems, cgroups.NewCpu(cpuMountPoint))
 		}
-		if cpuacctMountPoint, err := cgi.MountPoint(string(cgroups.Cpuacct)); err != nil {
+		if cpuacctMountPoint, err := cgi.MountPoint(string(cgroups.Cpuacct)); err == nil {
 			subsystems = append(subsystems, cgroups.NewCpuacct(cpuacctMountPoint))
 		}
-		if memoryMountPoint, err := cgi.MountPoint(string(cgroups.Memory)); err != nil {
+		if memoryMountPoint, err := cgi.MountPoint(string(cgroups.Memory)); err == nil {
 			subsystems = append(subsystems, cgroups.NewMemory(memoryMountPoint))
 		}
-		if blkioMountPoint, err := cgi.MountPoint(string(cgroups.Blkio)); err != nil {
+		if blkioMountPoint, err := cgi.MountPoint(string(cgroups.Blkio)); err == nil {
 			subsystems = append(subsystems, cgroups.NewBlkio(blkioMountPoint))
 		}
-		if pidsMountPoint, err := cgi.MountPoint(string(cgroups.Pids)); err != nil {
+		if pidsMountPoint, err := cgi.MountPoint(string(cgroups.Pids)); err == nil {
 			subsystems = append(subsystems, cgroups.NewPids(pidsMountPoint))
 		}
 
