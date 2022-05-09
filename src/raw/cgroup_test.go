@@ -17,8 +17,17 @@ func TestCountCpusetCPUs(t *testing.T) {
 			expectedCount: 1,
 		},
 		{
+			input:         "0,1",
+			expectedCount: 2,
+		},
+		{
+			input:         "0-1",
+			expectedCount: 2,
+		},
+
+		{
 			input:         "0-4",
-			expectedCount: 4,
+			expectedCount: 5,
 		},
 		{
 			input:         "1,4",
@@ -26,11 +35,11 @@ func TestCountCpusetCPUs(t *testing.T) {
 		},
 		{
 			input:         "0-4,8,10",
-			expectedCount: 6,
+			expectedCount: 7,
 		},
 		{
 			input:         "0-4,8,10,12-16",
-			expectedCount: 10,
+			expectedCount: 12,
 		},
 	}
 

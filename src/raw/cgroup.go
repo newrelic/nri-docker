@@ -55,7 +55,7 @@ func countCpusetCPUs(cpusetInfo string) (uint, error) {
 			if lowerLimit >= upperLimit {
 				return 0, fmt.Errorf("invalid %q cpuset format: invalid interval %s", cpusetInfo, interval)
 			}
-			numCPUs += uint(upperLimit - lowerLimit)
+			numCPUs += uint(upperLimit - lowerLimit + 1)
 		default:
 			return 0, fmt.Errorf("invalid %q cpuset format", cpusetInfo)
 		}
