@@ -8,6 +8,7 @@ import (
 
 	"github.com/newrelic/infra-integrations-sdk/persist"
 	"github.com/newrelic/nri-docker/src/raw"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestMetricsFetcher_memory(t *testing.T) {
@@ -99,4 +100,54 @@ func TestMetricsFetcher_memory(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCpuPercent(t *testing.T) {
+
+	var (
+		previousTotalUsage  uint64 = 10
+		previousSystemUsage uint64 = 20
+		currentTotalUsage   uint64 = previousTotalUsage + 1
+		currentSystemUsage  uint64 = previousSystemUsage + 10
+		onlineCPUs          uint   = 2
+	)
+
+	cases := []struct {
+		Name              string
+		Previous, Current raw.CPU
+		Expected          float64
+	}{
+		{
+			Name:     "No system usage changes",
+			Previous: raw.CPU{TotalUsage: previousTotalUsage, SystemUsage: previousSystemUsage},
+			Current:  raw.CPU{TotalUsage: currentTotalUsage, SystemUsage: previousSystemUsage, OnlineCPUs: onlineCPUs},
+			Expected: 0,
+		},
+		{
+			Name:     "No total usage changes",
+			Previous: raw.CPU{TotalUsage: previousTotalUsage, SystemUsage: previousSystemUsage},
+			Current:  raw.CPU{TotalUsage: previousTotalUsage, SystemUsage: currentSystemUsage, OnlineCPUs: onlineCPUs},
+			Expected: 0,
+		},
+		{
+			Name:     "System and total usage changes",
+			Previous: raw.CPU{TotalUsage: previousTotalUsage, SystemUsage: previousSystemUsage},
+			Current:  raw.CPU{TotalUsage: currentTotalUsage, SystemUsage: currentSystemUsage, OnlineCPUs: onlineCPUs},
+			Expected: 20,
+		},
+		{
+			Name:     "Fallback to PercpuUsage as OnlineCPUs are not defined",
+			Previous: raw.CPU{TotalUsage: previousTotalUsage, SystemUsage: previousSystemUsage},
+			Current:  raw.CPU{TotalUsage: currentTotalUsage, SystemUsage: currentSystemUsage, PercpuUsage: []uint64{0, 0}},
+			Expected: 20,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.Name, func(t *testing.T) {
+			v := cpuPercent(c.Previous, c.Current)
+			assert.Equal(t, c.Expected, v)
+		})
+	}
+
 }
