@@ -13,6 +13,14 @@ The New Relic infrastructure agent automatically monitors your Docker containers
 
 For installation and usage instructions, see our [documentation web site](https://docs.newrelic.com/docs/infrastructure/install-configure-manage-infrastructure/docker-installation/docker-instrumentation-infrastructure).
 
+## Compatibility
+
+As of `v1.7.0, `nri-docker` supports the usage either of Control Group v1 or Control Group v2.
+
+Updating from `cgroupsV1` to `cgroupsV2` should be transparent to the users, without noticing any difference between the metrics in both versions.
+
+**Note:** Until further notice, some new metrics that comes with `cgroupsV2` may not yet be implemented.
+
 ## Building
 
 Golang is required to build the integration. We recommend Golang 1.11 or higher.
