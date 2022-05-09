@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"os"
 	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -22,12 +21,24 @@ const nanoSecondsPerSecond = 1e9
 
 // CgroupsV1Fetcher fetches the metrics that can be found in cgroups (v1) file system
 type CgroupsV1Fetcher struct {
-	hostRoot        string
-	systemCPUReader SystemCPUReader
+	hostRoot           string
+	cgroupDetector     CgroupDetector
+	systemCPUReader    SystemCPUReader
+	networkStatsGetter NetworkStatsGetter
 }
 
-func NewCgroupsV1Fetcher(hostrRoot string, systemCPUReader SystemCPUReader) (*CgroupsV1Fetcher, error) {
-	return &CgroupsV1Fetcher{hostRoot: hostrRoot, systemCPUReader: systemCPUReader}, nil
+func NewCgroupsV1Fetcher(
+	hostRoot string,
+	cgroupDetector CgroupDetector,
+	systemCPUReader SystemCPUReader,
+	networkStatsGetter NetworkStatsGetter,
+) (*CgroupsV1Fetcher, error) {
+	return &CgroupsV1Fetcher{
+		hostRoot:           hostRoot,
+		cgroupDetector:     cgroupDetector,
+		systemCPUReader:    systemCPUReader,
+		networkStatsGetter: networkStatsGetter,
+	}, nil
 }
 
 // Fetch get the metrics that can be found in cgroups file system:
@@ -38,20 +49,18 @@ func (cg *CgroupsV1Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	pid := c.State.Pid
 	containerID := c.ID
 
-	var (
-		cgroupInfo *cgroupV1Paths
-		err        error
-	)
-	cgroupInfo, err = getCgroupV1Paths(cg.hostRoot, pid)
-
+	err := cg.cgroupDetector.PopulatePaths(cg.hostRoot, pid)
 	if err != nil {
 		return stats, err
 	}
+
+	cgroupInfo := cg.cgroupDetector.(*CgoupsV1Detector).paths
 
 	control, err := cgroups.Load(cgroupInfo.getHierarchyFn(), cgroupInfo.getPath)
 	if err != nil {
 		return stats, err
 	}
+
 	metrics, err := control.Stat(cgroups.IgnoreNotExist)
 	if err != nil {
 		return stats, err
@@ -88,20 +97,11 @@ func (cg *CgroupsV1Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	if stats.Memory.SoftLimit, err = cgroupInfo.getSingleFileUintStat(cgroups.Memory, "memory.soft_limit_in_bytes"); err != nil {
 		log.Debug("couldn't read soft_limit_in_bytes stats: %v", err)
 	}
+
 	stats.ContainerID = containerID
+	stats.Network, err = cg.networkStatsGetter.GetForContainer(cg.hostRoot, strconv.Itoa(pid), containerID)
 
-	netMetricsPath := filepath.Join(cg.hostRoot, "/proc", strconv.Itoa(pid), "net", "dev")
-	stats.Network, err = network(netMetricsPath)
-	if err != nil {
-		log.Error(
-			"couldn't fetch network stats for container %s from cgroups: %v",
-			containerID,
-			err,
-		)
-		return stats, err
-	}
-
-	return stats, nil
+	return stats, err
 }
 
 func (cg *CgroupsV1Fetcher) pids(metrics *cgroupstats.Metrics) (Pids, error) {

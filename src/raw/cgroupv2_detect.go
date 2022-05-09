@@ -1,126 +1,92 @@
 package raw
 
 import (
-	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"path/filepath"
-	"strings"
-
-	"github.com/newrelic/infra-integrations-sdk/log"
 )
 
-var cgroupV2MountPointNotFoundErr = errors.New("cgroups2 mountpoint was not found")
+var (
+	v2MountPointNotFoundErr = errors.New("cgroups2 mountpoint was not found")
+	v2PathNotFoundErr       = errors.New("cgroup2 path not found")
+)
 
-type cgroupV2Paths struct {
-	// MountPoint is the cgroup2 mount point, Eg: /sys/fs/cgroup
-	MountPoint string
-	// Group is the group path, with the same format that the third parameter in /proc/<pid>/cgroup.
-	// Eg: /system.slice/docker.service
-	Group string
+type CgoupsV2Detector struct {
+	openFn fileOpenFn
+	paths  *cgroupV2Paths
 }
 
-func (c *cgroupV2Paths) FullPath() string {
-	return filepath.Join(c.MountPoint, c.Group)
+type V2MountPoint string
+
+func NewCgroupsV2Detector() *CgoupsV2Detector {
+	return &CgoupsV2Detector{openFn: defaultFileOpenFn}
 }
 
-func getSingleFileUintStat(cGroupV2Paths *cgroupV2Paths, stat string) (uint64, error) {
-	fp := filepath.Join(cGroupV2Paths.MountPoint, cGroupV2Paths.Group, stat)
-
-	c, err := ParseStatFileContentUint64(fp)
+func (cgd *CgoupsV2Detector) PopulatePaths(hostRoot string, pid int) error {
+	fullpath, err := cgd.cgroupV2FullPath(hostRoot, pid)
 	if err != nil {
-		return 0, err
+		return err
 	}
-	return c, nil
+	mountPoint, group := cgd.splitMountPointAndGroup(fullpath)
+	cgd.paths = &cgroupV2Paths{
+		mountPoint: mountPoint,
+		group:      group,
+	}
+
+	return nil
 }
 
-func getCgroupV2Paths(hostRoot string, pid int, driver string, containerID string) (*cgroupV2Paths, error) {
-	fullpath, err := cgroupV2FullPath(hostRoot, pid, defaultFileOpenFn)
+// cgroupV2FullPath returns the cgroup mount point which is built joining info from mountsFile (Eg: /proc/mounts)
+// and pid's cgroup file (Eg: /proc/<pid>/cgroup)
+func (cgd *CgoupsV2Detector) cgroupV2FullPath(hostRoot string, pid int) (string, error) {
+	mountPoints := make(map[string]string)
+	err := getMountsFile(hostRoot, mountPoints, cgroup2MountName, cgd.openFn)
 	if err != nil {
-		return nil, err
+		return "", fmt.Errorf("failed to parse cgroups2 mountpoint: %s", err)
 	}
-	mountPoint, group := splitMountPointAndGroup(fullpath)
-	return &cgroupV2Paths{MountPoint: mountPoint, Group: group}, nil
+	if mountPoints[cgroup2UnifiedFilesystem] == "" {
+		return "", v2MountPointNotFoundErr
+	}
+
+	cgroupPaths := make(map[string]string)
+	err = getCgroupFilePaths(hostRoot, pid, cgroupPaths, cgroup2MountName, cgd.openFn)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse cgroups2 paths, error: %s", err)
+	}
+	if mountPoints[cgroup2UnifiedFilesystem] == "" {
+		return "", fmt.Errorf("error parsing cgroup file, %v", v2PathNotFoundErr)
+	}
+
+	return filepath.Join(mountPoints[cgroup2UnifiedFilesystem], cgroupPaths[cgroup2UnifiedFilesystem]), nil
 }
 
-func splitMountPointAndGroup(fullpath string) (string, string) {
+func (cgd *CgoupsV2Detector) splitMountPointAndGroup(fullpath string) (string, string) {
 	mountPoint := filepath.Dir(fullpath)
 	group := filepath.Base(fullpath)
 	group = "/" + group
 	return mountPoint, group
 }
 
-// cgroupV2FullPath returns the cgroup mount point which is built joining info from mountsFile (Eg: /proc/mounts)
-// and pid's cgroup file (Eg: /proc/<pid>/cgroup)
-func cgroupV2FullPath(hostRoot string, pid int, fileOpen fileOpenFn) (string, error) {
-	path := filepath.Join(hostRoot, mountsFilePath)
-	mountsFile, err := fileOpen(path)
-	if err != nil {
-		return "", fmt.Errorf(
-			"failed to open file %s, while detecting cgroup2 mountpoint error: %s",
-			path, err,
-		)
-	}
-	defer func() {
-		if err := mountsFile.Close(); err != nil {
-			log.Error("Error occurred while closing the file %s", err)
-		}
-	}()
-	rootMountPoint, err := parseCgroupV2MountPoint(hostRoot, mountsFile)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse cgroups2 mountpoint: %s", err)
-	}
-	cgroupFilePath := filepath.Join(hostRoot, fmt.Sprintf(cgroupFilePathTpl, pid))
-	cgroupFile, err := fileOpen(cgroupFilePath)
-	if err != nil {
-		return "", fmt.Errorf(
-			"failed to open file: %s, while detecting cgroup paths error: %v",
-			cgroupFilePath, err,
-		)
-	}
-	defer func() {
-		if closeErr := cgroupFile.Close(); closeErr != nil {
-			log.Error("Error occurred while closing the file: %v", closeErr)
-		}
-	}()
-	cgroupPath, err := parseCgroupV2Path(cgroupFile)
-	if err != nil {
-		return "", fmt.Errorf("failed to parse cgroups2 paths, error: %s", err)
-	}
-	return filepath.Join(rootMountPoint, cgroupPath), nil
+type cgroupV2Paths struct {
+	// MountPoint is the cgroup2 mount point, Eg: /sys/fs/cgroup
+	mountPoint string
+	// Group is the group path, with the same format that the third parameter in /proc/<pid>/cgroup.
+	// Eg: /system.slice/docker.service
+	group string
 }
 
-func parseCgroupV2MountPoint(hostRoot string, mountFile io.Reader) (string, error) {
-	sc := bufio.NewScanner(mountFile)
-	for sc.Scan() {
-		line := sc.Text()
-		fields := strings.Fields(line)
-		if len(fields) >= 3 && strings.HasPrefix(fields[2], "cgroup2") && strings.HasPrefix(fields[1], hostRoot) {
-			return fields[1], nil
-		}
-	}
-	if err := sc.Err(); err != nil {
-		return "", err
-	}
-	return "", cgroupV2MountPointNotFoundErr
+func (cgi *cgroupV2Paths) getFullPath() string {
+	return filepath.Join(cgi.mountPoint, cgi.group)
 }
 
-func parseCgroupV2Path(cgroupFile io.Reader) (string, error) {
-	sc := bufio.NewScanner(cgroupFile)
-	for sc.Scan() {
-		line := sc.Text()
-		fields := strings.Split(line, ":")
+func (cgi *cgroupV2Paths) getSingleFileUintStat(stat string) (uint64, error) {
+	// get full path
+	// /sys/fs/cgroup/system.slice/cpu.weight
+	fp := filepath.Join(cgi.mountPoint, cgi.group, stat)
 
-		if len(fields) != 3 {
-			return "", fmt.Errorf("unexpected cgroup file format: \"%s\"", line)
-		}
-		if fields[0] == "0" && fields[1] == "" {
-			return fields[2], nil
-		}
+	c, err := ParseStatFileContentUint64(filepath.Join(fp, stat))
+	if err != nil {
+		return 0, err
 	}
-	if err := sc.Err(); err != nil {
-		return "", err
-	}
-	return "", errors.New("error parsing cgroup file, cgroup2 path not found")
+	return c, nil
 }

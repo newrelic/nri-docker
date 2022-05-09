@@ -2,18 +2,17 @@ package raw
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"path"
 	"strings"
 	"testing"
 
 	"github.com/containerd/cgroups"
-
 	"github.com/stretchr/testify/assert"
 )
 
 func TestParseCgroupMountPoints(t *testing.T) {
-
 	testCases := map[string]struct {
 		hostRoot    string
 		fileContent string
@@ -71,11 +70,15 @@ cgroup /sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,relatime,cpu,cpu
 
 	for testName, testCase := range testCases {
 		t.Run(testName, func(t *testing.T) {
-			mountFileInfo := strings.NewReader(testCase.fileContent)
-			actual, err := parseCgroupV1MountPoints(testCase.hostRoot, mountFileInfo)
+			mountPointsOpen := func(string) (io.ReadCloser, error) {
+				return io.NopCloser(strings.NewReader(testCase.fileContent)), nil
+			}
+
+			mountPoints := make(map[string]string)
+			err := getMountsFile(testCase.hostRoot, mountPoints, cgroup1MountName, mountPointsOpen)
 			assert.NoError(t, err)
 
-			assert.Equal(t, testCase.expected, actual)
+			assert.Equal(t, testCase.expected, mountPoints)
 		})
 	}
 }
@@ -85,7 +88,6 @@ func TestParseCgroupPaths(t *testing.T) {
 	3:cpuset:/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0
 	2:cpu,cpuacct:/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0
 	1:name=systemd:/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0`
-	cgroupPaths := strings.NewReader(cgroupFileContains)
 
 	expected := map[string]string{
 		"pids":         "/system.slice/docker-ea06501e021b11a0d46a09de007b3d71bd6f37537cceabd2c3cbfa7f9b3da1ee.scope",
@@ -95,14 +97,18 @@ func TestParseCgroupPaths(t *testing.T) {
 		"name=systemd": "/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0",
 	}
 
-	actual, err := parseCgroupV1Paths(cgroupPaths)
+	cgroupPathOpen := func(string) (io.ReadCloser, error) {
+		return io.NopCloser(strings.NewReader(cgroupFileContains)), nil
+	}
+
+	cgroupPaths := make(map[string]string)
+	err := getCgroupFilePaths("a-host-root", 111, cgroupPaths, cgroup1MountName, cgroupPathOpen)
 	assert.NoError(t, err)
 
-	assert.Equal(t, expected, actual)
+	assert.Equal(t, expected, cgroupPaths)
 }
 
 func TestCgroupPathsGetFullPath(t *testing.T) {
-
 	cgroupInfo := &cgroupV1Paths{
 		mountPoints: map[string]string{
 			"cpu":     "/sys/fs/cgroup",
@@ -142,7 +148,6 @@ func TestCgroupPathsGetMountPoint(t *testing.T) {
 }
 
 func TestCgroupPathsFetcherParse(t *testing.T) {
-
 	filesMap := map[string]string{
 		"/custom/host/proc/mounts": `tmpfs /dev/shm tmpfs rw,nosuid,nodev 0 0
 tmpfs /run/lock tmpfs rw,nosuid,nodev,noexec,relatime,size=5120k 0 0
@@ -155,7 +160,9 @@ cgroup /custom/host/sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,rela
 1:name=systemd:/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0`,
 	}
 
-	cgroupInfo, err := cgroupV1PathsFetch("/custom/host", 123, createFileOpenFnMock(filesMap))
+	cgroupDetector := &CgoupsV1Detector{openFn: createFileOpenFnMock(filesMap)}
+	err := cgroupDetector.PopulatePaths("/custom/host", 123)
+	assert.NoError(t, err)
 
 	expected := &cgroupV1Paths{
 		mountPoints: map[string]string{
@@ -173,7 +180,7 @@ cgroup /custom/host/sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,rela
 	}
 
 	assert.NoError(t, err)
-	assert.Equal(t, expected, cgroupInfo)
+	assert.Equal(t, expected, cgroupDetector.paths)
 }
 
 func TestCgroupPathsSubsystems(t *testing.T) {
@@ -221,10 +228,11 @@ configfs /sys/kernel/config configfs rw,relatime 0 0`,
 		cgroups.NewBlkio("/custom/host/sys/fs/cgroup5"),
 	}
 
-	cgroupInfo, err := cgroupV1PathsFetch("/custom/host", 123, createFileOpenFnMock(filesMap))
+	cgroupDetector := &CgoupsV1Detector{openFn: createFileOpenFnMock(filesMap)}
+	err := cgroupDetector.PopulatePaths("/custom/host", 123)
 	assert.NoError(t, err)
 
-	actual, err := cgroupInfo.getHierarchyFn()()
+	actual, err := cgroupDetector.paths.getHierarchyFn()()
 	assert.NoError(t, err)
 
 	assert.ElementsMatch(t, expected, actual)

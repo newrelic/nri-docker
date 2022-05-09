@@ -24,9 +24,11 @@ func TestSplitMountPointAndGroup(t *testing.T) {
 		},
 	}
 
+	cgroupDetector := NewCgroupsV2Detector()
+
 	for _, c := range cases {
 		t.Run("check "+c.fullPath, func(t *testing.T) {
-			mountpoint, group := splitMountPointAndGroup(c.fullPath)
+			mountpoint, group := cgroupDetector.splitMountPointAndGroup(c.fullPath)
 			assert.Equal(t, c.mountPoint, mountpoint)
 			assert.Equal(t, c.group, group)
 		})
@@ -93,10 +95,12 @@ tmpfs /run/user/1000 tmpfs rw,nosuid,nodev,relatime,size=99456k,nr_inodes=24864,
 		},
 	}
 
+	cgroupDetector := NewCgroupsV2Detector()
+
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			fn := createFileOpenFnMock(c.FilesContent)
-			mountPoint, err := cgroupV2FullPath(c.HostRoot, c.Pid, fn)
+			cgroupDetector.openFn = createFileOpenFnMock(c.FilesContent)
+			mountPoint, err := cgroupDetector.cgroupV2FullPath(c.HostRoot, c.Pid)
 			require.NoError(t, err)
 			assert.Equal(t, c.Expected, mountPoint)
 		})
@@ -180,10 +184,12 @@ tmpfs /run/user/1000 tmpfs rw,nosuid,nodev,relatime,size=99456k,nr_inodes=24864,
 		},
 	}
 
+	cgroupDetector := NewCgroupsV2Detector()
+
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
-			fn := createFileOpenFnMock(c.FilesContent)
-			_, err := cgroupV2FullPath(c.HostRoot, c.Pid, fn)
+			cgroupDetector.openFn = createFileOpenFnMock(c.FilesContent)
+			_, err := cgroupDetector.cgroupV2FullPath(c.HostRoot, c.Pid)
 			require.Error(t, err)
 		})
 	}

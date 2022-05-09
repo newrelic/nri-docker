@@ -3,14 +3,35 @@ package raw
 import (
 	"bufio"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/newrelic/infra-integrations-sdk/log"
 )
 
-// network fetches the network metrics from the /proc file system TODO: use cgroups library + split this to open and parse.
-func network(filePath string) (Network, error) {
+type NetworkStatsGetter interface {
+	GetForContainer(hostRoot, pid, containerID string) (Network, error)
+}
+
+type NetDevNetworkStatsGetter struct{}
+
+func (cd NetDevNetworkStatsGetter) GetForContainer(hostRoot, pid, containerID string) (Network, error) {
+	netMetricsPath := filepath.Join(hostRoot, "/proc", pid, "net", "dev")
+	net, err := cd.network(netMetricsPath)
+	if err != nil {
+		log.Error(
+			"couldn't fetch network stats for container %s from cgroups: %v",
+			containerID,
+			err,
+		)
+	}
+	return net, err
+}
+
+// network fetches the network metrics from the /proc file system
+// TODO: use cgroups library + split this to open and parse.
+func (cd NetDevNetworkStatsGetter) network(filePath string) (Network, error) {
 	var network Network
 	file, err := os.Open(filePath)
 	if err != nil {
