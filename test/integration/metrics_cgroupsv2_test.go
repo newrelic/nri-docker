@@ -1,15 +1,16 @@
 package integration_test
 
 import (
-	"github.com/newrelic/nri-docker/src/biz"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/newrelic/nri-docker/src/biz"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
