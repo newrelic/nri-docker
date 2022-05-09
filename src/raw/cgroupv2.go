@@ -140,7 +140,10 @@ func (cg *CgroupsV2Fetcher) memory(metric *cgroupstatsV2.Metrics) (Memory, error
 	mem.SwapUsage = metric.Memory.SwapUsage
 	mem.SwapLimit = metric.Memory.SwapLimit
 	mem.KernelMemoryUsage = metric.Memory.KernelStack + metric.Memory.Slab
-	mem.SoftLimit = metric.MemoryEvents.Low
+
+	if metric.MemoryEvents != nil {
+		mem.SoftLimit = metric.MemoryEvents.Low
+	}
 
 	return mem, nil
 }

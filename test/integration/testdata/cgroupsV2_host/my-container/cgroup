@@ -1,0 +1,14 @@
+13:memory:/docker/my-container
+12:cpuset:/docker/my-container
+11:rdma:/
+10:misc:/
+9:devices:/docker/my-container
+8:net_cls,net_prio:/docker/my-container
+7:hugetlb:/docker/my-container
+6:cpu,cpuacct:/docker/my-container
+5:perf_event:/docker/my-container
+4:pids:/docker/my-container
+3:freezer:/docker/my-container
+2:io:/docker/my-container
+1:name=systemd:/docker/my-container
+0::/system.slice/containerd.service
