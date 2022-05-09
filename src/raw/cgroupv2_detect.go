@@ -53,7 +53,7 @@ func (cgd *CgoupsV2Detector) cgroupV2FullPath(hostRoot string, pid int) (string,
 	if err != nil {
 		return "", fmt.Errorf("failed to parse cgroups2 paths, error: %s", err)
 	}
-	if mountPoints[cgroup2UnifiedFilesystem] == "" {
+	if cgroupPaths[cgroup2UnifiedFilesystem] == "" {
 		return "", fmt.Errorf("error parsing cgroup file, %v", v2PathNotFoundErr)
 	}
 

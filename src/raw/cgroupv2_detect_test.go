@@ -126,6 +126,7 @@ vagrant /vagrant vboxsf rw,nodev,relatime,iocharset=utf8,uid=1000,gid=1000 0 0
 tmpfs /run/user/1000 tmpfs rw,nosuid,nodev,relatime,size=99456k,nr_inodes=24864,mode=700,uid=1000,gid=1000,inode64 0 0`
 
 	cgroup2PathsFileContent := "0::/system.slice/docker.service\n"
+	cgroup2PathsFileContentWrongFormat := "1::/system.slice/docker.service\n"
 
 	cases := []struct {
 		Name         string
@@ -168,7 +169,7 @@ tmpfs /run/user/1000 tmpfs rw,nosuid,nodev,relatime,size=99456k,nr_inodes=24864,
 		{
 			Name:     "Paths file not found",
 			Pid:      42,
-			HostRoot: "/custom/host",
+			HostRoot: "",
 			FilesContent: map[string]string{
 				"/proc/mounts": cgroup2MountfileContentNoMatchingHostRoot,
 			},
@@ -176,10 +177,19 @@ tmpfs /run/user/1000 tmpfs rw,nosuid,nodev,relatime,size=99456k,nr_inodes=24864,
 		{
 			Name:     "Paths file with bad format",
 			Pid:      42,
-			HostRoot: "/custom/host",
+			HostRoot: "",
 			FilesContent: map[string]string{
 				"/proc/mounts":    cgroup2MountfileContentNoMatchingHostRoot,
 				"/proc/42/cgroup": "\n",
+			},
+		},
+		{
+			Name:     "Paths file with bad format",
+			Pid:      42,
+			HostRoot: "",
+			FilesContent: map[string]string{
+				"/proc/mounts":    cgroup2MountfileContentNoMatchingHostRoot,
+				"/proc/42/cgroup": cgroup2PathsFileContentWrongFormat,
 			},
 		},
 	}
