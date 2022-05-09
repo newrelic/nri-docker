@@ -38,5 +38,7 @@ func (cgf *CgroupsFetcherV2Mock) Fetch(c types.ContainerJSON) (raw.Metrics, erro
 	}
 
 	metrics.Time = cgf.time
+	metrics.CPU.SystemUsage = cgf.systemUsage
+
 	return metrics, nil
 }

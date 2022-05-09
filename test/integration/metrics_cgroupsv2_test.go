@@ -1,16 +1,15 @@
 package integration_test
 
 import (
+	"github.com/newrelic/nri-docker/src/biz"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/newrelic/nri-docker/src/biz"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -42,6 +41,7 @@ func TestCgroupsv2AllMetricsPresent(t *testing.T) {
 			TotalWriteBytes: 207296,
 		},
 		CPU: biz.CPU{
+			CPUPercent:       2854.9141950255494,
 			KernelPercent:    0,
 			UserPercent:      0,
 			UsedCores:        95.1638064999,
@@ -83,13 +83,6 @@ func TestCgroupsv2AllMetricsPresent(t *testing.T) {
 
 		sample, err := metrics.Process(InspectorContainerID)
 		require.NoError(t, err)
-
-		// A value cannot be set for CPUPercent as it isn't deterministic.
-		// It's just checked that in fact is set with some value > 0.
-		assert.True(t, sample.CPU.CPUPercent > 0)
-
-		// Manually set the expected field to the result to make the test pass.
-		expectedSample.CPU.CPUPercent = sample.CPU.CPUPercent
 
 		assert.Equal(t, expectedSample, sample)
 	})
