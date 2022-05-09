@@ -80,11 +80,9 @@ func (cgi *cgroupV2Paths) getFullPath() string {
 }
 
 func (cgi *cgroupV2Paths) getSingleFileUintStat(stat string) (uint64, error) {
-	// get full path
-	// /sys/fs/cgroup/system.slice/cpu.weight
 	fp := filepath.Join(cgi.mountPoint, cgi.group, stat)
 
-	c, err := ParseStatFileContentUint64(filepath.Join(fp, stat))
+	c, err := ParseStatFileContentUint64(fp)
 	if err != nil {
 		return 0, err
 	}
