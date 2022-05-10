@@ -43,7 +43,12 @@ func TestHighCPU(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher("/", raw.NewPosixSystemCPUReader())
+	cgroupFetcher, err := raw.NewCgroupsV1Fetcher(
+		"/",
+		raw.NewCgroupV1PathParser(),
+		raw.NewPosixSystemCPUReader(),
+		raw.NetDevNetworkStatsGetter{},
+	)
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(
@@ -90,7 +95,12 @@ func TestLowCPU(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher("/", raw.NewPosixSystemCPUReader())
+	cgroupFetcher, err := raw.NewCgroupsV1Fetcher(
+		"/",
+		raw.NewCgroupV1PathParser(),
+		raw.NewPosixSystemCPUReader(),
+		raw.NetDevNetworkStatsGetter{},
+	)
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(
@@ -128,7 +138,12 @@ func TestMemory(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher("/", raw.NewPosixSystemCPUReader())
+	cgroupFetcher, err := raw.NewCgroupsV1Fetcher(
+		"/",
+		raw.NewCgroupV1PathParser(),
+		raw.NewPosixSystemCPUReader(),
+		raw.NetDevNetworkStatsGetter{},
+	)
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(
@@ -203,7 +218,12 @@ func TestExitedContainersWithTTL(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher("/", raw.NewPosixSystemCPUReader())
+	cgroupFetcher, err := raw.NewCgroupsV1Fetcher(
+		"/",
+		raw.NewCgroupV1PathParser(),
+		raw.NewPosixSystemCPUReader(),
+		raw.NetDevNetworkStatsGetter{},
+	)
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 1*time.Second)
@@ -222,7 +242,12 @@ func TestExitedContainersWithoutTTL(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher("/", raw.NewPosixSystemCPUReader())
+	cgroupFetcher, err := raw.NewCgroupsV1Fetcher(
+		"/",
+		raw.NewCgroupV1PathParser(),
+		raw.NewPosixSystemCPUReader(),
+		raw.NetDevNetworkStatsGetter{},
+	)
 	require.NoError(t, err)
 
 	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
