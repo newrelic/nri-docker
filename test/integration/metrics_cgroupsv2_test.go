@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/newrelic/nri-docker/src/biz"
+	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,12 +43,12 @@ func TestCgroupsv2AllMetricsPresent(t *testing.T) {
 			TotalWriteBytes: 207296,
 		},
 		CPU: biz.CPU{
-			CPUPercent:       2854.9141950255494,
-			KernelPercent:    0,
-			UserPercent:      0,
-			UsedCores:        95.1638064999,
-			LimitCores:       3,
-			UsedCoresPercent: 3172.12688333,
+			CPUPercent:       191.3611027027027,
+			KernelPercent:    21,
+			UserPercent:      353.77101,
+			UsedCores:        3.5401804,
+			LimitCores:       4,
+			UsedCoresPercent: 88.50451,
 			ThrottlePeriods:  0,
 			ThrottledTimeMS:  0,
 			Shares:           100,
@@ -72,11 +73,23 @@ func TestCgroupsv2AllMetricsPresent(t *testing.T) {
 
 	err := mockedCgroupsV2FileSystem(t, hostRoot)
 
-	storer := inMemoryStorerWithPreviousCPUState()
+	previousCPUState := raw.CPU{
+		TotalUsage:        916236261000,
+		UsageInUsermode:   726716405000,
+		UsageInKernelmode: 187444559000,
+		PercpuUsage:       nil,
+		ThrottledPeriods:  1,
+		ThrottledTimeNS:   1,
+		SystemUsage:       1e9, // seconds in ns
+		OnlineCPUs:        1,
+		Shares:            1,
+	}
+	storer := inMemoryStorerWithCustomPreviousCPUState(previousCPUState)
 
 	inspector := NewInspectorMock(InspectorContainerID, InspectorPIDCgroupsV2, 2)
 
-	cgroupFetcher, err := NewCgroupsV2FetcherMock(hostRoot, mockedTimeForAllMetricsTest, uint64(100000000000))
+	currentSystemUsage := 75 * 1e9 // seconds in ns
+	cgroupFetcher, err := NewCgroupsV2FetcherMock(hostRoot, mockedTimeForAllMetricsTest, uint64(currentSystemUsage))
 	require.NoError(t, err)
 
 	t.Run("Given a mockedFilesystem and previous CPU state Then processed metrics are as expected", func(t *testing.T) {
