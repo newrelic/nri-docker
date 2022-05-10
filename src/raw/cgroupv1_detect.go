@@ -7,34 +7,43 @@ import (
 	"github.com/containerd/cgroups"
 )
 
-type CgoupsV1Detector struct {
+type CgroupV1Detector interface {
+	Paths(hostRoot string, pid int) (CgroupsV1PathGetter, error)
+}
+
+type CgroupsV1PathGetter interface {
+	getMountPoint(name cgroups.Name) (string, error)
+	getPath(name cgroups.Name) (string, error)
+	getSingleFileUintStat(name cgroups.Name, stat string) (uint64, error)
+	getFullPath(name cgroups.Name) (string, error)
+	getHierarchyFn() cgroups.Hierarchy
+}
+
+type CgroupV1PathParser struct {
 	openFn fileOpenFn
-	paths  *cgroupV1Paths
 }
 
-func NewCgroupsV1Detector() *CgoupsV1Detector {
-	return &CgoupsV1Detector{openFn: defaultFileOpenFn}
+func NewCgroupV1PathParser() *CgroupV1PathParser {
+	return &CgroupV1PathParser{openFn: defaultFileOpenFn}
 }
 
-func (cgd *CgoupsV1Detector) PopulatePaths(hostRoot string, pid int) error {
+func (cgd *CgroupV1PathParser) Paths(hostRoot string, pid int) (CgroupsV1PathGetter, error) {
 	mountPoints := make(map[string]string)
 	err := getMountsFile(hostRoot, mountPoints, cgroup1MountName, cgd.openFn)
 	if err != nil {
-		return fmt.Errorf("failed to parse cgroups mountpoints: %v", err)
+		return nil, fmt.Errorf("failed to parse cgroups mountpoints: %v", err)
 	}
 
 	cgroupPaths := make(map[string]string)
 	err = getCgroupFilePaths(hostRoot, pid, cgroupPaths, cgroup1MountName, cgd.openFn)
 	if err != nil {
-		return fmt.Errorf("failed to parse cgroup paths error: %v", err)
+		return nil, fmt.Errorf("failed to parse cgroup paths error: %v", err)
 	}
 
-	cgd.paths = &cgroupV1Paths{
+	return &cgroupV1Paths{
 		mountPoints: mountPoints,
 		paths:       cgroupPaths,
-	}
-
-	return nil
+	}, nil
 }
 
 type cgroupV1Paths struct {

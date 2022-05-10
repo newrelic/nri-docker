@@ -19,10 +19,6 @@ const (
 	cgroup2UnifiedFilesystem = "/"
 )
 
-type CgroupDetector interface {
-	PopulatePaths(hostRoot string, pid int) error
-}
-
 type fileOpenFn func(string) (io.ReadCloser, error)
 
 func defaultFileOpenFn(filePath string) (io.ReadCloser, error) {
@@ -65,7 +61,6 @@ func getMountsFile(hostRoot string, mountPoints map[string]string, cgroupMountPo
 				mountPoints[cgroup2UnifiedFilesystem] = fields[1]
 				return nil
 			}
-		default:
 		}
 	}
 
@@ -111,7 +106,6 @@ func getCgroupFilePaths(
 				cgroupPaths[cgroup2UnifiedFilesystem] = fields[2]
 				return nil
 			}
-		default:
 		}
 	}
 

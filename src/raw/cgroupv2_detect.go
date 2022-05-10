@@ -11,34 +11,42 @@ var (
 	v2PathNotFoundErr       = errors.New("cgroup2 path not found")
 )
 
-type CgoupsV2Detector struct {
+type CgroupV2Detector interface {
+	Paths(hostRoot string, pid int) (CgroupV2PathGetter, error)
+}
+
+type CgroupV2PathGetter interface {
+	getFullPath() string
+	getSingleFileUintStat(stat string) (uint64, error)
+	getMountPoint() string
+	getGroup() string
+}
+
+type CgroupV2PathParser struct {
 	openFn fileOpenFn
-	paths  *cgroupV2Paths
 }
 
 type V2MountPoint string
 
-func NewCgroupsV2Detector() *CgoupsV2Detector {
-	return &CgoupsV2Detector{openFn: defaultFileOpenFn}
+func NewCgroupV2PathParser() *CgroupV2PathParser {
+	return &CgroupV2PathParser{openFn: defaultFileOpenFn}
 }
 
-func (cgd *CgoupsV2Detector) PopulatePaths(hostRoot string, pid int) error {
+func (cgd *CgroupV2PathParser) Paths(hostRoot string, pid int) (CgroupV2PathGetter, error) {
 	fullpath, err := cgd.cgroupV2FullPath(hostRoot, pid)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	mountPoint, group := cgd.splitMountPointAndGroup(fullpath)
-	cgd.paths = &cgroupV2Paths{
+	return &cgroupV2Paths{
 		mountPoint: mountPoint,
 		group:      group,
-	}
-
-	return nil
+	}, nil
 }
 
 // cgroupV2FullPath returns the cgroup mount point which is built joining info from mountsFile (Eg: /proc/mounts)
 // and pid's cgroup file (Eg: /proc/<pid>/cgroup)
-func (cgd *CgoupsV2Detector) cgroupV2FullPath(hostRoot string, pid int) (string, error) {
+func (cgd *CgroupV2PathParser) cgroupV2FullPath(hostRoot string, pid int) (string, error) {
 	mountPoints := make(map[string]string)
 	err := getMountsFile(hostRoot, mountPoints, cgroup2MountName, cgd.openFn)
 	if err != nil {
@@ -60,7 +68,7 @@ func (cgd *CgoupsV2Detector) cgroupV2FullPath(hostRoot string, pid int) (string,
 	return filepath.Join(mountPoints[cgroup2UnifiedFilesystem], cgroupPaths[cgroup2UnifiedFilesystem]), nil
 }
 
-func (cgd *CgoupsV2Detector) splitMountPointAndGroup(fullpath string) (string, string) {
+func (cgd *CgroupV2PathParser) splitMountPointAndGroup(fullpath string) (string, string) {
 	mountPoint := filepath.Dir(fullpath)
 	group := filepath.Base(fullpath)
 	group = "/" + group
@@ -87,4 +95,12 @@ func (cgi *cgroupV2Paths) getSingleFileUintStat(stat string) (uint64, error) {
 		return 0, err
 	}
 	return c, nil
+}
+
+func (cgi *cgroupV2Paths) getMountPoint() string {
+	return cgi.mountPoint
+}
+
+func (cgi *cgroupV2Paths) getGroup() string {
+	return cgi.group
 }

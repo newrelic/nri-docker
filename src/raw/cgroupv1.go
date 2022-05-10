@@ -22,14 +22,14 @@ const nanoSecondsPerSecond = 1e9
 // CgroupsV1Fetcher fetches the metrics that can be found in cgroups (v1) file system
 type CgroupsV1Fetcher struct {
 	hostRoot           string
-	cgroupDetector     CgroupDetector
+	cgroupDetector     CgroupV1Detector
 	systemCPUReader    SystemCPUReader
 	networkStatsGetter NetworkStatsGetter
 }
 
 func NewCgroupsV1Fetcher(
 	hostRoot string,
-	cgroupDetector CgroupDetector,
+	cgroupDetector CgroupV1Detector,
 	systemCPUReader SystemCPUReader,
 	networkStatsGetter NetworkStatsGetter,
 ) (*CgroupsV1Fetcher, error) {
@@ -49,12 +49,10 @@ func (cg *CgroupsV1Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	pid := c.State.Pid
 	containerID := c.ID
 
-	err := cg.cgroupDetector.PopulatePaths(cg.hostRoot, pid)
+	cgroupInfo, err := cg.cgroupDetector.Paths(cg.hostRoot, pid)
 	if err != nil {
 		return stats, err
 	}
-
-	cgroupInfo := cg.cgroupDetector.(*CgoupsV1Detector).paths
 
 	control, err := cgroups.Load(cgroupInfo.getHierarchyFn(), cgroupInfo.getPath)
 	if err != nil {

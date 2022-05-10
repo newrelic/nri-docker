@@ -17,7 +17,7 @@ import (
 type CgroupsV2Fetcher struct {
 	cgroupDriver       string
 	hostRoot           string
-	cgroupDetector     CgroupDetector
+	cgroupDetector     CgroupV2Detector
 	systemCPUReader    SystemCPUReader
 	networkStatsGetter NetworkStatsGetter
 	cpuCounter         func(effectiveCPUsPath string) (uint, error)
@@ -27,7 +27,7 @@ type CgroupsV2Fetcher struct {
 func NewCgroupsV2Fetcher(
 	hostRoot string,
 	cgroupDriver string,
-	cgroupDetector CgroupDetector,
+	cgroupDetector CgroupV2Detector,
 	systemCPUReader SystemCPUReader,
 	networkStatsGetter NetworkStatsGetter,
 ) (*CgroupsV2Fetcher, error) {
@@ -50,14 +50,12 @@ func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	pid := c.State.Pid
 	containerID := c.ID
 
-	err := cg.cgroupDetector.PopulatePaths(cg.hostRoot, pid)
+	cgroupInfo, err := cg.cgroupDetector.Paths(cg.hostRoot, pid)
 	if err != nil {
 		return stats, err
 	}
 
-	cgroupInfo := cg.cgroupDetector.(*CgoupsV2Detector).paths
-
-	manager, err := cgroupsV2.LoadManager(cgroupInfo.mountPoint, cgroupInfo.group)
+	manager, err := cgroupsV2.LoadManager(cgroupInfo.getMountPoint(), cgroupInfo.getGroup())
 	if err != nil {
 		return stats, err
 	}
