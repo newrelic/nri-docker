@@ -76,3 +76,7 @@ func parseUint(s string, base, bitSize int) (uint64, error) {
 	}
 	return v, nil
 }
+
+func microsecondsToNanoseconds(v uint64) uint64 {
+	return v * 1000
+}
