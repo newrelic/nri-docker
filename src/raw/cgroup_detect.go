@@ -12,11 +12,11 @@ import (
 )
 
 const (
-	mountsFilePath           = "/proc/mounts"
-	cgroupFilePathTpl        = "/proc/%d/cgroup"
-	cgroup1MountName         = "cgroup"
-	cgroup2MountName         = "cgroup2"
-	cgroup2UnifiedFilesystem = "/"
+	mountsFilePath            = "/proc/mounts"
+	cgroupFilePathTpl         = "/proc/%d/cgroup"
+	cgroupV1MountName         = "cgroup"
+	cgroupV2MountName         = "cgroup2"
+	cgroupV2UnifiedFilesystem = "/"
 )
 
 type fileOpenFn func(string) (io.ReadCloser, error)
@@ -45,9 +45,9 @@ func getMountsFile(hostRoot string, mountPoints map[string]string, cgroupMountPo
 		fields := strings.Fields(line)
 
 		switch cgroupMountPointName {
-		case cgroup1MountName:
+		case cgroupV1MountName:
 			// Filter mount points if the type is not 'cgroup' or not mounted under </host>/sys
-			if len(fields) < 3 || !strings.HasPrefix(fields[2], cgroup1MountName) || !strings.HasPrefix(fields[1], hostRoot) {
+			if len(fields) < 3 || !strings.HasPrefix(fields[2], cgroupV1MountName) || !strings.HasPrefix(fields[1], hostRoot) {
 				continue
 			}
 
@@ -56,9 +56,9 @@ func getMountsFile(hostRoot string, mountPoints map[string]string, cgroupMountPo
 					mountPoints[subsystem] = filepath.Dir(fields[1])
 				}
 			}
-		case cgroup2MountName:
-			if len(fields) >= 3 && strings.HasPrefix(fields[2], cgroup2MountName) && strings.HasPrefix(fields[1], hostRoot) {
-				mountPoints[cgroup2UnifiedFilesystem] = fields[1]
+		case cgroupV2MountName:
+			if len(fields) >= 3 && strings.HasPrefix(fields[2], cgroupV2MountName) && strings.HasPrefix(fields[1], hostRoot) {
+				mountPoints[cgroupV2UnifiedFilesystem] = fields[1]
 				return nil
 			}
 		}
@@ -97,13 +97,13 @@ func getCgroupFilePaths(
 		}
 
 		switch cgroupMountPointName {
-		case cgroup1MountName:
+		case cgroupV1MountName:
 			for _, subsystem := range strings.Split(fields[1], ",") {
 				cgroupPaths[subsystem] = fields[2]
 			}
-		case cgroup2MountName:
+		case cgroupV2MountName:
 			if fields[0] == "0" && fields[1] == "" {
-				cgroupPaths[cgroup2UnifiedFilesystem] = fields[2]
+				cgroupPaths[cgroupV2UnifiedFilesystem] = fields[2]
 				return nil
 			}
 		}

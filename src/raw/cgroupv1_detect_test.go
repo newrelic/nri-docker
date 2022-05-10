@@ -75,7 +75,7 @@ cgroup /sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,relatime,cpu,cpu
 			}
 
 			mountPoints := make(map[string]string)
-			err := getMountsFile(testCase.hostRoot, mountPoints, cgroup1MountName, mountPointsOpen)
+			err := getMountsFile(testCase.hostRoot, mountPoints, cgroupV1MountName, mountPointsOpen)
 			assert.NoError(t, err)
 
 			assert.Equal(t, testCase.expected, mountPoints)
@@ -102,7 +102,7 @@ func TestParseCgroupPaths(t *testing.T) {
 	}
 
 	cgroupPaths := make(map[string]string)
-	err := getCgroupFilePaths("a-host-root", 111, cgroupPaths, cgroup1MountName, cgroupPathOpen)
+	err := getCgroupFilePaths("a-host-root", 111, cgroupPaths, cgroupV1MountName, cgroupPathOpen)
 	assert.NoError(t, err)
 
 	assert.Equal(t, expected, cgroupPaths)

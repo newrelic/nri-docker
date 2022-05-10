@@ -48,24 +48,24 @@ func (cgd *CgroupV2PathParser) Paths(hostRoot string, pid int) (CgroupV2PathGett
 // and pid's cgroup file (Eg: /proc/<pid>/cgroup)
 func (cgd *CgroupV2PathParser) cgroupV2FullPath(hostRoot string, pid int) (string, error) {
 	mountPoints := make(map[string]string)
-	err := getMountsFile(hostRoot, mountPoints, cgroup2MountName, cgd.openFn)
+	err := getMountsFile(hostRoot, mountPoints, cgroupV2MountName, cgd.openFn)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse cgroups2 mountpoint: %s", err)
 	}
-	if mountPoints[cgroup2UnifiedFilesystem] == "" {
+	if mountPoints[cgroupV2UnifiedFilesystem] == "" {
 		return "", v2MountPointNotFoundErr
 	}
 
 	cgroupPaths := make(map[string]string)
-	err = getCgroupFilePaths(hostRoot, pid, cgroupPaths, cgroup2MountName, cgd.openFn)
+	err = getCgroupFilePaths(hostRoot, pid, cgroupPaths, cgroupV2MountName, cgd.openFn)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse cgroups2 paths, error: %s", err)
 	}
-	if cgroupPaths[cgroup2UnifiedFilesystem] == "" {
+	if cgroupPaths[cgroupV2UnifiedFilesystem] == "" {
 		return "", fmt.Errorf("error parsing cgroup file, %v", v2PathNotFoundErr)
 	}
 
-	return filepath.Join(mountPoints[cgroup2UnifiedFilesystem], cgroupPaths[cgroup2UnifiedFilesystem]), nil
+	return filepath.Join(mountPoints[cgroupV2UnifiedFilesystem], cgroupPaths[cgroupV2UnifiedFilesystem]), nil
 }
 
 func (cgd *CgroupV2PathParser) splitMountPointAndGroup(fullpath string) (string, string) {

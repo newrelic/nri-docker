@@ -29,13 +29,13 @@ func NewCgroupV1PathParser() *CgroupV1PathParser {
 
 func (cgd *CgroupV1PathParser) Paths(hostRoot string, pid int) (CgroupsV1PathGetter, error) {
 	mountPoints := make(map[string]string)
-	err := getMountsFile(hostRoot, mountPoints, cgroup1MountName, cgd.openFn)
+	err := getMountsFile(hostRoot, mountPoints, cgroupV1MountName, cgd.openFn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse cgroups mountpoints: %v", err)
 	}
 
 	cgroupPaths := make(map[string]string)
-	err = getCgroupFilePaths(hostRoot, pid, cgroupPaths, cgroup1MountName, cgd.openFn)
+	err = getCgroupFilePaths(hostRoot, pid, cgroupPaths, cgroupV1MountName, cgd.openFn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse cgroup paths error: %v", err)
 	}
