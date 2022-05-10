@@ -88,7 +88,7 @@ func main() {
 			detectedHostRoot,
 			cgroupInfo,
 			raw.NewPosixSystemCPUReader(),
-			raw.NetDevNetworkStatsGetter{},
+			raw.NewNetDevNetworkStatsGetter(),
 		)
 		exitOnErr(err)
 	}
