@@ -24,7 +24,7 @@ func TestSplitMountPointAndGroup(t *testing.T) {
 		},
 	}
 
-	cgroupDetector := NewCgroupsV2Detector()
+	cgroupDetector := NewCgroupV2PathParser()
 
 	for _, c := range cases {
 		t.Run("check "+c.fullPath, func(t *testing.T) {
@@ -95,7 +95,7 @@ tmpfs /run/user/1000 tmpfs rw,nosuid,nodev,relatime,size=99456k,nr_inodes=24864,
 		},
 	}
 
-	cgroupDetector := NewCgroupsV2Detector()
+	cgroupDetector := NewCgroupV2PathParser()
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {
@@ -194,7 +194,7 @@ tmpfs /run/user/1000 tmpfs rw,nosuid,nodev,relatime,size=99456k,nr_inodes=24864,
 		},
 	}
 
-	cgroupDetector := NewCgroupsV2Detector()
+	cgroupDetector := NewCgroupV2PathParser()
 
 	for _, c := range cases {
 		t.Run(c.Name, func(t *testing.T) {

@@ -45,7 +45,7 @@ func TestHighCPU(t *testing.T) {
 
 	cgroupFetcher, err := raw.NewCgroupsV1Fetcher(
 		"/",
-		raw.NewCgroupsV1Detector(),
+		raw.NewCgroupV1PathParser(),
 		raw.NewPosixSystemCPUReader(),
 		raw.NetDevNetworkStatsGetter{},
 	)
@@ -97,7 +97,7 @@ func TestLowCPU(t *testing.T) {
 
 	cgroupFetcher, err := raw.NewCgroupsV1Fetcher(
 		"/",
-		raw.NewCgroupsV1Detector(),
+		raw.NewCgroupV1PathParser(),
 		raw.NewPosixSystemCPUReader(),
 		raw.NetDevNetworkStatsGetter{},
 	)
@@ -140,7 +140,7 @@ func TestMemory(t *testing.T) {
 
 	cgroupFetcher, err := raw.NewCgroupsV1Fetcher(
 		"/",
-		raw.NewCgroupsV1Detector(),
+		raw.NewCgroupV1PathParser(),
 		raw.NewPosixSystemCPUReader(),
 		raw.NetDevNetworkStatsGetter{},
 	)
@@ -220,7 +220,7 @@ func TestExitedContainersWithTTL(t *testing.T) {
 
 	cgroupFetcher, err := raw.NewCgroupsV1Fetcher(
 		"/",
-		raw.NewCgroupsV1Detector(),
+		raw.NewCgroupV1PathParser(),
 		raw.NewPosixSystemCPUReader(),
 		raw.NetDevNetworkStatsGetter{},
 	)
@@ -244,7 +244,7 @@ func TestExitedContainersWithoutTTL(t *testing.T) {
 
 	cgroupFetcher, err := raw.NewCgroupsV1Fetcher(
 		"/",
-		raw.NewCgroupsV1Detector(),
+		raw.NewCgroupV1PathParser(),
 		raw.NewPosixSystemCPUReader(),
 		raw.NetDevNetworkStatsGetter{},
 	)

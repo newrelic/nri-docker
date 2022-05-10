@@ -160,8 +160,8 @@ cgroup /custom/host/sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,rela
 1:name=systemd:/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0`,
 	}
 
-	cgroupDetector := &CgoupsV1Detector{openFn: createFileOpenFnMock(filesMap)}
-	err := cgroupDetector.PopulatePaths("/custom/host", 123)
+	cgroupDetector := &CgroupV1PathParser{openFn: createFileOpenFnMock(filesMap)}
+	actual, err := cgroupDetector.Paths("/custom/host", 123)
 	assert.NoError(t, err)
 
 	expected := &cgroupV1Paths{
@@ -180,7 +180,7 @@ cgroup /custom/host/sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,rela
 	}
 
 	assert.NoError(t, err)
-	assert.Equal(t, expected, cgroupDetector.paths)
+	assert.Equal(t, expected, actual)
 }
 
 func TestCgroupPathsSubsystems(t *testing.T) {
@@ -228,11 +228,11 @@ configfs /sys/kernel/config configfs rw,relatime 0 0`,
 		cgroups.NewBlkio("/custom/host/sys/fs/cgroup5"),
 	}
 
-	cgroupDetector := &CgoupsV1Detector{openFn: createFileOpenFnMock(filesMap)}
-	err := cgroupDetector.PopulatePaths("/custom/host", 123)
+	cgroupDetector := &CgroupV1PathParser{openFn: createFileOpenFnMock(filesMap)}
+	cgroupInfo, err := cgroupDetector.Paths("/custom/host", 123)
 	assert.NoError(t, err)
 
-	actual, err := cgroupDetector.paths.getHierarchyFn()()
+	actual, err := cgroupInfo.getHierarchyFn()()
 	assert.NoError(t, err)
 
 	assert.ElementsMatch(t, expected, actual)

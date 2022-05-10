@@ -21,7 +21,7 @@ func NewCgroupsV2FetcherMock(hostRoot string, time time.Time, systemUsage uint64
 	cgroupsFetcher, err := raw.NewCgroupsV2Fetcher(
 		hostRoot,
 		cgroupDriver,
-		raw.NewCgroupsV2Detector(),
+		raw.NewCgroupV2PathParser(),
 		raw.NewPosixSystemCPUReader(),
 		raw.NetDevNetworkStatsGetter{},
 	)
