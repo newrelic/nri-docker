@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/infra-integrations-sdk/persist"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/stretchr/testify/assert"
@@ -150,4 +153,90 @@ func TestCpuPercent(t *testing.T) {
 		})
 	}
 
+}
+
+func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
+	type args struct {
+		cpu  raw.Metrics
+		json *types.ContainerJSON
+	}
+
+	store, _ := persist.NewFileStore(
+		"test-path",
+		log.NewStdErr(true),
+		1*time.Second)
+
+	tests := []struct {
+		name string
+		args args
+		want CPU
+	}{
+		{
+			name: "LimitCores honors cpu quota even if online CPUs is set",
+			args: args{
+				cpu: raw.Metrics{
+					ContainerID: "test-container",
+					CPU: raw.CPU{
+						OnlineCPUs: 4,
+					},
+				},
+				json: &types.ContainerJSON{
+					ContainerJSONBase: &types.ContainerJSONBase{
+						HostConfig: &container.HostConfig{
+							Resources: container.Resources{
+								NanoCPUs: 500000000,
+							},
+						},
+					},
+				},
+			},
+			want: CPU{
+				LimitCores: 0.5,
+			},
+		},
+		{
+			name: "LimitCores set to OnlineCPUs when no CPU quota",
+			args: args{
+				cpu: raw.Metrics{
+					CPU: raw.CPU{
+						OnlineCPUs: 4,
+					},
+				},
+				json: &types.ContainerJSON{
+					ContainerJSONBase: &types.ContainerJSONBase{
+						HostConfig: &container.HostConfig{},
+					},
+				},
+			},
+			want: CPU{
+				LimitCores: 4,
+			},
+		},
+		{
+			name: "LimitCores set to default runtime.NumCPU() when neither CPU quota or OnlineCPUs set",
+			args: args{
+				cpu: raw.Metrics{
+					CPU: raw.CPU{},
+				},
+				json: &types.ContainerJSON{
+					ContainerJSONBase: &types.ContainerJSONBase{
+						HostConfig: &container.HostConfig{},
+					},
+				},
+			},
+			want: CPU{
+				LimitCores: 2,
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mc := &MetricsFetcher{store: store}
+
+			if got := mc.cpu(tt.args.cpu, tt.args.json); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("MetricsFetcher.cpu() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
