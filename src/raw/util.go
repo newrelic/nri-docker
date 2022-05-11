@@ -3,6 +3,7 @@ package raw
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math"
 	"os"
@@ -12,6 +13,12 @@ import (
 )
 
 var errHostRootNotFound = errors.New("no /proc folder found on the system")
+
+type fileOpenFn func(string) (io.ReadCloser, error)
+
+func defaultFileOpenFn(filePath string) (io.ReadCloser, error) {
+	return os.Open(filePath)
+}
 
 // DetectHostRoot returns a path that is located on the hostRoot folder of the host and the `/host` folder
 // on the integrations. If they existed in both hostRoot and /host, returns the /host path,

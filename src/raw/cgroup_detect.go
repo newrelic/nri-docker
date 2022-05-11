@@ -3,8 +3,6 @@ package raw
 import (
 	"bufio"
 	"fmt"
-	"io"
-	"os"
 	"path/filepath"
 	"strings"
 
@@ -18,12 +16,6 @@ const (
 	cgroupV2MountName         = "cgroup2"
 	cgroupV2UnifiedFilesystem = "/"
 )
-
-type fileOpenFn func(string) (io.ReadCloser, error)
-
-func defaultFileOpenFn(filePath string) (io.ReadCloser, error) {
-	return os.Open(filePath)
-}
 
 func getMountsFile(hostRoot string, mountPoints map[string]string, cgroupMountPointName string, fileOpen fileOpenFn) error {
 	path := filepath.Join(hostRoot, mountsFilePath)

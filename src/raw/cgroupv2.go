@@ -43,7 +43,6 @@ func NewCgroupsV2Fetcher(
 
 // Fetch get the metrics that can be found in cgroups v2 file system
 // Unlike v1, cgroup v2 has only single hierarchy.
-//TODO: populate also network from libcgroups
 func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	stats := Metrics{}
 
