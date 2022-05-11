@@ -104,14 +104,14 @@ func (cg *CgroupsV2Fetcher) cpu(metric *cgroupstatsV2.Metrics) (CPU, error) {
 	}
 
 	cpu := CPU{
-		TotalUsage:        metric.CPU.UsageUsec * uint64(time.Microsecond),
-		UsageInUsermode:   metric.CPU.UserUsec * uint64(time.Microsecond),
-		UsageInKernelmode: metric.CPU.SystemUsec * uint64(time.Microsecond),
+		TotalUsage:        microsecondsToNanoseconds(metric.CPU.UsageUsec),
+		UsageInUsermode:   microsecondsToNanoseconds(metric.CPU.UserUsec),
+		UsageInKernelmode: microsecondsToNanoseconds(metric.CPU.SystemUsec),
 	}
 
 	if metric.CPU.NrThrottled != 0 {
 		cpu.ThrottledPeriods = metric.CPU.NrThrottled
-		cpu.ThrottledTimeNS = metric.CPU.ThrottledUsec * uint64(time.Microsecond)
+		cpu.ThrottledTimeNS = microsecondsToNanoseconds(metric.CPU.ThrottledUsec)
 	}
 
 	var err error

@@ -187,7 +187,7 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CP
 		return cpu
 	}
 
-	maxVal := float64(len(metrics.CPU.PercpuUsage) * 100)
+	maxVal := float64(metrics.CPU.OnlineCPUsWithFallback() * 100)
 
 	cpu.CPUPercent = cpuPercent(previous.CPU, metrics.CPU)
 
@@ -311,11 +311,8 @@ func cpuPercent(previous, current raw.CPU) float64 {
 		cpuDelta = float64(current.TotalUsage - previous.TotalUsage)
 		// calculate the change for the entire system between readings
 		systemDelta = float64(current.SystemUsage - previous.SystemUsage)
-		onlineCPUs  = float64(current.OnlineCPUs)
+		onlineCPUs  = float64(current.OnlineCPUsWithFallback())
 	)
-	if onlineCPUs == 0 { // fallback in case OnlineCPUs is not defined
-		onlineCPUs = float64(len(current.PercpuUsage))
-	}
 
 	if systemDelta > 0.0 && cpuDelta > 0.0 {
 		cpuPercent = (cpuDelta / systemDelta) * onlineCPUs * 100.0

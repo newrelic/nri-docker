@@ -368,15 +368,7 @@ func mockedFileSystem(t *testing.T, hostRoot string) error {
 // inMemoryStorerWithPreviousCPUState creates a storere with a previous CPU state
 // in order to make the processor calculate a Cpu Delta
 func inMemoryStorerWithPreviousCPUState() persist.Storer {
-	var previous struct {
-		Time int64
-		CPU  raw.CPU
-	}
-
-	storer := persist.NewInMemoryStore()
-	// We set the time as 10 seconds before the timestamp for the metrics
-	previous.Time = mockedTimeForAllMetricsTest.Add(-time.Second * 10).Unix()
-	previous.CPU = raw.CPU{
+	return inMemoryStorerWithCustomPreviousCPUState(raw.CPU{
 		TotalUsage:        1,
 		UsageInUsermode:   1,
 		UsageInKernelmode: 1,
@@ -386,7 +378,19 @@ func inMemoryStorerWithPreviousCPUState() persist.Storer {
 		SystemUsage:       1,
 		OnlineCPUs:        1,
 		Shares:            1,
+	})
+}
+
+func inMemoryStorerWithCustomPreviousCPUState(cpu raw.CPU) persist.Storer {
+	var previous struct {
+		Time int64
+		CPU  raw.CPU
 	}
+
+	storer := persist.NewInMemoryStore()
+	// We set the time as 10 seconds before the timestamp for the metrics
+	previous.Time = mockedTimeForAllMetricsTest.Add(-time.Second * 10).Unix()
+	previous.CPU = cpu
 	storer.Set(InspectorContainerID, previous)
 	return storer
 }

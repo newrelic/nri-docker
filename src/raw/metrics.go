@@ -81,3 +81,11 @@ type Network struct {
 type Fetcher interface {
 	Fetch(types.ContainerJSON) (Metrics, error)
 }
+
+// OnlineCPUsWithFallback gets onlineCPUs value falling back to percpuUsage length in case OnlineCPUs is not defined
+func (c *CPU) OnlineCPUsWithFallback() int {
+	if c.OnlineCPUs != 0 {
+		return int(c.OnlineCPUs)
+	}
+	return len(c.PercpuUsage)
+}
