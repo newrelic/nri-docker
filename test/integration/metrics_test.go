@@ -47,7 +47,7 @@ func TestHighCPU(t *testing.T) {
 		"/",
 		raw.NewCgroupV1PathParser(),
 		raw.NewPosixSystemCPUReader(),
-		raw.NetDevNetworkStatsGetter{},
+		raw.NewNetDevNetworkStatsGetter(),
 	)
 	require.NoError(t, err)
 
@@ -99,7 +99,7 @@ func TestLowCPU(t *testing.T) {
 		"/",
 		raw.NewCgroupV1PathParser(),
 		raw.NewPosixSystemCPUReader(),
-		raw.NetDevNetworkStatsGetter{},
+		raw.NewNetDevNetworkStatsGetter(),
 	)
 	require.NoError(t, err)
 
@@ -142,7 +142,7 @@ func TestMemory(t *testing.T) {
 		"/",
 		raw.NewCgroupV1PathParser(),
 		raw.NewPosixSystemCPUReader(),
-		raw.NetDevNetworkStatsGetter{},
+		raw.NewNetDevNetworkStatsGetter(),
 	)
 	require.NoError(t, err)
 
@@ -222,7 +222,7 @@ func TestExitedContainersWithTTL(t *testing.T) {
 		"/",
 		raw.NewCgroupV1PathParser(),
 		raw.NewPosixSystemCPUReader(),
-		raw.NetDevNetworkStatsGetter{},
+		raw.NewNetDevNetworkStatsGetter(),
 	)
 	require.NoError(t, err)
 
@@ -246,7 +246,7 @@ func TestExitedContainersWithoutTTL(t *testing.T) {
 		"/",
 		raw.NewCgroupV1PathParser(),
 		raw.NewPosixSystemCPUReader(),
-		raw.NetDevNetworkStatsGetter{},
+		raw.NewNetDevNetworkStatsGetter(),
 	)
 	require.NoError(t, err)
 

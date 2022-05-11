@@ -23,7 +23,7 @@ func NewCgroupsV2FetcherMock(hostRoot string, time time.Time, systemUsage uint64
 		cgroupDriver,
 		raw.NewCgroupV2PathParser(),
 		raw.NewPosixSystemCPUReader(),
-		raw.NetDevNetworkStatsGetter{},
+		raw.NewNetDevNetworkStatsGetter(),
 	)
 	if err != nil {
 		return nil, err
