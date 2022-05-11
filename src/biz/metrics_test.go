@@ -163,7 +163,7 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want CPU
+		want float64
 	}{
 		{
 			name: "LimitCores honors cpu quota even if online CPUs is set",
@@ -184,9 +184,7 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 					},
 				},
 			},
-			want: CPU{
-				LimitCores: 0.5,
-			},
+			want: 0.5,
 		},
 		{
 			name: "LimitCores set to OnlineCPUs when no CPU quota",
@@ -202,9 +200,7 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 					},
 				},
 			},
-			want: CPU{
-				LimitCores: 4,
-			},
+			want: 4,
 		},
 		{
 			name: "LimitCores set to default runtime.NumCPU() when neither CPU quota or OnlineCPUs set",
@@ -218,9 +214,7 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 					},
 				},
 			},
-			want: CPU{
-				LimitCores: 2,
-			},
+			want: 2,
 		},
 	}
 
@@ -228,9 +222,9 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mc := &MetricsFetcher{store: persist.NewInMemoryStore()}
 
-			if got := mc.cpu(tt.args.cpu, tt.args.json); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("MetricsFetcher.cpu() = %v, want %v", got, tt.want)
-			}
+			got := mc.cpu(tt.args.cpu, tt.args.json)
+
+			assert.Equal(t, tt.want, got.LimitCores)
 		})
 	}
 }
