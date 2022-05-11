@@ -74,3 +74,12 @@ integrations:
 ```
 
 Finally, [Restart the infrastructure agent](https://docs.newrelic.com/docs/infrastructure/install-infrastructure-agent/manage-your-agent/start-stop-restart-infrastructure-agent/).
+
+
+You may launch some containers to get data from, in a similar way it is done in integration tests:
+
+```
+root@vagrant# cd /code
+root@vagrant# docker build -t stress ./src/biz
+root@vagrant# docker run --rm -it stress stress-ng -c 2 -l 95 --io 3 -t 5m
+```
