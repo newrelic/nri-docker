@@ -170,6 +170,8 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CP
 	} else if metrics.CPU.OnlineCPUs != 0 {
 		cpu.LimitCores = float64(metrics.CPU.OnlineCPUs)
 	} else {
+		// TODO: if newrelic-infra is in a limited cpus container, this may report the number of cpus of the
+		// 	newrelic-infra container if the container has no CPU quota
 		cpu.LimitCores = float64(runtime.NumCPU())
 	}
 
