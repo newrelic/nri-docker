@@ -8,7 +8,6 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/infra-integrations-sdk/persist"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/stretchr/testify/assert"
@@ -161,11 +160,6 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 		json *types.ContainerJSON
 	}
 
-	store, _ := persist.NewFileStore(
-		"test-path",
-		log.NewStdErr(true),
-		1*time.Second)
-
 	tests := []struct {
 		name string
 		args args
@@ -232,7 +226,7 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mc := &MetricsFetcher{store: store}
+			mc := &MetricsFetcher{store: persist.NewInMemoryStore()}
 
 			if got := mc.cpu(tt.args.cpu, tt.args.json); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MetricsFetcher.cpu() = %v, want %v", got, tt.want)
