@@ -318,9 +318,7 @@ func fetcher(t *testing.T, docker *client.Client) raw.Fetcher {
 	t.Helper()
 
 	cgroupInfo, err := raw.GetCgroupInfo(context.Background(), docker)
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
 
 	cgroupFetcher, err := raw.NewCgroupsFetcher(
 		"/",
@@ -328,9 +326,7 @@ func fetcher(t *testing.T, docker *client.Client) raw.Fetcher {
 		raw.NewPosixSystemCPUReader(),
 		raw.NewNetDevNetworkStatsGetter(),
 	)
-	if err != nil {
-		require.NoError(t, err)
-	}
+	require.NoError(t, err)
 
 	return cgroupFetcher
 }
