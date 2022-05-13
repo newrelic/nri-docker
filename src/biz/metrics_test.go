@@ -166,7 +166,7 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 		want float64
 	}{
 		{
-			name: "LimitCores honors cpu quota even if online CPUs is set",
+			name: "LimitCores honors cpu quota",
 			args: args{
 				cpu: raw.Metrics{
 					ContainerID: "test-container",
@@ -187,23 +187,7 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 			want: 0.5,
 		},
 		{
-			name: "LimitCores set to OnlineCPUs when no CPU quota",
-			args: args{
-				cpu: raw.Metrics{
-					CPU: raw.CPU{
-						OnlineCPUs: 4,
-					},
-				},
-				json: &types.ContainerJSON{
-					ContainerJSONBase: &types.ContainerJSONBase{
-						HostConfig: &container.HostConfig{},
-					},
-				},
-			},
-			want: 4,
-		},
-		{
-			name: "LimitCores set to default runtime.NumCPU() when neither CPU quota or OnlineCPUs set",
+			name: "LimitCores set to default runtime.NumCPU() when no CPU quota set",
 			args: args{
 				cpu: raw.Metrics{
 					CPU: raw.CPU{},
