@@ -161,9 +161,10 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 	}
 
 	tests := []struct {
-		name string
-		args args
-		want float64
+		name               string
+		args               args
+		runtimeCPUMockFunc func() int // In order to avoid flaky test we use this mocked to simulate runtime.CPU call.
+		want               float64
 	}{
 		{
 			name: "LimitCores honors cpu quota",
@@ -184,6 +185,9 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 					},
 				},
 			},
+			runtimeCPUMockFunc: func() int {
+				return 2
+			},
 			want: 0.5,
 		},
 		{
@@ -198,13 +202,19 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 					},
 				},
 			},
+			runtimeCPUMockFunc: func() int {
+				return 2
+			},
 			want: 2,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mc := &MetricsFetcher{store: persist.NewInMemoryStore()}
+			mc := &MetricsFetcher{
+				store:            persist.NewInMemoryStore(),
+				getRuntimeNumCPU: tt.runtimeCPUMockFunc,
+			}
 
 			got := mc.cpu(tt.args.cpu, tt.args.json)
 

@@ -81,6 +81,7 @@ type MetricsFetcher struct {
 	fetcher            raw.Fetcher
 	inspector          raw.DockerInspector
 	exitedContainerTTL time.Duration
+	getRuntimeNumCPU   func() int
 }
 
 // NewProcessor creates a MetricsFetcher from implementations of its required components
@@ -90,6 +91,7 @@ func NewProcessor(store persist.Storer, fetcher raw.Fetcher, inspector raw.Docke
 		fetcher:            fetcher,
 		inspector:          inspector,
 		exitedContainerTTL: exitedContainerTTL,
+		getRuntimeNumCPU:   runtime.NumCPU,
 	}
 }
 
@@ -170,7 +172,7 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CP
 	} else {
 		// TODO: if newrelic-infra is in a limited cpus container, this may report the number of cpus of the
 		// 	newrelic-infra container if the container has no CPU quota
-		cpu.LimitCores = float64(runtime.NumCPU())
+		cpu.LimitCores = float64(mc.getRuntimeNumCPU())
 	}
 
 	// Reading previous CPU stats
