@@ -166,7 +166,7 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CP
 
 	cpu := CPU{}
 
-	// Set LimitCores to first honor CPU quota if any; otherwise try to set it from OnlineCPUs.
+	// Set LimitCores to first honor CPU quota if any; otherwise set it to runtime.CPU().
 	if json.HostConfig != nil && json.HostConfig.NanoCPUs != 0 {
 		cpu.LimitCores = float64(json.HostConfig.NanoCPUs) / 1e9
 	} else {
