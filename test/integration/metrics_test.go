@@ -319,7 +319,7 @@ func fetcher(t *testing.T, docker *client.Client) raw.Fetcher {
 
 	cgroupInfo, err := raw.GetCgroupInfo(context.Background(), docker)
 	if err != nil {
-		t.Fatalf("Creating CgroupInfo: %v", err)
+		require.NoError(t, err)
 	}
 
 	cgroupFetcher, err := raw.NewCgroupsFetcher(
@@ -329,7 +329,7 @@ func fetcher(t *testing.T, docker *client.Client) raw.Fetcher {
 		raw.NewNetDevNetworkStatsGetter(),
 	)
 	if err != nil {
-		t.Fatalf("Creating CgroupsFetcher: %v", err)
+		require.NoError(t, err)
 	}
 
 	return cgroupFetcher
