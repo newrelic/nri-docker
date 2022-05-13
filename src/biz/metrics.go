@@ -167,8 +167,6 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CP
 	// Set LimitCores to first honor CPU quota if any; otherwise try to set it from OnlineCPUs.
 	if json.HostConfig != nil && json.HostConfig.NanoCPUs != 0 {
 		cpu.LimitCores = float64(json.HostConfig.NanoCPUs) / 1e9
-	} else if metrics.CPU.OnlineCPUs != 0 {
-		cpu.LimitCores = float64(metrics.CPU.OnlineCPUs)
 	} else {
 		// TODO: if newrelic-infra is in a limited cpus container, this may report the number of cpus of the
 		// 	newrelic-infra container if the container has no CPU quota
