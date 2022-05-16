@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -43,13 +44,7 @@ func TestHighCPU(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher(
-		"/",
-		raw.NewCgroupV1PathParser(),
-		raw.NewPosixSystemCPUReader(),
-		raw.NewNetDevNetworkStatsGetter(),
-	)
-	require.NoError(t, err)
+	cgroupFetcher := fetcher(t, docker)
 
 	metrics := biz.NewProcessor(
 		persist.NewInMemoryStore(),
@@ -95,13 +90,7 @@ func TestLowCPU(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher(
-		"/",
-		raw.NewCgroupV1PathParser(),
-		raw.NewPosixSystemCPUReader(),
-		raw.NewNetDevNetworkStatsGetter(),
-	)
-	require.NoError(t, err)
+	cgroupFetcher := fetcher(t, docker)
 
 	metrics := biz.NewProcessor(
 		persist.NewInMemoryStore(),
@@ -138,13 +127,7 @@ func TestMemory(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher(
-		"/",
-		raw.NewCgroupV1PathParser(),
-		raw.NewPosixSystemCPUReader(),
-		raw.NewNetDevNetworkStatsGetter(),
-	)
-	require.NoError(t, err)
+	cgroupFetcher := fetcher(t, docker)
 
 	metrics := biz.NewProcessor(
 		persist.NewInMemoryStore(),
@@ -218,13 +201,7 @@ func TestExitedContainersWithTTL(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher(
-		"/",
-		raw.NewCgroupV1PathParser(),
-		raw.NewPosixSystemCPUReader(),
-		raw.NewNetDevNetworkStatsGetter(),
-	)
-	require.NoError(t, err)
+	cgroupFetcher := fetcher(t, docker)
 
 	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 1*time.Second)
 
@@ -242,13 +219,7 @@ func TestExitedContainersWithoutTTL(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher(
-		"/",
-		raw.NewCgroupV1PathParser(),
-		raw.NewPosixSystemCPUReader(),
-		raw.NewNetDevNetworkStatsGetter(),
-	)
-	require.NoError(t, err)
+	cgroupFetcher := fetcher(t, docker)
 
 	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
 
@@ -338,6 +309,26 @@ func TestAllMetricsPresent(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedSample, sample)
 	})
+}
+
+// fetcher is a helper function that returns a Fetcher.
+//
+// If any error happens, the function will make to fail the given test.
+func fetcher(t *testing.T, docker *client.Client) raw.Fetcher {
+	t.Helper()
+
+	cgroupInfo, err := raw.GetCgroupInfo(context.Background(), docker)
+	require.NoError(t, err)
+
+	cgroupFetcher, err := raw.NewCgroupsFetcher(
+		"/",
+		cgroupInfo,
+		raw.NewPosixSystemCPUReader(),
+		raw.NewNetDevNetworkStatsGetter(),
+	)
+	require.NoError(t, err)
+
+	return cgroupFetcher
 }
 
 func mockedFileSystem(t *testing.T, hostRoot string) error {
