@@ -19,7 +19,7 @@ As of `v1.7.0, `nri-docker` supports the usage either of Control Group v1 or Con
 
 Updating from `cgroupsV1` to `cgroupsV2` should be transparent to the users, without noticing any difference between the metrics in both versions.
 
-**Note:** Until further notice, some new metrics that comes with `cgroupsV2` may not yet be implemented.
+**Note:** Until further notice, some new metrics that come with `cgroupsV2` may not yet be implemented.
 
 ## Building
 
