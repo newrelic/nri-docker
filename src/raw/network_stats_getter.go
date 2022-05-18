@@ -2,26 +2,49 @@ package raw
 
 import (
 	"bufio"
-	"os"
+	"io"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/newrelic/infra-integrations-sdk/log"
 )
 
-// network fetches the network metrics from the /proc file system TODO: use cgroups library + split this to open and parse.
-func network(filePath string) (Network, error) {
-	var network Network
-	file, err := os.Open(filePath)
+type NetworkStatsGetter interface {
+	GetForContainer(hostRoot, pid, containerID string) (Network, error)
+}
+
+type NetDevNetworkStatsGetter struct {
+	openFn fileOpenFn
+}
+
+func NewNetDevNetworkStatsGetter() *NetDevNetworkStatsGetter {
+	return &NetDevNetworkStatsGetter{openFn: defaultFileOpenFn}
+}
+
+func (cd *NetDevNetworkStatsGetter) GetForContainer(hostRoot, pid, containerID string) (Network, error) {
+	netMetricsPath := filepath.Join(hostRoot, "/proc", pid, "net", "dev")
+	file, err := cd.openFn(netMetricsPath)
 	if err != nil {
-		return network, err
+		log.Error(
+			"couldn't fetch network stats for container %s from cgroups: %v",
+			containerID,
+			err,
+		)
+		return Network{}, err
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
-			log.Error("Failed to close file: %s, error: %v", filePath, err)
+			log.Error("Failed to close file: %s, error: %v", netMetricsPath, err)
 		}
 	}()
 
+	var network Network
+	cd.parse(file, &network)
+	return network, err
+}
+
+func (cd *NetDevNetworkStatsGetter) parse(file io.ReadCloser, network *Network) {
 	sc := bufio.NewScanner(file)
 	sc.Split(bufio.ScanLines)
 	sc.Scan() // scan first header line
@@ -92,6 +115,4 @@ func network(filePath string) (Network, error) {
 		network.TxErrors += int64(txErrors)
 		network.TxPackets += int64(txPackets)
 	}
-
-	return network, nil
 }

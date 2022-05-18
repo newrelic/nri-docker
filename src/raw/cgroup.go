@@ -9,12 +9,17 @@ import (
 )
 
 // NewCgroupsFetcher creates the proper metrics fetcher for the used cgroups version.
-func NewCgroupsFetcher(hostRoot string, cgroupInfo *CgroupInfo, systemCPUReader SystemCPUReader) (Fetcher, error) {
+func NewCgroupsFetcher(
+	hostRoot string,
+	cgroupInfo *CgroupInfo,
+	systemCPUReader SystemCPUReader,
+	networkStatsGetter NetworkStatsGetter,
+) (Fetcher, error) {
 	if cgroupInfo.Version == CgroupV2 {
-		return NewCgroupsV2Fetcher(hostRoot, systemCPUReader, cgroupInfo.Driver)
+		return NewCgroupsV2Fetcher(hostRoot, cgroupInfo.Driver, NewCgroupV2PathParser(), systemCPUReader, networkStatsGetter)
 	}
 
-	return NewCgroupsV1Fetcher(hostRoot, systemCPUReader)
+	return NewCgroupsV1Fetcher(hostRoot, NewCgroupV1PathParser(), systemCPUReader, networkStatsGetter)
 }
 
 func countCpusetCPUsFromPath(path string) (uint, error) {
@@ -55,7 +60,7 @@ func countCpusetCPUs(cpusetInfo string) (uint, error) {
 			if lowerLimit >= upperLimit {
 				return 0, fmt.Errorf("invalid %q cpuset format: invalid interval %s", cpusetInfo, interval)
 			}
-			numCPUs += uint(upperLimit - lowerLimit)
+			numCPUs += uint(upperLimit - lowerLimit + 1)
 		default:
 			return 0, fmt.Errorf("invalid %q cpuset format", cpusetInfo)
 		}

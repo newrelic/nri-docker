@@ -15,42 +15,46 @@ import (
 
 // CgroupsV2Fetcher fetches the metrics that can be found in cgroups (v2) file system
 type CgroupsV2Fetcher struct {
-	cgroupDriver    string
-	hostRoot        string
-	systemCPUReader SystemCPUReader
-	cpuCounter      func(effectiveCPUsPath string) (uint, error)
+	cgroupDriver       string
+	hostRoot           string
+	cgroupDetector     CgroupV2Detector
+	systemCPUReader    SystemCPUReader
+	networkStatsGetter NetworkStatsGetter
+	cpuCounter         func(effectiveCPUsPath string) (uint, error)
 }
 
 // NewCgroupsV2Fetcher creates a new cgroups data fetcher.
-func NewCgroupsV2Fetcher(hostRoot string, systemCPUReader SystemCPUReader, cgroupDriver string) (*CgroupsV2Fetcher, error) {
+func NewCgroupsV2Fetcher(
+	hostRoot string,
+	cgroupDriver string,
+	cgroupDetector CgroupV2Detector,
+	systemCPUReader SystemCPUReader,
+	networkStatsGetter NetworkStatsGetter,
+) (*CgroupsV2Fetcher, error) {
 	return &CgroupsV2Fetcher{
-		cgroupDriver:    cgroupDriver,
-		hostRoot:        hostRoot,
-		systemCPUReader: systemCPUReader,
-		cpuCounter:      countCpusetCPUsFromPath,
+		cgroupDriver:       cgroupDriver,
+		hostRoot:           hostRoot,
+		cgroupDetector:     cgroupDetector,
+		systemCPUReader:    systemCPUReader,
+		networkStatsGetter: networkStatsGetter,
+		cpuCounter:         countCpusetCPUsFromPath,
 	}, nil
 }
 
 // Fetch get the metrics that can be found in cgroups v2 file system
 // Unlike v1, cgroup v2 has only single hierarchy.
-//TODO: populate also network from libcgroups
 func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	stats := Metrics{}
 
 	pid := c.State.Pid
 	containerID := c.ID
 
-	var (
-		cgroupInfo *cgroupV2Paths
-		err        error
-	)
-
-	cgroupInfo, err = getCgroupV2Paths(cg.hostRoot, pid, cg.cgroupDriver, containerID)
+	cgroupInfo, err := cg.cgroupDetector.Paths(cg.hostRoot, pid)
 	if err != nil {
 		return stats, err
 	}
 
-	manager, err := cgroupsV2.LoadManager(cgroupInfo.MountPoint, cgroupInfo.Group)
+	manager, err := cgroupsV2.LoadManager(cgroupInfo.getMountPoint(), cgroupInfo.getGroup())
 	if err != nil {
 		return stats, err
 	}
@@ -70,11 +74,11 @@ func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		log.Error("couldn't read cpu stats: %v", err)
 	}
 
-	if stats.CPU.Shares, err = getSingleFileUintStat(cgroupInfo, "cpu.weight"); err != nil {
+	if stats.CPU.Shares, err = cgroupInfo.getSingleFileUintStat("cpu.weight"); err != nil {
 		log.Error("couldn't read cpu weight: %v", err)
 	}
 
-	cpusetPath := filepath.Join(cgroupInfo.FullPath(), "cpuset.cpus.effective")
+	cpusetPath := filepath.Join(cgroupInfo.getFullPath(), "cpuset.cpus.effective")
 	if stats.CPU.OnlineCPUs, err = cg.cpuCounter(cpusetPath); err != nil {
 		log.Error("couldn't get cpu count: %v", err)
 	}
@@ -88,19 +92,9 @@ func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	}
 
 	stats.ContainerID = containerID
+	stats.Network, err = cg.networkStatsGetter.GetForContainer(cg.hostRoot, strconv.Itoa(pid), containerID)
 
-	netMetricsPath := filepath.Join(cg.hostRoot, "/proc", strconv.Itoa(pid), "net", "dev")
-	stats.Network, err = network(netMetricsPath)
-	if err != nil {
-		log.Error(
-			"couldn't fetch network stats for container %s from cgroups: %v",
-			containerID,
-			err,
-		)
-		return stats, err
-	}
-
-	return stats, nil
+	return stats, err
 }
 
 func (cg *CgroupsV2Fetcher) cpu(metric *cgroupstatsV2.Metrics) (CPU, error) {
@@ -109,14 +103,14 @@ func (cg *CgroupsV2Fetcher) cpu(metric *cgroupstatsV2.Metrics) (CPU, error) {
 	}
 
 	cpu := CPU{
-		TotalUsage:        metric.CPU.UsageUsec * uint64(time.Microsecond),
-		UsageInUsermode:   metric.CPU.UserUsec * uint64(time.Microsecond),
-		UsageInKernelmode: metric.CPU.SystemUsec * uint64(time.Microsecond),
+		TotalUsage:        microsecondsToNanoseconds(metric.CPU.UsageUsec),
+		UsageInUsermode:   microsecondsToNanoseconds(metric.CPU.UserUsec),
+		UsageInKernelmode: microsecondsToNanoseconds(metric.CPU.SystemUsec),
 	}
 
 	if metric.CPU.NrThrottled != 0 {
 		cpu.ThrottledPeriods = metric.CPU.NrThrottled
-		cpu.ThrottledTimeNS = metric.CPU.ThrottledUsec * uint64(time.Microsecond)
+		cpu.ThrottledTimeNS = microsecondsToNanoseconds(metric.CPU.ThrottledUsec)
 	}
 
 	var err error

@@ -55,6 +55,9 @@ To run the tests execute:
 $ make test
 ```
 
+To run some tests your host should meet specific requirements, you can check [this vm setup](./test/vm-setup.md) for some
+insights.
+
 ## Support
 
 Should you need assistance with New Relic products, you are in good hands with several support diagnostic tools and support channels.

@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"os"
+	"io"
 	"strconv"
 	"strings"
 )
@@ -14,7 +14,8 @@ type SystemCPUReader interface {
 }
 
 type PosixSystemCPUReader struct {
-	statsFilePath string
+	openFn       fileOpenFn
+	statFilePath string
 }
 
 var (
@@ -22,22 +23,10 @@ var (
 	ErrInvalidProcStatFormat       = errors.New("invalid stat format. Error trying to parse the '/proc/stat' file")
 )
 
-const StatFileDefaultPath = "/proc/stat"
+const statFilePath = "/proc/stat"
 
-type CPUReaderOption func(*PosixSystemCPUReader)
-
-func NewPosixSystemCPUReader(opts ...CPUReaderOption) PosixSystemCPUReader {
-	posixSystemCPUReader := PosixSystemCPUReader{statsFilePath: StatFileDefaultPath}
-	for _, opt := range opts {
-		opt(&posixSystemCPUReader)
-	}
-	return posixSystemCPUReader
-}
-
-func CPUReaderWithStatFilePath(statFilePath string) CPUReaderOption {
-	return func(r *PosixSystemCPUReader) {
-		r.statsFilePath = statFilePath
-	}
+func NewPosixSystemCPUReader() PosixSystemCPUReader {
+	return PosixSystemCPUReader{openFn: defaultFileOpenFn, statFilePath: statFilePath}
 }
 
 // ReadUsage returns the host system's cpu usage in
@@ -49,15 +38,22 @@ func CPUReaderWithStatFilePath(statFilePath string) CPUReaderOption {
 // provided. See `man 5 proc` for details on specific field
 // information.
 func (r PosixSystemCPUReader) ReadUsage() (uint64, error) {
-	f, err := os.Open(r.statsFilePath)
+	f, err := r.openFn(r.statFilePath)
 	if err != nil {
 		return 0, err
 	}
 
+	defer func() {
+		f.Close()
+	}()
+
+	return r.parseAndGetUsage(f)
+}
+
+func (r PosixSystemCPUReader) parseAndGetUsage(f io.ReadCloser) (uint64, error) {
 	bufReader := bufio.NewReaderSize(nil, 128)
 	defer func() {
 		bufReader.Reset(nil)
-		f.Close()
 	}()
 	bufReader.Reset(f)
 

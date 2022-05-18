@@ -5,9 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## 1.7.0 (2022-05-18)
+
+### Breaking
+* Stop honoring cgroupPath and cgroupDriver arguments.
+
+### Added
+* Adding support for cgroups v2.
+* Bump go version and use go modules.
+* Bump infra-integration-sdk version.
+
 ## 1.6.0 (2021-04-21)
 
-## Breaking
+### Breaking
 * All swap memory has been removed from `memoryUsageBytes` and `memoryUsageLimitPercent`. `memoryUsageBytes` shows non swap memory only and `memoryUsageLimitPercent` is calculated as a percentage of `memoryUsageBytes` over `memorySizeLimitBytes`
 
 ### Added

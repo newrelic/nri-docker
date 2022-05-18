@@ -2,6 +2,7 @@ package integration_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -36,15 +37,14 @@ const (
 
 func TestHighCPU(t *testing.T) {
 	// GIVEN a container consuming a lot of CPU
-	containerID, dockerRM := stress(t, "stress-ng", "-c", "4", "-l 100", "-t", "5m")
+	containerID, dockerRM := stress(t, "stress-ng", "-c", "4", "-l", "100", "-t", "5m")
 	defer dockerRM()
 
 	// WHEN its metrics are sampled and processed
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher("/", raw.NewPosixSystemCPUReader())
-	require.NoError(t, err)
+	cgroupFetcher := fetcher(t, docker)
 
 	metrics := biz.NewProcessor(
 		persist.NewInMemoryStore(),
@@ -90,8 +90,7 @@ func TestLowCPU(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher("/", raw.NewPosixSystemCPUReader())
-	require.NoError(t, err)
+	cgroupFetcher := fetcher(t, docker)
 
 	metrics := biz.NewProcessor(
 		persist.NewInMemoryStore(),
@@ -128,8 +127,7 @@ func TestMemory(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher("/", raw.NewPosixSystemCPUReader())
-	require.NoError(t, err)
+	cgroupFetcher := fetcher(t, docker)
 
 	metrics := biz.NewProcessor(
 		persist.NewInMemoryStore(),
@@ -203,8 +201,7 @@ func TestExitedContainersWithTTL(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher("/", raw.NewPosixSystemCPUReader())
-	require.NoError(t, err)
+	cgroupFetcher := fetcher(t, docker)
 
 	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 1*time.Second)
 
@@ -222,8 +219,7 @@ func TestExitedContainersWithoutTTL(t *testing.T) {
 	docker := newDocker(t)
 	defer docker.Close()
 
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher("/", raw.NewPosixSystemCPUReader())
-	require.NoError(t, err)
+	cgroupFetcher := fetcher(t, docker)
 
 	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
 
@@ -315,6 +311,26 @@ func TestAllMetricsPresent(t *testing.T) {
 	})
 }
 
+// fetcher is a helper function that returns a Fetcher.
+//
+// If any error happens, the function will make to fail the given test.
+func fetcher(t *testing.T, docker *client.Client) raw.Fetcher {
+	t.Helper()
+
+	cgroupInfo, err := raw.GetCgroupInfo(context.Background(), docker)
+	require.NoError(t, err)
+
+	cgroupFetcher, err := raw.NewCgroupsFetcher(
+		"/",
+		cgroupInfo,
+		raw.NewPosixSystemCPUReader(),
+		raw.NewNetDevNetworkStatsGetter(),
+	)
+	require.NoError(t, err)
+
+	return cgroupFetcher
+}
+
 func mockedFileSystem(t *testing.T, hostRoot string) error {
 	// Create our mocked container cgroups filesystem in the tempDir directory
 	// that will be a symLink to our cgroups testdata
@@ -343,15 +359,7 @@ func mockedFileSystem(t *testing.T, hostRoot string) error {
 // inMemoryStorerWithPreviousCPUState creates a storere with a previous CPU state
 // in order to make the processor calculate a Cpu Delta
 func inMemoryStorerWithPreviousCPUState() persist.Storer {
-	var previous struct {
-		Time int64
-		CPU  raw.CPU
-	}
-
-	storer := persist.NewInMemoryStore()
-	// We set the time as 10 seconds before the timestamp for the metrics
-	previous.Time = mockedTimeForAllMetricsTest.Add(-time.Second * 10).Unix()
-	previous.CPU = raw.CPU{
+	return inMemoryStorerWithCustomPreviousCPUState(raw.CPU{
 		TotalUsage:        1,
 		UsageInUsermode:   1,
 		UsageInKernelmode: 1,
@@ -361,7 +369,19 @@ func inMemoryStorerWithPreviousCPUState() persist.Storer {
 		SystemUsage:       1,
 		OnlineCPUs:        1,
 		Shares:            1,
+	})
+}
+
+func inMemoryStorerWithCustomPreviousCPUState(cpu raw.CPU) persist.Storer {
+	var previous struct {
+		Time int64
+		CPU  raw.CPU
 	}
+
+	storer := persist.NewInMemoryStore()
+	// We set the time as 10 seconds before the timestamp for the metrics
+	previous.Time = mockedTimeForAllMetricsTest.Add(-time.Second * 10).Unix()
+	previous.CPU = cpu
 	storer.Set(InspectorContainerID, previous)
 	return storer
 }
