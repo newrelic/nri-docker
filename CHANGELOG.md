@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/).
 
 ### Added
 * Adding support for cgroups v2.
+* Bump go version and use go modules.
+* Bump infra-integration-sdk version.
 
 ## 1.6.0 (2021-04-21)
 
