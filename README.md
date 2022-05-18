@@ -15,7 +15,7 @@ For installation and usage instructions, see our [documentation web site](https:
 
 ## Compatibility
 
-As of `v1.7.0, `nri-docker` supports the usage either of Control Group v1 or Control Group v2.
+As of `v1.7.0`, `nri-docker` supports the usage either of Control Group v1 or Control Group v2.
 
 Updating from `cgroupsV1` to `cgroupsV2` should be transparent to the users, without noticing any difference between the metrics in both versions.
 
