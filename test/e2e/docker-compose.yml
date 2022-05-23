@@ -1,0 +1,12 @@
+version: '3.5'
+
+services:
+    stresser:
+      build:
+        context: deps
+      restart: unless-stopped
+      deploy:
+        resources:
+          limits:
+            cpus: 0.50
+            memory: 512M
