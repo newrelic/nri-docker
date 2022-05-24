@@ -36,4 +36,3 @@ scenarios:
             - docker.container.storageMetadataTotalBytes
             - docker.container.storageMetadataUsagePercent
             - docker.container.storageMetadataUsedBytes
-          # additionals: ""
