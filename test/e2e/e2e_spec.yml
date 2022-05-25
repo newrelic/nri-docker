@@ -1,0 +1,39 @@
+description: |
+  End-to-end tests for Docker integration
+
+scenarios:
+  - description: |
+      This scenario will verify that metrics from docker integration are correcly collected.
+    before:
+      - docker-compose up -d
+    after:
+      - docker-compose down -v
+    integrations:
+      - name: nri-docker
+        binary_path: ../../bin/nri-docker
+        when:
+          feature: docker_enabled
+          file_exists: /var/run/docker.sock
+        interval: 15s
+    tests:
+      nrqls:
+        - query: "SELECT average(docker.container.cpuUsedCores) FROM Metric"
+      entities:
+        - type: "CONTAINER"
+          data_type: "Metric"
+          metric_name: "docker.container.cpuUsedCores"
+      metrics:
+        - source: "docker.yml"
+          except_metrics:
+            - docker.container.memorySoftLimitBytes
+            - docker.container.pids
+            - docker.container.processCount
+            - docker.container.processCountLimit
+            - docker.container.storageDataAvailableBytes
+            - docker.container.storageDataTotalBytes
+            - docker.container.storageDataUsagePercent
+            - docker.container.storageDataUsedBytes
+            - docker.container.storageMetadataAvailableBytes
+            - docker.container.storageMetadataTotalBytes
+            - docker.container.storageMetadataUsagePercent
+            - docker.container.storageMetadataUsedBytes
