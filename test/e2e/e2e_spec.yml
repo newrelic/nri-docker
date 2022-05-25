@@ -10,6 +10,7 @@ scenarios:
       - docker-compose down -v
     integrations:
       - name: nri-docker
+        binary_path: ../../bin/nri-docker
         when:
           feature: docker_enabled
           file_exists: /var/run/docker.sock

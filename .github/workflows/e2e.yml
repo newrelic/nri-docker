@@ -21,7 +21,7 @@ jobs:
       - name: Compile nri-docker
         run: |
           GOOS=linux GOARCH=amd64 make compile
-      - name: Run E2E
+      - name: Run E2E for Cgroups v1
         uses: newrelic/newrelic-integration-e2e-action@v1
         with:
           spec_path: test/e2e/e2e_spec.yml
