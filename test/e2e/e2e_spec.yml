@@ -25,7 +25,11 @@ scenarios:
       metrics:
         - source: "docker.yml"
           except_metrics:
+            - docker.container.memorySizeLimitBytes
             - docker.container.memorySoftLimitBytes
+            - docker.container.memorySwapLimitBytes
+            - docker.container.memorySwapLimitUsagePercent
+            - docker.container.memoryUsageLimitPercent
             - docker.container.pids
             - docker.container.processCount
             - docker.container.processCountLimit
