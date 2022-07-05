@@ -108,12 +108,13 @@ func (e *FargateFetcher) getFargateContainerMetrics() (FargateStats, error) {
 	}
 
 	now := time.Now()
-	for i := range stats {
-		if stats[i] == nil {
-			log.Warn("getting stats from fargate returned a nil at index %d: %s", i, string(response))
+	for i, k := range stats {
+		if k == nil {
+			log.Warn("getting stats from fargate returned a nil at index %d.", i)
+			log.Warn("raise the log level to debug to have more information")
 			continue
 		}
-		stats[i].time = now
+		k.time = now
 	}
 
 	return stats, nil
