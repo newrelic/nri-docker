@@ -50,8 +50,7 @@ func NewFargateFetcher(baseURL *url.URL) (*FargateFetcher, error) {
 
 // Fetch fetches raw metrics from a given Fargate container.
 func (e *FargateFetcher) Fetch(container docker.ContainerJSON) (raw.Metrics, error) {
-	var stats FargateStats
-	err := e.fargateStatsFromCacheOrNew(&stats)
+	stats, err := e.fargateStatsFromCacheOrNew()
 	if err != nil {
 		return raw.Metrics{}, err
 	}
@@ -63,23 +62,23 @@ func (e *FargateFetcher) Fetch(container docker.ContainerJSON) (raw.Metrics, err
 }
 
 // fargateStatsFromCacheOrNew wraps the access to Fargate task stats with a caching layer.
-func (e *FargateFetcher) fargateStatsFromCacheOrNew(response *FargateStats) error {
+func (e *FargateFetcher) fargateStatsFromCacheOrNew() (FargateStats, error) {
 	defer func() {
 		if err := e.containerStore.Save(); err != nil {
 			log.Warn("error persisting Fargate task metadata: %s", err)
 		}
 	}()
 
-	var err error
-	_, err = e.containerStore.Get(fargateTaskStatsCacheKey, response)
+	var response FargateStats
+	_, err := e.containerStore.Get(fargateTaskStatsCacheKey, &response)
 	if err == persist.ErrNotFound {
-		err = e.getFargateContainerMetrics(response)
+		response, err = e.getFargateContainerMetrics()
 	}
 	if err != nil {
-		return fmt.Errorf("cannot fetch task stats response: %s", err)
+		return nil, fmt.Errorf("cannot fetch task stats response: %s", err)
 	}
-	e.containerStore.Set(fargateTaskMetadataCacheKey, *response)
-	return nil
+	e.containerStore.Set(fargateTaskMetadataCacheKey, response)
+	return response, nil
 }
 
 // getFargateContainerMetrics returns Docker metrics from inside a Fargate container.
@@ -88,12 +87,12 @@ func (e *FargateFetcher) fargateStatsFromCacheOrNew(response *FargateStats) erro
 // Note that the endpoint doesn't follow strictly the same schema as Docker's: it returns a list of containers,
 // instead of only one. They are not compatible in terms of the requests that they accept, but they share
 // part of the response's schema.
-func (e *FargateFetcher) getFargateContainerMetrics(stats *FargateStats) error {
+func (e *FargateFetcher) getFargateContainerMetrics() (FargateStats, error) {
 	endpoint := TaskStatsEndpoint(e.baseURL.String())
 
 	response, err := metadataResponse(e.http, endpoint)
 	if err != nil {
-		return fmt.Errorf(
+		return nil, fmt.Errorf(
 			"error when sending request to ECS container metadata endpoint (%s): %v",
 			endpoint,
 			err,
@@ -102,15 +101,21 @@ func (e *FargateFetcher) getFargateContainerMetrics(stats *FargateStats) error {
 	log.Debug("fargate task stats response from endpoint %s: %s", endpoint, string(response))
 	e.latestFetch = time.Now()
 
+	var stats FargateStats
 	err = json.Unmarshal(response, &stats)
 	if err != nil {
-		return fmt.Errorf("error unmarshalling ECS container: %v", err)
+		return nil, fmt.Errorf("error unmarshalling ECS container: %v", err)
 	}
 
 	now := time.Now()
-	for id := range *stats {
-		(*stats)[id].time = now
+	for i, k := range stats {
+		if k == nil {
+			log.Warn("getting stats from fargate returned a nil at index %d.", i)
+			log.Warn("raise the log level to debug to have more information")
+			continue
+		}
+		k.time = now
 	}
 
-	return nil
+	return stats, nil
 }
