@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+## 1.7.5 (2022-11-30)
+
+### Changed
+* bump go version and dependencies (#143)
+
 ## 1.7.4 (2022-09-21)
 
 ### Changed
