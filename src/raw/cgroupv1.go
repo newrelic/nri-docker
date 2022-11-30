@@ -42,7 +42,7 @@ func NewCgroupsV1Fetcher(
 }
 
 // Fetch get the metrics that can be found in cgroups file system:
-//TODO: populate also network from libcgroups
+// TODO: populate also network from libcgroups
 func (cg *CgroupsV1Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 	stats := Metrics{}
 
