@@ -87,5 +87,15 @@ func (c *CPU) OnlineCPUsWithFallback() int {
 	if c.OnlineCPUs != 0 {
 		return int(c.OnlineCPUs)
 	}
-	return len(c.PercpuUsage)
+
+	// Calculate OnlineCPUs from PercpuUsage by checking the positions with cpu usage higher than 0, because in some OS,
+	// the array returned has more entries than the number of OnlineCpus (sometimes bigger than the available),
+	// causing the length calculation to give a wrong value.
+	var onlineCPUs int
+	for _, cpuUsage := range c.PercpuUsage {
+		if cpuUsage > 0 {
+			onlineCPUs++
+		}
+	}
+	return onlineCPUs
 }

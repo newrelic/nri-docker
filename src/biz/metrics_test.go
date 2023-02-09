@@ -138,9 +138,9 @@ func TestCpuPercent(t *testing.T) {
 			Expected: 20,
 		},
 		{
-			Name:     "Fallback to PercpuUsage as OnlineCPUs are not defined",
+			Name:     "Fallback to PercpuUsage having 2 used CPUs but 5 positions in the array and onlineCPUs not defined",
 			Previous: raw.CPU{TotalUsage: previousTotalUsage, SystemUsage: previousSystemUsage},
-			Current:  raw.CPU{TotalUsage: currentTotalUsage, SystemUsage: currentSystemUsage, PercpuUsage: []uint64{0, 0}},
+			Current:  raw.CPU{TotalUsage: currentTotalUsage, SystemUsage: currentSystemUsage, PercpuUsage: []uint64{10, 10, 0, 0, 0}},
 			Expected: 20,
 		},
 	}
