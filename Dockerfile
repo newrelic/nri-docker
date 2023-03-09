@@ -1,6 +1,6 @@
 ARG infra_image=newrelic/infrastructure-bundle
 
-FROM golang:1.14 as builder
+FROM golang:1.19 as builder
 
 WORKDIR /go/src/github.com/newrelic/nri-docker
 COPY . .
