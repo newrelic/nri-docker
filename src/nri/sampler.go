@@ -165,11 +165,9 @@ func attributes(container types.Container) []entry {
 	// Removes attributes with emtpy values to avoid be reported.
 	sanitizedEntries := []entry{}
 	for _, entry := range entries {
-		if isAttributeValueEmpty(entry) {
-			continue
+                if !isAttributeValueEmpty(entry) {
+			sanitizedEntries = append(sanitizedEntries, entry)
 		}
-
-		sanitizedEntries = append(sanitizedEntries, entry)
 	}
 
 	return sanitizedEntries
@@ -177,10 +175,9 @@ func attributes(container types.Container) []entry {
 
 func isAttributeValueEmpty(e entry) bool {
 	if e.Type == metric.ATTRIBUTE {
-		if strVal, ok := e.Value.(string); ok && strVal == "" {
-			return true
-		}
-	}
+             strVal, ok := e.Value.(string)
+             return ok && strVal == ""
+        }
 	return false
 }
 
