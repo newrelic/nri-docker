@@ -172,6 +172,11 @@ func TestSampleAll(t *testing.T) {
 			Names:   []string{"Container 1"},
 			Image:   "my_image",
 			ImageID: "my_image_id",
+			State:   "",
+			Labels: map[string]string{
+				"value":   "foo",
+				"noValue": "",
+			},
 		},
 	}, nil)
 	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{
@@ -212,4 +217,13 @@ func TestSampleAll(t *testing.T) {
 	assert.Len(t, i.Entities, 1)
 	assert.Equal(t, i.Entities[0].Metadata.Name, "containerid")
 	assert.Equal(t, i.Entities[0].Metrics[0].Metrics["storageDataTotalBytes"], 102e9)
+
+	assert.Equal(t, i.Entities[0].Metrics[0].Metrics["image"], "my_image_id")
+	assert.Equal(t, i.Entities[0].Metrics[0].Metrics["label.value"], "foo")
+
+	// emtpy labels are populated
+	assert.Equal(t, i.Entities[0].Metrics[0].Metrics["label.noValue"], "")
+
+	// container attributes are not populated with emtpy values
+	assert.NotContains(t, i.Entities[0].Metrics[0].Metrics, "state")
 }

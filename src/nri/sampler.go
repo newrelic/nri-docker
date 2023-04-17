@@ -138,9 +138,9 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 }
 
 func populate(ms *metric.Set, metrics []entry) {
-	for _, metric := range metrics {
-		if err := ms.SetMetric(metric.Name, metric.Value, metric.Type); err != nil {
-			log.Warn("Unexpected error setting metric %v: %v", metric, err)
+	for _, m := range metrics {
+		if err := ms.SetMetric(m.Name, m.Value, m.Type); err != nil {
+			log.Warn("Unexpected error setting metric %v: %v", m, err)
 		}
 	}
 }
@@ -153,7 +153,7 @@ func attributes(container types.Container) []entry {
 			cname = cname[1:]
 		}
 	}
-	return []entry{
+	entries := []entry{
 		metricCommandLine(container.Command),
 		metricContainerName(cname),
 		metricContainerImage(container.ImageID),
@@ -161,6 +161,24 @@ func attributes(container types.Container) []entry {
 		metricState(container.State),
 		metricStatus(container.Status),
 	}
+
+	// Removes attributes with emtpy values to avoid be reported.
+	sanitizedEntries := []entry{}
+	for _, entry := range entries {
+		if !isAttributeValueEmpty(entry) {
+			sanitizedEntries = append(sanitizedEntries, entry)
+		}
+	}
+
+	return sanitizedEntries
+}
+
+func isAttributeValueEmpty(e entry) bool {
+	if e.Type == metric.ATTRIBUTE {
+		strVal, ok := e.Value.(string)
+		return ok && strVal == ""
+	}
+	return false
 }
 
 // labelRename contains a list of labels that should be
