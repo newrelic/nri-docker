@@ -3,7 +3,8 @@ name: Security Scan
 on:
   push:
     branches:
-      - main
+      - master
+      - renovate/**
   pull_request:
   schedule:
     - cron: "0 3 * * *"

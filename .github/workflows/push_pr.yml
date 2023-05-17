@@ -3,8 +3,8 @@ name: Push/PR
 on:
   push:
     branches:
-      - main
       - master
+      - renovate/**
   pull_request:
 
 env:
