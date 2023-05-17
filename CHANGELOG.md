@@ -5,6 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/)
 and this project adheres to [Semantic Versioning](http://semver.org/).
 
+Unreleased section should follow [Release Toolkit](https://github.com/newrelic/release-toolkit#render-markdown-and-update-markdown).
+
+## Unreleased
+
 ## 1.8.1  (2023-04-17)
 ### Changed
 - Skip reporting container attributes with empty values (#152)
