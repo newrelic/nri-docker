@@ -9,6 +9,12 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+## v1.8.2 - 2023-05-18
+
+### ⛓️ Dependencies
+- Updated github.com/docker/docker to v23.0.3+incompatible
+- Updated github.com/aws/aws-sdk-go to v1.44.264 - [Changelog 🔗](https://github.com/aws/aws-sdk-go/releases/tag/v1.44.264)
+
 ## 1.8.1  (2023-04-17)
 ### Changed
 - Skip reporting container attributes with empty values (#152)
