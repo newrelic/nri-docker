@@ -65,13 +65,6 @@ jobs:
           GPG_MAIL: 'infrastructure-eng@newrelic.com'
           GPG_PASSPHRASE: ${{ secrets.OHAI_GPG_PASSPHRASE }}
           GPG_PRIVATE_KEY_BASE64: ${{ secrets.OHAI_GPG_PRIVATE_KEY_BASE64 }} # base64 encoded
-      - name: Notify failure via Slack
-        if: ${{ failure() }}
-        uses: archive/github-actions-slack@master
-        with:
-          slack-bot-user-oauth-access-token: ${{ secrets.COREINT_SLACK_TOKEN }}
-          slack-channel: ${{ secrets.COREINT_SLACK_CHANNEL }}
-          slack-text: "❌ `${{ env.REPO_FULL_NAME }}`: prerelease pipeline failed."
 
   publish-to-s3:
     name: Send release assets to S3
@@ -103,10 +96,15 @@ jobs:
           # used for signing package stuff
           gpg_passphrase: ${{ secrets.OHAI_GPG_PASSPHRASE }}
           gpg_private_key_base64: ${{ secrets.OHAI_GPG_PRIVATE_KEY_BASE64 }}
+
+  notify-failure:
+    if: ${{ always() && failure() }}
+    needs: [test-nix, test-integration-nix, prerelease, publish-to-s3]
+    runs-on: ubuntu-latest
+    steps:
       - name: Notify failure via Slack
-        if: ${{ failure() }}
         uses: archive/github-actions-slack@master
         with:
           slack-bot-user-oauth-access-token: ${{ secrets.COREINT_SLACK_TOKEN }}
           slack-channel: ${{ secrets.COREINT_SLACK_CHANNEL }}
-          slack-text: "❌ `${{ env.REPO_FULL_NAME }}`: s3 publish to staging failed."
+          slack-text: "❌ `${{ env.REPO_FULL_NAME }}`: [prerelease pipeline failed](${{ github.server_url }}/${{ env.REPO_FULL_NAME }}/actions/runs/${{ github.run_id }})."
