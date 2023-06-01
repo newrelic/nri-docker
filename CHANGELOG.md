@@ -9,7 +9,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
-### bugfix
+## v1.8.6 - 2023-06-01
+
+### 🐞 Bug fixes
 - github.com/docker/distribution has been updated from v2.8.1+incompatible to v2.8.2+incompatible to fix a vulnerability
 
 ## v1.8.5 - 2023-05-30
