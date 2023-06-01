@@ -8,7 +8,7 @@ require (
 	github.com/docker/docker v24.0.2+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/newrelic/infra-integrations-sdk v3.7.3+incompatible
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 )
 
 require (
