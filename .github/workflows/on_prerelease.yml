@@ -99,7 +99,7 @@ jobs:
 
   notify-failure:
     if: ${{ always() && failure() }}
-    needs: [test-nix, test-integration-nix, prerelease, publish-to-s3]
+    needs: [validate, test-nix, test-integration-nix, prerelease, publish-to-s3]
     runs-on: ubuntu-latest
     steps:
       - name: Notify failure via Slack
