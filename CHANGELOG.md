@@ -9,9 +9,10 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
-### bugfix
-- Use positive rate metric type for all rate kind metrics (perSecond). This will prevent to report negative values on this metrics
-  caused by restarts.
+## v1.8.10 - 2023-07-13
+
+### 🐞 Bug fixes
+- Use positive rate metric type for all rate kind metrics (perSecond). This will prevent to report negative values on this metrics caused by restarts.
 
 ## v1.8.9 - 2023-07-11
 
