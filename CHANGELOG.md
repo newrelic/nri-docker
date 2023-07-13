@@ -9,7 +9,7 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
-### fix
+### bugfix
 - Use positive rate metric type for all rate kind metrics (perSecond). This will prevent to report negative values on this metrics
   caused by restarts.
 
