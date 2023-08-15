@@ -9,6 +9,11 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+## v1.8.15 - 2023-08-15
+
+### ⛓️ Dependencies
+- Updated github.com/aws/aws-sdk-go to v1.44.323 - [Changelog 🔗](https://github.com/aws/aws-sdk-go/releases/tag/v1.44.323)
+
 ## v1.8.14 - 2023-08-08
 
 ### ⛓️ Dependencies
