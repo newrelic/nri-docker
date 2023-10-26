@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/aws/aws-sdk-go v1.46.4
 	github.com/containerd/cgroups v1.1.0
-	github.com/docker/docker v24.0.6+incompatible
+	github.com/docker/docker v24.0.7+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/newrelic/infra-integrations-sdk v3.7.3+incompatible
 	github.com/stretchr/testify v1.8.4
