@@ -3,7 +3,7 @@ module github.com/newrelic/nri-docker
 go 1.20
 
 require (
-	github.com/aws/aws-sdk-go v1.46.5
+	github.com/aws/aws-sdk-go v1.46.6
 	github.com/containerd/cgroups v1.1.0
 	github.com/docker/docker v24.0.7+incompatible
 	github.com/dustin/go-humanize v1.0.1
