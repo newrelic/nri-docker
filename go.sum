@@ -193,6 +193,8 @@ github.com/aws/aws-sdk-go v1.46.6 h1:6wFnNC9hETIZLMf6SOTN7IcclrOGwp/n9SLp8Pjt6E8
 github.com/aws/aws-sdk-go v1.46.6/go.mod h1:aVsgQcEevwlmQ7qHE9I3h+dtQgpqhFB+i8Phjh7fkwI=
 github.com/aws/aws-sdk-go v1.46.7 h1:IjvAWeiJZlbETOemOwvheN5L17CvKvKW0T1xOC6d3Sc=
 github.com/aws/aws-sdk-go v1.46.7/go.mod h1:aVsgQcEevwlmQ7qHE9I3h+dtQgpqhFB+i8Phjh7fkwI=
+github.com/aws/aws-sdk-go v1.47.0 h1:/JUg9V1+xh+qBn8A6ec/l15ETPaMaBqxkjz+gg63dNk=
+github.com/aws/aws-sdk-go v1.47.0/go.mod h1:DlEaEbWKZmsITVbqlSVvekPARM1HzeV9PMYg15ymSDA=
 github.com/cilium/ebpf v0.10.0 h1:nk5HPMeoBXtOzbkZBWym+ZWq1GIiHUsBFXxwewXAHLQ=
 github.com/cilium/ebpf v0.10.0/go.mod h1:DPiVdY/kT534dgc9ERmvP8mWA+9gvwgKfRvk4nNWnoE=
 github.com/containerd/cgroups v1.1.0 h1:v8rEWFl6EoqHB+swVNjVoCJE8o3jX7e8nqBGPLaDFBM=
