@@ -7,7 +7,6 @@ import (
 	"os"
 	"runtime"
 	"strings"
-	"time"
 
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/integration"
@@ -51,9 +50,6 @@ func main() {
 
 	log.SetupLogging(args.Verbose)
 
-	exitedContainerTTL, err := time.ParseDuration(args.ExitedContainersTTL)
-	exitOnErr(err)
-
 	var fetcher raw.Fetcher
 	var docker raw.DockerClient
 	if args.Fargate {
@@ -92,7 +88,7 @@ func main() {
 		)
 		exitOnErr(err)
 	}
-	sampler, err := nri.NewSampler(fetcher, docker, exitedContainerTTL, args)
+	sampler, err := nri.NewSampler(fetcher, docker, args)
 	exitOnErr(err)
 	exitOnErr(sampler.SampleAll(context.Background(), i))
 	exitOnErr(i.Publish())

@@ -9,6 +9,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+### Enhancement
+- Make metric cache used to calculate deltas configurable
+
 ## v1.8.29 - 2023-11-14
 
 ### ⛓️ Dependencies
