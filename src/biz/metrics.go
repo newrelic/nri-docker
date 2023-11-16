@@ -95,6 +95,11 @@ func NewProcessor(store persist.Storer, fetcher raw.Fetcher, inspector raw.Docke
 	}
 }
 
+// WithRuntimeNumCPUfunc changes the NumCPU counting func so MetricsFetcher is mockable
+func (mc *MetricsFetcher) WithRuntimeNumCPUfunc(rcFunc func() int) {
+	mc.getRuntimeNumCPU = rcFunc
+}
+
 // ErrExitedContainerExpired is the error type used when exited containers have exceed the TTL that would allow the
 // integration to keep reporting them.
 type ErrExitedContainerExpired struct {
