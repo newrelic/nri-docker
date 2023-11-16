@@ -13,4 +13,6 @@ type ArgumentList struct {
 	// CgroupPath and CgroupDriver arguments are not used but are kept here for backwards compatibility reasons.
 	CgroupPath   string `default:"" help:"Deprecated. cgroup_path argument is not used anymore."`
 	CgroupDriver string `default:"" help:"Deprecated. cgroup_driver argument is not used anymore."`
+
+	CacheTTL string `default:"1m" help:"Set the maximum cache TTL that the integration is going to use to calculate rates and deltas. Possible values are time-strings: 1s, 1m, 1h"`
 }

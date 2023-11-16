@@ -34,12 +34,22 @@ type ContainerSampler struct {
 }
 
 // NewSampler returns a ContainerSampler instance.
-func NewSampler(fetcher raw.Fetcher, docker raw.DockerClient, exitedContainerTTL time.Duration, config config.ArgumentList) (*ContainerSampler, error) {
+func NewSampler(fetcher raw.Fetcher, docker raw.DockerClient, config config.ArgumentList) (*ContainerSampler, error) {
+	cacheTTL, err := time.ParseDuration(config.CacheTTL)
+	if err != nil {
+		return nil, err
+	}
+
+	exitedContainerTTL, err := time.ParseDuration(config.ExitedContainersTTL)
+	if err != nil {
+		return nil, err
+	}
+
 	// SDK Storer to keep metric values between executions (e.g. for rates and deltas)
-	store, err := persist.NewFileStore( // TODO: make the following options configurable
+	store, err := persist.NewFileStore(
 		persist.DefaultPath("container_cpus"),
 		log.NewStdErr(true),
-		60*time.Second)
+		cacheTTL)
 	if err != nil {
 		return nil, err
 	}

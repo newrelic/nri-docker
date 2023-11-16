@@ -94,6 +94,7 @@ func TestCgroupsv2AllMetricsPresent(t *testing.T) {
 
 	t.Run("Given a mockedFilesystem and previous CPU state Then processed metrics are as expected", func(t *testing.T) {
 		metrics := biz.NewProcessor(storer, cgroupFetcher, inspector, 0)
+		metrics.WithRuntimeNumCPUfunc(func() int { return 2 }) // Mocked cgroups are extracted from a 2 CPU machine.
 
 		sample, err := metrics.Process(InspectorContainerID)
 		require.NoError(t, err)
