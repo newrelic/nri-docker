@@ -9,8 +9,13 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
-### Enhancement
+## v1.9.0 - 2023-11-21
+
+### 🚀 Enhancements
 - Make metric cache used to calculate deltas configurable
+
+### ⛓️ Dependencies
+- Updated github.com/aws/aws-sdk-go to v1.48.1 - [Changelog 🔗](https://github.com/aws/aws-sdk-go/releases/tag/v1.48.1)
 
 ## v1.8.29 - 2023-11-14
 
