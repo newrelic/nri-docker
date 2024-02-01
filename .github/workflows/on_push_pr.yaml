@@ -7,77 +7,26 @@ on:
       - renovate/**
   pull_request:
 
-env:
-  TAG: "v0.0.0" # not needed for go releaser, but kept for uniformity
-  REPO_FULL_NAME: ${{ github.event.repository.full_name }}
-  ORIGINAL_REPO_NAME: "newrelic/nri-docker"
-
 jobs:
-  validate:
-    name: Validate code via linters
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Validate code
-        run: make ci/validate
-      - name: Check if CHANGELOG is valid
-        uses: newrelic/release-toolkit/validate-markdown@v1
+  push-pr:
+    uses: newrelic/coreint-automation/.github/workflows/reusable_push_pr.yaml@v2
+    with:
+      run_test_windows: false
 
-  test-nix:
-    name: Run unit tests on *Nix
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Unit tests
-        run: make ci/test
-
-  # can't run this step inside of container because of tests specific
-  test-integration-nix:
+  test-integration-nix-cgroups-v1:
     name: Run integration tests on *Nix
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: src/github.com/${{ env.ORIGINAL_REPO_NAME }}
+    needs: [push-pr]
+    runs-on: ubuntu-20.04
     steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-          path: src/github.com/${{env.ORIGINAL_REPO_NAME}}
-      - name: Install Go
-        uses: actions/setup-go@v4
-        with:
-          go-version-file: 'src/github.com/${{ env.ORIGINAL_REPO_NAME }}/go.mod'
-      - name: Integration test
-        env:
-          GOPATH: ${{ github.workspace }}
-        run: make integration-test
-
-  test-cgroups-v2-integration-nix:
-    name: Run integration tests for cgroups v2 on *Nix
-    runs-on: ubuntu-22.04
-    defaults:
-      run:
-        working-directory: src/github.com/${{ env.ORIGINAL_REPO_NAME }}
-    steps:
-      - name: Check out code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-          path: src/github.com/${{env.ORIGINAL_REPO_NAME}}
-      - name: Install Go
-        uses: actions/setup-go@v4
-        with:
-          go-version-file: 'src/github.com/${{ env.ORIGINAL_REPO_NAME }}/go.mod'
-      - name: Integration test
-        env:
-          GOPATH: ${{ github.workspace }}
-        run: make integration-test
-
-  test-build:
-    name: Test binary compilation for all platforms:arch
-    runs-on: ubuntu-latest
-    steps:
+      - name: Check cgroups version
+        run: |
+          if [ $(docker info --format '{{.CgroupVersion}}') != "1" ]; then
+              echo "This test must be run in cgroups v1"
+              exit 1
+          fi
       - uses: actions/checkout@v4
-      - name: Build all platforms:arch
-        run: make ci/build
+      - uses: actions/setup-go@v4
+        with:
+          go-version-file: 'go.mod'
+      - name: Integration test
+        run: make integration-test
