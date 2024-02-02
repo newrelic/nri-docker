@@ -1,6 +1,6 @@
 module github.com/newrelic/nri-docker
 
-go 1.21
+go 1.21.6
 
 require (
 	github.com/aws/aws-sdk-go v1.50.9
