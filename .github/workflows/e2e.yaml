@@ -11,8 +11,14 @@ jobs:
   e2eTests-cgroups-v1:
     # Do not run e2e tests if commit message or PR has skip-e2e.
     if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ci/skip-e2e') }}
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-20.04
     steps:
+      - name: Check cgroups version
+        run: |
+          if [ $(docker info --format '{{.CgroupVersion}}') != "1" ]; then
+              echo "This test must be run in cgroups v1"
+              exit 1
+          fi
       - name: checkout-repository
         uses: actions/checkout@v4
       - name: Install Go

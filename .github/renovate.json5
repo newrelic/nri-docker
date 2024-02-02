@@ -1,5 +1,14 @@
 {
   "extends": [
     "github>newrelic/coreint-automation:renovate-base.json5"
+  ],
+  "packageRules": [
+    {
+      "matchPackageNames": [
+        // Skip updating runners used to test cgroups v1
+        "ubuntu-20.04"
+      ],
+      "enabled": false
+    }
   ]
 }
