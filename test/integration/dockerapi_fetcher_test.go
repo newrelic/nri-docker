@@ -10,6 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// TODO: this should extended/replaced when the fetcher actually fetches something.
+// It currently it shows how to get container stats data and can be useful for development purposes.
 func TestDockerAPIHelpers(t *testing.T) {
 	// Build the client and the fetcher
 	// The API Version can be set up using `args.DockerClientVersion` (defaults to 1.24 for now)
