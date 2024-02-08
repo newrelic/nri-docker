@@ -23,9 +23,8 @@ func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
 	if err != nil {
 		return raw.Metrics{}, fmt.Errorf("could not fetch stats for container %s: %w", container.ID, err)
 	}
-	now := time.Now() // nolint: staticcheck
 	metrics := raw.Metrics{
-		Time:        now,
+		Time:        time.Now(), // nolint: staticcheck
 		ContainerID: container.ID,
 		Memory:      f.memoryMetrics(containerStats),
 		Network:     f.networkMetrics(containerStats),
