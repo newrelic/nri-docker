@@ -53,11 +53,10 @@ func main() {
 	var fetcher raw.Fetcher
 	var docker raw.DockerClient
 	if args.Fargate {
-		var err error
 		var metadataBaseURL *url.URL
 		if metadataBaseURL, err = aws.MetadataV4BaseURL(); err != nil {
 			log.Debug("The Metadata endpoint V4 is not available, falling back to V3: %s", err.Error())
-			//If we do not find V4 we fall back to V3
+			// If we do not find V4 we fall back to V3
 			metadataBaseURL, err = aws.MetadataV3BaseURL()
 		}
 		exitOnErr(err)
@@ -74,11 +73,11 @@ func main() {
 		defer tmpDocker.Close()
 		docker = raw.NewCachedInfoDockerClient(tmpDocker)
 
-		detectedHostRoot, err := raw.DetectHostRoot(args.HostRoot, raw.CanAccessDir)
-		exitOnErr(err)
+		detectedHostRoot, hostRootErr := raw.DetectHostRoot(args.HostRoot, raw.CanAccessDir)
+		exitOnErr(hostRootErr)
 
-		cgroupInfo, err := raw.GetCgroupInfo(context.Background(), docker)
-		exitOnErr(err)
+		cgroupInfo, cgroupInfoErr := raw.GetCgroupInfo(context.Background(), docker)
+		exitOnErr(cgroupInfoErr)
 
 		fetcher, err = raw.NewCgroupsFetcher(
 			detectedHostRoot,
