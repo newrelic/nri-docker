@@ -52,61 +52,45 @@ func main() {
 
 	var fetcher raw.Fetcher
 	var docker raw.DockerClient
-
 	if args.Fargate {
-		fetcher, docker = setupFargateFetcher()
-	} else {
-		fetcher, docker = setupCgroupsFetcher(args)
-	}
+		var metadataBaseURL *url.URL
+		if metadataBaseURL, err = aws.MetadataV4BaseURL(); err != nil {
+			log.Debug("The Metadata endpoint V4 is not available, falling back to V3: %s", err.Error())
+			// If we do not find V4 we fall back to V3
+			metadataBaseURL, err = aws.MetadataV3BaseURL()
+		}
+		exitOnErr(err)
 
+		fetcher, err = aws.NewFargateFetcher(metadataBaseURL)
+		exitOnErr(err)
+
+		docker, err = aws.NewFargateInspector(metadataBaseURL)
+		exitOnErr(err)
+	} else {
+		var tmpDocker *client.Client
+		tmpDocker, err = client.NewClientWithOpts(client.FromEnv, client.WithVersion(args.DockerClientVersion))
+		exitOnErr(err)
+		defer tmpDocker.Close()
+		docker = raw.NewCachedInfoDockerClient(tmpDocker)
+
+		detectedHostRoot, hostRootErr := raw.DetectHostRoot(args.HostRoot, raw.CanAccessDir)
+		exitOnErr(hostRootErr)
+
+		cgroupInfo, cgroupInfoErr := raw.GetCgroupInfo(context.Background(), docker)
+		exitOnErr(cgroupInfoErr)
+
+		fetcher, err = raw.NewCgroupsFetcher(
+			detectedHostRoot,
+			cgroupInfo,
+			raw.NewPosixSystemCPUReader(),
+			raw.NewNetDevNetworkStatsGetter(),
+		)
+		exitOnErr(err)
+	}
 	sampler, err := nri.NewSampler(fetcher, docker, args)
 	exitOnErr(err)
 	exitOnErr(sampler.SampleAll(context.Background(), i))
 	exitOnErr(i.Publish())
-}
-
-func setupFargateFetcher() (raw.Fetcher, raw.DockerClient) {
-	var err error
-	var metadataBaseURL *url.URL
-	if metadataBaseURL, err = aws.MetadataV4BaseURL(); err != nil {
-		log.Debug("The Metadata endpoint V4 is not available, falling back to V3: %s", err.Error())
-		// If we do not find V4 we fall back to V3
-		metadataBaseURL, err = aws.MetadataV3BaseURL()
-	}
-	exitOnErr(err)
-
-	fetcher, err := aws.NewFargateFetcher(metadataBaseURL)
-	exitOnErr(err)
-
-	docker, err := aws.NewFargateInspector(metadataBaseURL)
-	exitOnErr(err)
-
-	return fetcher, docker
-}
-
-func setupCgroupsFetcher(args config.ArgumentList) (raw.Fetcher, raw.DockerClient) {
-	var err error
-	var dockerClient *client.Client
-	dockerClient, err = client.NewClientWithOpts(client.FromEnv, client.WithVersion(args.DockerClientVersion))
-	exitOnErr(err)
-	defer dockerClient.Close()
-	dockerClientWithCachedInfo := raw.NewCachedInfoDockerClient(dockerClient)
-
-	detectedHostRoot, err := raw.DetectHostRoot(args.HostRoot, raw.CanAccessDir)
-	exitOnErr(err)
-
-	cgroupInfo, err := raw.GetCgroupInfo(context.Background(), dockerClientWithCachedInfo)
-	exitOnErr(err)
-
-	fetcher, err := raw.NewCgroupsFetcher(
-		detectedHostRoot,
-		cgroupInfo,
-		raw.NewPosixSystemCPUReader(),
-		raw.NewNetDevNetworkStatsGetter(),
-	)
-	exitOnErr(err)
-
-	return fetcher, dockerClientWithCachedInfo
 }
 
 func exitOnErr(err error) {
