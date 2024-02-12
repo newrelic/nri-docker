@@ -24,11 +24,6 @@ type DockerClient interface {
 	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
 }
 
-// DockerStatsClient defines how to access docker container stats through the docker API.
-type DockerStatsClient interface {
-	ContainerStats(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error)
-}
-
 // CachedInfoDockerClient Wraps a DockerClient indefinitely caching Info method first call.
 type CachedInfoDockerClient struct {
 	DockerClient
