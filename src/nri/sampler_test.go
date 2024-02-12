@@ -30,10 +30,6 @@ func (m *mocker) ContainerInspect(ctx context.Context, containerID string) (type
 	args := m.Called(ctx, containerID)
 	return args.Get(0).(types.ContainerJSON), args.Error(1)
 }
-func (m *mocker) Info(ctx context.Context) (types.Info, error) {
-	args := m.Called(ctx)
-	return args.Get(0).(types.Info), args.Error(1)
-}
 
 type mockStorer struct {
 	mock.Mock
@@ -102,8 +98,6 @@ func TestECSLabelRename(t *testing.T) {
 	}, nil)
 	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{}, nil)
 
-	mocker.On("Info", mock.Anything, mock.Anything).Return(types.Info{}, nil)
-
 	mStore := &mockStorer{}
 	mStore.On("Save").Return(nil)
 
@@ -115,7 +109,7 @@ func TestECSLabelRename(t *testing.T) {
 
 	i, err := integration.New("test", "test-version")
 	assert.NoError(t, err)
-	assert.NoError(t, sampler.SampleAll(context.Background(), i))
+	assert.NoError(t, sampler.SampleAll(context.Background(), i, types.Info{}))
 
 	for expectedName, expectedValue := range expectedLabels {
 		value, ok := i.Entities[0].Metrics[0].Metrics[expectedName]
@@ -147,7 +141,6 @@ func TestExitedContainerTTLExpired(t *testing.T) {
 			},
 		},
 	}, nil)
-	mocker.On("Info", mock.Anything, mock.Anything).Return(types.Info{}, nil)
 	mStore := &mockStorer{}
 	mStore.On("Save").Return(nil)
 
@@ -160,7 +153,7 @@ func TestExitedContainerTTLExpired(t *testing.T) {
 	i, err := integration.New("test", "test-version")
 	assert.NoError(t, err)
 
-	err = sampler.SampleAll(context.Background(), i)
+	err = sampler.SampleAll(context.Background(), i, types.Info{})
 	assert.Empty(t, i.Entities)
 }
 
@@ -188,12 +181,12 @@ func TestSampleAll(t *testing.T) {
 		},
 	}, nil)
 
-	mocker.On("Info", mock.Anything, mock.Anything).Return(types.Info{
+	info := types.Info{
 		Driver: "devicemapper",
 		DriverStatus: [][2]string{
 			{"Data Space Total", "102 GB"},
 		},
-	}, nil)
+	}
 
 	mStore := &mockStorer{}
 	mStore.On("Save").Return(nil)
@@ -212,7 +205,7 @@ func TestSampleAll(t *testing.T) {
 	i, err := integration.New("test", "test-version")
 	assert.NoError(t, err)
 
-	err = sampler.SampleAll(context.Background(), i)
+	err = sampler.SampleAll(context.Background(), i, info)
 	assert.NoError(t, err)
 	assert.Len(t, i.Entities, 1)
 	assert.Equal(t, i.Entities[0].Metadata.Name, "containerid")

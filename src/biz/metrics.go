@@ -100,7 +100,7 @@ func (mc *MetricsFetcher) WithRuntimeNumCPUfunc(rcFunc func() int) {
 	mc.getRuntimeNumCPU = rcFunc
 }
 
-// ErrExitedContainerExpired is the error type used when exited containers have exceed the TTL that would allow the
+// ErrExitedContainerExpired is the error type used when exited containers have exceeded the TTL that would allow the
 // integration to keep reporting them.
 type ErrExitedContainerExpired struct {
 	s string

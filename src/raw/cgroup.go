@@ -3,23 +3,28 @@ package raw
 import (
 	"errors"
 	"fmt"
+	"github.com/docker/docker/api/types"
 	"os"
 	"strconv"
 	"strings"
 )
 
-// NewCgroupsFetcher creates the proper metrics fetcher for the used cgroups version.
-func NewCgroupsFetcher(
-	hostRoot string,
-	cgroupInfo *CgroupInfo,
-	systemCPUReader SystemCPUReader,
-	networkStatsGetter NetworkStatsGetter,
-) (Fetcher, error) {
-	if cgroupInfo.Version == CgroupV2 {
-		return NewCgroupsV2Fetcher(hostRoot, cgroupInfo.Driver, NewCgroupV2PathParser(), systemCPUReader, networkStatsGetter)
+const (
+	CgroupV2 = "2"
+)
+
+// NewCgroupFetcher returns either a V2Fetcher or a V1Fetcher depending on the cgroupInfo
+func NewCgroupFetcher(hostRoot string, cgroupInfo types.Info) (Fetcher, error) {
+	detectedHostRoot, err := DetectHostRoot(hostRoot, CanAccessDir)
+	if err != nil {
+		return nil, err
 	}
 
-	return NewCgroupsV1Fetcher(hostRoot, NewCgroupV1PathParser(), systemCPUReader, networkStatsGetter)
+	if cgroupInfo.CgroupVersion == CgroupV2 {
+		return NewCgroupsV2Fetcher(detectedHostRoot, cgroupInfo.CgroupDriver, NewPosixSystemCPUReader())
+	}
+	// if cgroupInfo.Version == CgroupV1
+	return NewCgroupsV1Fetcher(detectedHostRoot, NewPosixSystemCPUReader())
 }
 
 func countCpusetCPUsFromPath(path string) (uint, error) {

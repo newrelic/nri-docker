@@ -145,9 +145,9 @@ func TaskStatsEndpoint(baseURL string) string {
 	return baseURL + "/task/stats"
 }
 
-// MetadataV3BaseURL returns the v3 metadata endpoint configured via the ECS_CONTAINER_METADATA_URI environment
+// metadataV3BaseURL returns the v3 metadata endpoint configured via the ECS_CONTAINER_METADATA_URI environment
 // variable.
-func MetadataV3BaseURL() (*url.URL, error) {
+func metadataV3BaseURL() (*url.URL, error) {
 	baseURL, found := os.LookupEnv(containerMetadataEnvVar)
 	if !found {
 		return nil, fmt.Errorf("could not find env var with Metadata V3 API URL: %s", containerMetadataEnvVar)
@@ -159,9 +159,9 @@ func MetadataV3BaseURL() (*url.URL, error) {
 	return parsedURL, nil
 }
 
-// MetadataV4BaseURL returns the v4 metadata endpoint configured via the ECS_CONTAINER_METADATA_URI environment
+// metadataV4BaseURL returns the v4 metadata endpoint configured via the ECS_CONTAINER_METADATA_URI environment
 // variable.
-func MetadataV4BaseURL() (*url.URL, error) {
+func metadataV4BaseURL() (*url.URL, error) {
 	baseURL, found := os.LookupEnv(containerMetadataEnvVarV4)
 	if !found {
 		return nil, fmt.Errorf("could not find env var with Metadata V4 API URL: %s", containerMetadataEnvVarV4)
@@ -171,4 +171,15 @@ func MetadataV4BaseURL() (*url.URL, error) {
 		return nil, fmt.Errorf("could not parse Metadata V4 API URL (%s): %s", baseURL, err)
 	}
 	return parsedURL, nil
+}
+
+// GetMetadataBaseURL returns metadataV4BaseURL if available, otherwise try with metadataV3BaseURL
+func GetMetadataBaseURL() (*url.URL, error) {
+	metadataBaseURL, err := metadataV4BaseURL()
+	if err != nil {
+		log.Debug("The Metadata endpoint V4 is not available, falling back to V3: %s", err.Error())
+		// If we do not find V4 we fall back to V3
+		metadataBaseURL, err = metadataV3BaseURL()
+	}
+	return metadataBaseURL, err
 }

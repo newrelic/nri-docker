@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/docker/docker/api/types"
-	humanize "github.com/dustin/go-humanize"
+	"github.com/dustin/go-humanize"
 )
 
 // DeviceMapperStats contains the stats of devicemapper storages driver type
