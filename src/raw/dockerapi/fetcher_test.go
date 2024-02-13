@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -29,6 +31,18 @@ func (m *mockDockerStatsClient) ContainerStats(ctx context.Context, containerID 
 }
 
 var mockStats = types.StatsJSON{
+	Stats: types.Stats{
+		MemoryStats: types.MemoryStats{
+			Usage: 1024 * 1024 * 250, // 250 MB current memory usage
+			Stats: map[string]uint64{
+				"file":         1024 * 1024 * 25, // 25 MB cache usage
+				"anon":         1024 * 1024 * 75, // 75 MB RSS usage
+				"kernel_stack": 1024 * 1024 * 5,  // 5 MB kernel stack usage
+				"slab":         1024 * 1024 * 5,  // 5 MB slab usage
+			},
+			Limit: 1024 * 1024 * 500, // 500 MB total memory limit
+		},
+	},
 	Networks: map[string]types.NetworkStats{
 		"eth0": mockNetworkStats,
 		"eth1": mockNetworkStats,
@@ -50,6 +64,19 @@ var mockNetworkStats = types.NetworkStats{
 	TxDropped: mockNetworkValue,
 }
 
+var expectedMetrics = raw.Metrics{
+	Memory: raw.Memory{
+		UsageLimit:        1024 * 1024 * 500, // 500 MB total memory limit
+		FuzzUsage:         1024 * 1024 * 250, // 250 MB current memory usage
+		SwapUsage:         0,
+		SwapLimit:         1024 * 1024 * 100, // 100 MB
+		SoftLimit:         1024 * 1024 * 250, // 250 MB memory reservation (soft limit)
+		Cache:             1024 * 1024 * 25,  // 25 MB cache usage
+		RSS:               1024 * 1024 * 75,  // 75 MB RSS usage
+		KernelMemoryUsage: 1024 * 1024 * 10,  // 10 MB kernel memory usage (kernel_stack + slab)
+	},
+}
+
 func Test_NetworkMetrics(t *testing.T) {
 	client := mockDockerStatsClient{}
 	client.On("ContainerStats", mock.Anything).Return(mockStats)
@@ -68,4 +95,32 @@ func Test_NetworkMetrics(t *testing.T) {
 	assert.Equal(t, expectedValue, metrics.Network.TxDropped)
 	assert.Equal(t, expectedValue, metrics.Network.TxErrors)
 	assert.Equal(t, expectedValue, metrics.Network.TxPackets)
+}
+
+func Test_MemoryMetrics(t *testing.T) {
+	client := mockDockerStatsClient{}
+	client.On("ContainerStats", mock.Anything).Return(mockStats)
+
+	fetcher := dockerapi.NewFetcher(&client)
+	metrics, err := fetcher.Fetch(types.ContainerJSON{ContainerJSONBase: &types.ContainerJSONBase{
+		ID: "test",
+		HostConfig: &container.HostConfig{
+			Resources: container.Resources{
+				Memory:            1024 * 1024 * 500, // 500 MB
+				MemoryReservation: 1024 * 1024 * 250, // 250 MB, for SoftLimit calculation
+				MemorySwap:        1024 * 1024 * 600, // Total memory + swap
+			},
+		},
+	}})
+	require.NoError(t, err)
+
+	// Assert the fetched memory metrics match the expected outcome
+	assert.Equal(t, expectedMetrics.Memory.UsageLimit, metrics.Memory.UsageLimit)
+	assert.Equal(t, expectedMetrics.Memory.FuzzUsage, metrics.Memory.FuzzUsage)
+	assert.Equal(t, expectedMetrics.Memory.SwapUsage, metrics.Memory.SwapUsage)
+	assert.Equal(t, expectedMetrics.Memory.SwapLimit, metrics.Memory.SwapLimit)
+	assert.Equal(t, expectedMetrics.Memory.SoftLimit, metrics.Memory.SoftLimit)
+	assert.Equal(t, expectedMetrics.Memory.Cache, metrics.Memory.Cache)
+	assert.Equal(t, expectedMetrics.Memory.RSS, metrics.Memory.RSS)
+	assert.Equal(t, expectedMetrics.Memory.KernelMemoryUsage, metrics.Memory.KernelMemoryUsage)
 }

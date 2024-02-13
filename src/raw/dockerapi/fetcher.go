@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
+	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/nri-docker/src/raw"
 )
 
@@ -26,7 +28,7 @@ func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
 	metrics := raw.Metrics{
 		Time:        time.Now(), // nolint: staticcheck
 		ContainerID: container.ID,
-		Memory:      f.memoryMetrics(containerStats),
+		Memory:      f.memoryMetrics(containerStats, container.HostConfig),
 		Network:     f.networkMetrics(containerStats),
 		CPU:         f.cpuMetrics(containerStats),
 		Pids:        f.pidsMetrics(containerStats),
@@ -35,8 +37,29 @@ func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
 	return metrics, nil
 }
 
-func (f *Fetcher) memoryMetrics(containerStats types.StatsJSON) raw.Memory {
-	return raw.Memory{}
+func (f *Fetcher) memoryMetrics(containerStats types.StatsJSON, hostConfig *container.HostConfig) raw.Memory {
+	mem := raw.Memory{}
+
+	if containerStats.MemoryStats.Usage != 0 {
+		mem.UsageLimit = containerStats.MemoryStats.Limit
+		mem.FuzzUsage = containerStats.MemoryStats.Usage
+	}
+
+	if hostConfig != nil {
+		// Set SwapUsage to zero since it's not reported in the docker API. We're doing the same for Fargate.
+		mem.SwapUsage = 0
+		mem.SwapLimit = uint64(hostConfig.MemorySwap) - uint64(hostConfig.Memory)
+		mem.SoftLimit = uint64(hostConfig.MemoryReservation)
+	} else {
+		log.Debug("received a nil hostConfig")
+	}
+
+	mem.Cache = getOrWarning(containerStats.MemoryStats.Stats, "file", "memory_stats.stats")
+	mem.RSS = getOrWarning(containerStats.MemoryStats.Stats, "anon", "memory_stats.stats")
+	mem.KernelMemoryUsage = getOrWarning(containerStats.MemoryStats.Stats, "kernel_stack", "memory_stats.stats") +
+		getOrWarning(containerStats.MemoryStats.Stats, "slab", "memory_stats.stats")
+
+	return mem
 }
 
 // networkMetrics aggregates and returns network metrics across all of a container's interfaces.
@@ -81,4 +104,12 @@ func (f *Fetcher) containerStats(ctx context.Context, containerID string) (types
 		return types.StatsJSON{}, err
 	}
 	return statsJSON, nil
+}
+
+func getOrWarning(m map[string]uint64, key string, metricsPath string) uint64 { // nolint:unparam
+	if val, ok := m[key]; ok {
+		return val
+	}
+	log.Warn("Could not fetch metric value from docker API: the key %q was not found in %s", key, metricsPath)
+	return 0
 }
