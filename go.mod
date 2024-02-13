@@ -7,7 +7,7 @@ require (
 	github.com/containerd/cgroups v1.1.0
 	github.com/docker/docker v24.0.9+incompatible
 	github.com/dustin/go-humanize v1.0.1
-	github.com/newrelic/infra-integrations-sdk v3.8.1+incompatible
+	github.com/newrelic/infra-integrations-sdk v3.8.2+incompatible
 	github.com/stretchr/testify v1.8.4
 )
 
