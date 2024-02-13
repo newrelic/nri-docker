@@ -176,10 +176,10 @@ func metadataV4BaseURL() (*url.URL, error) {
 // GetMetadataBaseURL returns metadataV4BaseURL if available, otherwise try with metadataV3BaseURL
 func GetMetadataBaseURL() (*url.URL, error) {
 	metadataBaseURL, err := metadataV4BaseURL()
-	if err != nil {
-		log.Debug("The Metadata endpoint V4 is not available, falling back to V3: %s", err.Error())
-		// If we do not find V4 we fall back to V3
-		metadataBaseURL, err = metadataV3BaseURL()
+	if err == nil {
+		return metadataBaseURL, nil
 	}
-	return metadataBaseURL, err
+	log.Debug("The Metadata endpoint V4 is not available, falling back to V3: %s", err.Error())
+	// If we do not find V4 we fall back to V3
+	return metadataV3BaseURL()
 }
