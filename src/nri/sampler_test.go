@@ -154,6 +154,7 @@ func TestExitedContainerTTLExpired(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = sampler.SampleAll(context.Background(), i, types.Info{})
+	assert.NoError(t, err)
 	assert.Empty(t, i.Entities)
 }
 

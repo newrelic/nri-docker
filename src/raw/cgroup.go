@@ -3,10 +3,11 @@ package raw
 import (
 	"errors"
 	"fmt"
-	"github.com/docker/docker/api/types"
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/docker/docker/api/types"
 )
 
 const (

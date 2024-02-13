@@ -317,16 +317,17 @@ func TestAllMetricsPresent(t *testing.T) {
 func fetcher(t *testing.T, docker *client.Client) raw.Fetcher {
 	t.Helper()
 
+	var cgroupFetcher raw.Fetcher
 	cgroupInfo, err := docker.Info(context.Background())
 	require.NoError(t, err)
 
 	if cgroupInfo.CgroupVersion == raw.CgroupV2 {
-		cgroupFetcher, err := raw.NewCgroupsV2Fetcher("/", cgroupInfo.CgroupDriver, raw.NewPosixSystemCPUReader())
+		cgroupFetcher, err = raw.NewCgroupsV2Fetcher("/", cgroupInfo.CgroupDriver, raw.NewPosixSystemCPUReader())
 		require.NoError(t, err)
 		return cgroupFetcher
 	}
 	// if cgroupInfo.Version == CgroupV1
-	cgroupFetcher, err := raw.NewCgroupsV1Fetcher("/", raw.NewPosixSystemCPUReader())
+	cgroupFetcher, err = raw.NewCgroupsV1Fetcher("/", raw.NewPosixSystemCPUReader())
 	require.NoError(t, err)
 
 	return cgroupFetcher
