@@ -14,6 +14,7 @@ package aws
 // permissions and limitations under the License.
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -30,6 +31,8 @@ const (
 	maxRetries                = 4
 	durationBetweenRetries    = time.Second
 )
+
+var errMetadata = errors.New("could not parse any Metadata API URL")
 
 // TaskResponse defines the schema for the task response JSON object
 type TaskResponse struct {
@@ -145,41 +148,17 @@ func TaskStatsEndpoint(baseURL string) string {
 	return baseURL + "/task/stats"
 }
 
-// metadataV3BaseURL returns the v3 metadata endpoint configured via the ECS_CONTAINER_METADATA_URI environment
-// variable.
-func metadataV3BaseURL() (*url.URL, error) {
-	baseURL, found := os.LookupEnv(containerMetadataEnvVar)
-	if !found {
-		return nil, fmt.Errorf("could not find env var with Metadata V3 API URL: %s", containerMetadataEnvVar)
-	}
-	parsedURL, err := url.Parse(baseURL)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse Metadata V3 API URL (%s): %s", baseURL, err)
-	}
-	return parsedURL, nil
-}
-
-// metadataV4BaseURL returns the v4 metadata endpoint configured via the ECS_CONTAINER_METADATA_URI environment
-// variable.
-func metadataV4BaseURL() (*url.URL, error) {
-	baseURL, found := os.LookupEnv(containerMetadataEnvVarV4)
-	if !found {
-		return nil, fmt.Errorf("could not find env var with Metadata V4 API URL: %s", containerMetadataEnvVarV4)
-	}
-	parsedURL, err := url.Parse(baseURL)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse Metadata V4 API URL (%s): %s", baseURL, err)
-	}
-	return parsedURL, nil
-}
-
 // GetMetadataBaseURL returns metadataV4BaseURL if available, otherwise try with metadataV3BaseURL
 func GetMetadataBaseURL() (*url.URL, error) {
-	metadataBaseURL, err := metadataV4BaseURL()
-	if err == nil {
-		return metadataBaseURL, nil
+	metadataBaseURL, ok := os.LookupEnv(containerMetadataEnvVarV4)
+	if !ok {
+		log.Debug("could not find env var with Metadata V4 API URL: %s", containerMetadataEnvVarV4)
+		metadataBaseURL, ok = os.LookupEnv(containerMetadataEnvVar)
+		if !ok {
+			log.Debug("could not find env var with Metadata V3 API URL: %s", containerMetadataEnvVar)
+			return nil, errMetadata
+		}
 	}
-	log.Debug("The Metadata endpoint V4 is not available, falling back to V3: %s", err.Error())
-	// If we do not find V4 we fall back to V3
-	return metadataV3BaseURL()
+
+	return url.Parse(metadataBaseURL)
 }

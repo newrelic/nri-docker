@@ -57,12 +57,10 @@ func populateFromFargate(i *integration.Integration, args config.ArgumentList) {
 	fargateDockerClient, err := aws.NewFargateInspector(metadataBaseURL)
 	exitOnErr(err)
 
-	// Info is currently used to get the Storage Driver stats that is not present on Fargate.
-	cgroupInfo := types.Info{}
-
 	sampler, err := nri.NewSampler(fargateFetcher, fargateDockerClient, args)
 	exitOnErr(err)
-	exitOnErr(sampler.SampleAll(context.Background(), i, cgroupInfo))
+	// Info is currently used to get the Storage Driver stats that is not present on Fargate.
+	exitOnErr(sampler.SampleAll(context.Background(), i, types.Info{}))
 }
 
 func populateFromDocker(i *integration.Integration, args config.ArgumentList) {
