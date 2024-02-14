@@ -56,6 +56,10 @@ var mockStats = types.StatsJSON{
 			},
 			Limit: 1024 * 1024 * 500, // 500 MB total memory limit
 		},
+		PidsStats: types.PidsStats{
+			Current: mockMetricValue,
+			Limit:   mockMetricValue,
+		},
 	},
 	Networks: map[string]types.NetworkStats{
 		"eth0": mockNetworkStats,
@@ -65,20 +69,20 @@ var mockStats = types.StatsJSON{
 }
 
 // All network metrics are monotonic counters,
-const mockNetworkValue = 1
+const mockMetricValue = 1
 
 var mockNetworkStats = types.NetworkStats{
-	RxBytes:   mockNetworkValue,
-	RxErrors:  mockNetworkValue,
-	RxPackets: mockNetworkValue,
-	RxDropped: mockNetworkValue,
-	TxBytes:   mockNetworkValue,
-	TxErrors:  mockNetworkValue,
-	TxPackets: mockNetworkValue,
-	TxDropped: mockNetworkValue,
+	RxBytes:   mockMetricValue,
+	RxErrors:  mockMetricValue,
+	RxPackets: mockMetricValue,
+	RxDropped: mockMetricValue,
+	TxBytes:   mockMetricValue,
+	TxErrors:  mockMetricValue,
+	TxPackets: mockMetricValue,
+	TxDropped: mockMetricValue,
 }
 
-func Test_NetworkMetrics(t *testing.T) {
+func Test_Fetch(t *testing.T) {
 	client := mockDockerStatsClient{}
 	client.On("ContainerStats", mock.Anything).Return(mockStats)
 
@@ -86,16 +90,28 @@ func Test_NetworkMetrics(t *testing.T) {
 	metrics, err := fetcher.Fetch(types.ContainerJSON{ContainerJSONBase: &types.ContainerJSONBase{ID: "test"}})
 	require.NoError(t, err)
 
-	// Multiply by the number of interfaces since network metrics are aggregated across all net interfaces.
-	expectedValue := int64(mockNetworkValue * 3)
-	assert.Equal(t, expectedValue, metrics.Network.RxBytes)
-	assert.Equal(t, expectedValue, metrics.Network.RxDropped)
-	assert.Equal(t, expectedValue, metrics.Network.RxErrors)
-	assert.Equal(t, expectedValue, metrics.Network.RxPackets)
-	assert.Equal(t, expectedValue, metrics.Network.TxBytes)
-	assert.Equal(t, expectedValue, metrics.Network.TxDropped)
-	assert.Equal(t, expectedValue, metrics.Network.TxErrors)
-	assert.Equal(t, expectedValue, metrics.Network.TxPackets)
+	t.Run("Network metrics", func(t *testing.T) {
+		t.Parallel()
+		// Multiply by the number of interfaces since network metrics are aggregated across all net interfaces.
+		expectedValue := int64(mockMetricValue * 3)
+		assert.Equal(t, expectedValue, metrics.Network.RxBytes)
+		assert.Equal(t, expectedValue, metrics.Network.RxDropped)
+		assert.Equal(t, expectedValue, metrics.Network.RxErrors)
+		assert.Equal(t, expectedValue, metrics.Network.RxPackets)
+		assert.Equal(t, expectedValue, metrics.Network.TxBytes)
+		assert.Equal(t, expectedValue, metrics.Network.TxDropped)
+		assert.Equal(t, expectedValue, metrics.Network.TxErrors)
+		assert.Equal(t, expectedValue, metrics.Network.TxPackets)
+	})
+
+	t.Run("Pid metrics", func(t *testing.T) {
+		t.Parallel()
+		// Multiply by the number of interfaces since network metrics are aggregated across all net interfaces.
+		expectedValue := uint64(mockMetricValue)
+		assert.Equal(t, expectedValue, metrics.Pids.Current)
+		assert.Equal(t, expectedValue, metrics.Pids.Limit)
+	})
+
 }
 func Test_MemoryMetrics(t *testing.T) {
 	client := mockDockerStatsClient{}
