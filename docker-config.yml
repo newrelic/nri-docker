@@ -4,6 +4,8 @@ integrations:
       feature: docker_enabled
       file_exists: /var/run/docker.sock
     interval: 15s
+  # This configuration is no longer included automatically in nri-ecs image.
+  # it is kept for legacy reasons, but the new one is located in https://github.com/newrelic/nri-ecs
   - name: nri-docker
     when:
       feature: docker_enabled

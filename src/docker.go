@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"github.com/newrelic/nri-docker/src/raw/dockerapi"
 	"os"
 	"runtime"
 
@@ -72,12 +73,28 @@ func populateFromDocker(i *integration.Integration, args config.ArgumentList) {
 	cgroupInfo, err := dockerClient.Info(context.Background())
 	exitOnErr(err)
 
-	fetcher, err := raw.NewCgroupFetcher(args.HostRoot, cgroupInfo)
-	exitOnErr(err)
+	var fetcher raw.Fetcher
+	if useDockerAPI(args, cgroupInfo.CgroupVersion) {
+		fetcher = dockerapi.NewFetcher(dockerClient)
+	} else { // use cgroups as source of data
+		fetcher, err = raw.NewCgroupFetcher(args.HostRoot, cgroupInfo)
+		exitOnErr(err)
+	}
 
 	sampler, err := nri.NewSampler(fetcher, dockerClient, args)
 	exitOnErr(err)
 	exitOnErr(sampler.SampleAll(context.Background(), i, cgroupInfo))
+}
+
+func useDockerAPI(args config.ArgumentList, version string) bool {
+	if args.UseDockerAPI {
+		if version == raw.CgroupV2 {
+			return true
+		}
+		log.Debug("UseDockerAPI config is not available on CgroupV1")
+		return false
+	}
+	return false
 }
 
 func exitOnErr(err error) {
