@@ -19,7 +19,7 @@ func NewFetcher(statsClient raw.DockerStatsClient) *Fetcher {
 }
 
 func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
-	containerStats, err := f.ContainerStats(context.Background(), container.ID)
+	containerStats, err := f.containerStats(context.Background(), container.ID)
 	if err != nil {
 		return raw.Metrics{}, fmt.Errorf("could not fetch stats for container %s: %w", container.ID, err)
 	}
@@ -36,27 +36,40 @@ func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
 }
 
 func (f *Fetcher) memoryMetrics(containerStats types.StatsJSON) raw.Memory {
-	panic("unimplemented")
+	return raw.Memory{}
 }
 
+// networkMetrics aggregates and returns network metrics across all of a container's interfaces.
+// All network metrics are monotonic counters that are represented with PRATE type of metric.
 func (f *Fetcher) networkMetrics(containerStats types.StatsJSON) raw.Network {
-	panic("unimplemented")
+	aggregatedMetrics := raw.Network{}
+	for _, netStats := range containerStats.Networks {
+		aggregatedMetrics.RxBytes += int64(netStats.RxBytes)
+		aggregatedMetrics.RxDropped += int64(netStats.RxDropped)
+		aggregatedMetrics.RxErrors += int64(netStats.RxErrors)
+		aggregatedMetrics.RxPackets += int64(netStats.RxPackets)
+		aggregatedMetrics.TxBytes += int64(netStats.TxBytes)
+		aggregatedMetrics.TxDropped += int64(netStats.TxDropped)
+		aggregatedMetrics.TxErrors += int64(netStats.TxErrors)
+		aggregatedMetrics.TxPackets += int64(netStats.TxPackets)
+	}
+
+	return aggregatedMetrics
 }
 
 func (f *Fetcher) cpuMetrics(containerStats types.StatsJSON) raw.CPU {
-	panic("unimplemented")
+	return raw.CPU{}
 }
 
 func (f *Fetcher) pidsMetrics(containerStats types.StatsJSON) raw.Pids {
-	panic("unimplemented")
+	return raw.Pids{}
 }
 
 func (f *Fetcher) blkioMetrics(containerStats types.StatsJSON) raw.Blkio {
-	panic("unimplemented")
+	return raw.Blkio{}
 }
 
-// TODO: the helper below should be private when the corresponding fetcher is ready to be used.
-func (f *Fetcher) ContainerStats(ctx context.Context, containerID string) (types.StatsJSON, error) {
+func (f *Fetcher) containerStats(ctx context.Context, containerID string) (types.StatsJSON, error) {
 	m, err := f.statsClient.ContainerStats(ctx, containerID, false)
 	if err != nil {
 		return types.StatsJSON{}, err
