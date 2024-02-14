@@ -6,6 +6,7 @@ WORKDIR /go/src/github.com/newrelic/nri-docker
 COPY . .
 
 RUN make compile && \
+    make test && \
     strip ./bin/nri-docker
 
 FROM $infra_image

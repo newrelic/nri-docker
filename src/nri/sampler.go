@@ -11,6 +11,7 @@ import (
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/infra-integrations-sdk/persist"
+
 	"github.com/newrelic/nri-docker/src/biz"
 	"github.com/newrelic/nri-docker/src/config"
 	"github.com/newrelic/nri-docker/src/raw"
@@ -64,7 +65,9 @@ func NewSampler(fetcher raw.Fetcher, docker raw.DockerClient, config config.Argu
 
 // SampleAll populates the integration of the argument with metrics and labels from all the containers in the system
 // running and non-running
-func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integration) error {
+//
+//nolint:gocyclo
+func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integration, cgroupInfo types.Info) error {
 	defer func() {
 		if err := cs.store.Save(); err != nil {
 			log.Warn("persisting previous metrics: %s", err.Error())
@@ -79,11 +82,7 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 
 	var storageEntry []entry
 	if !cs.config.DisableStorageMetrics {
-		info, err := cs.docker.Info(context.Background())
-		if err != nil {
-			log.Error("fetching info from docker api: %s", err.Error())
-		}
-		storageStats, err := biz.ParseDeviceMapperStats(info)
+		storageStats, err := biz.ParseDeviceMapperStats(cgroupInfo)
 		if err != nil {
 			log.Warn("computing Storage Driver stats: %s", err.Error())
 		}

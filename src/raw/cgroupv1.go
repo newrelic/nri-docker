@@ -29,15 +29,13 @@ type CgroupsV1Fetcher struct {
 
 func NewCgroupsV1Fetcher(
 	hostRoot string,
-	cgroupDetector CgroupV1Detector,
 	systemCPUReader SystemCPUReader,
-	networkStatsGetter NetworkStatsGetter,
 ) (*CgroupsV1Fetcher, error) {
 	return &CgroupsV1Fetcher{
 		hostRoot:           hostRoot,
-		cgroupDetector:     cgroupDetector,
+		cgroupDetector:     NewCgroupV1PathParser(),
 		systemCPUReader:    systemCPUReader,
-		networkStatsGetter: networkStatsGetter,
+		networkStatsGetter: NewNetDevNetworkStatsGetter(),
 	}, nil
 }
 

@@ -14,6 +14,7 @@ package aws
 // permissions and limitations under the License.
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -30,6 +31,8 @@ const (
 	maxRetries                = 4
 	durationBetweenRetries    = time.Second
 )
+
+var errMetadata = errors.New("could not parse any Metadata API URL")
 
 // TaskResponse defines the schema for the task response JSON object
 type TaskResponse struct {
@@ -145,30 +148,17 @@ func TaskStatsEndpoint(baseURL string) string {
 	return baseURL + "/task/stats"
 }
 
-// MetadataV3BaseURL returns the v3 metadata endpoint configured via the ECS_CONTAINER_METADATA_URI environment
-// variable.
-func MetadataV3BaseURL() (*url.URL, error) {
-	baseURL, found := os.LookupEnv(containerMetadataEnvVar)
-	if !found {
-		return nil, fmt.Errorf("could not find env var with Metadata V3 API URL: %s", containerMetadataEnvVar)
+// GetMetadataBaseURL returns metadataV4BaseURL if available, otherwise try with metadataV3BaseURL
+func GetMetadataBaseURL() (*url.URL, error) {
+	metadataBaseURL, ok := os.LookupEnv(containerMetadataEnvVarV4)
+	if !ok {
+		log.Debug("could not find env var with Metadata V4 API URL: %s", containerMetadataEnvVarV4)
+		metadataBaseURL, ok = os.LookupEnv(containerMetadataEnvVar)
+		if !ok {
+			log.Debug("could not find env var with Metadata V3 API URL: %s", containerMetadataEnvVar)
+			return nil, errMetadata
+		}
 	}
-	parsedURL, err := url.Parse(baseURL)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse Metadata V3 API URL (%s): %s", baseURL, err)
-	}
-	return parsedURL, nil
-}
 
-// MetadataV4BaseURL returns the v4 metadata endpoint configured via the ECS_CONTAINER_METADATA_URI environment
-// variable.
-func MetadataV4BaseURL() (*url.URL, error) {
-	baseURL, found := os.LookupEnv(containerMetadataEnvVarV4)
-	if !found {
-		return nil, fmt.Errorf("could not find env var with Metadata V4 API URL: %s", containerMetadataEnvVarV4)
-	}
-	parsedURL, err := url.Parse(baseURL)
-	if err != nil {
-		return nil, fmt.Errorf("could not parse Metadata V4 API URL (%s): %s", baseURL, err)
-	}
-	return parsedURL, nil
+	return url.Parse(metadataBaseURL)
 }
