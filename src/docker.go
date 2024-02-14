@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/newrelic/nri-docker/src/raw/dockerapi"
 	"os"
 	"runtime"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/newrelic/nri-docker/src/nri"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/newrelic/nri-docker/src/raw/aws"
+	"github.com/newrelic/nri-docker/src/raw/dockerapi"
 )
 
 const (
