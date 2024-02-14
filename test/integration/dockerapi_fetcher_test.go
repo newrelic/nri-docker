@@ -4,15 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"testing"
+	"time"
 
 	"github.com/docker/docker/client"
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// TODO: this should extended/replaced when the fetcher actually fetches something.
 // It currently it shows how to get container stats data and can be useful for development purposes.
-func TestDockerAPIHelpers(t *testing.T) {
+func TestDockerAPIFetcher(t *testing.T) {
 	// Build the client and the fetcher
 	// The API Version can be set up using `args.DockerClientVersion` (defaults to 1.24 for now)
 	dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion("1.24"))
@@ -28,10 +29,17 @@ func TestDockerAPIHelpers(t *testing.T) {
 	require.NoError(t, err)
 	logAsJSON(t, "Inspect data", &inspectData)
 
-	// fetch stats data
+	// Let stress container have some stresful moments before fetching data.
+	time.Sleep(time.Second * 10)
+
 	statsData, err := fetcher.Fetch(inspectData)
 	require.NoError(t, err)
 	logAsJSON(t, "Container Stats", &statsData)
+
+	// Network metrics
+	// Only RxBytes and RxPackets are generated
+	assert.NotZero(t, statsData.Network.RxBytes)
+	assert.NotZero(t, statsData.Network.RxPackets)
 }
 
 func logAsJSON(t *testing.T, title string, data any) {
