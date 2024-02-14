@@ -13,4 +13,4 @@ FROM $infra_image
 
 RUN rm -rf /etc/newrelic-infra/integrations.d/*
 COPY --from=builder /go/src/github.com/newrelic/nri-docker/bin/nri-docker /var/db/newrelic-infra/newrelic-integrations/bin/
-COPY --from=builder /go/src/github.com/newrelic/nri-docker/docker-config.yml.sample /etc/newrelic-infra/integrations.d/docker-config.yml
+COPY --from=builder /go/src/github.com/newrelic/nri-docker/dev-config.yml.sample /etc/newrelic-infra/integrations.d/docker-config.yml
