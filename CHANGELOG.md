@@ -9,6 +9,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+### Enhancement
+- Allow the path (TMP_DIR) to store container_cpus.json (cache file) to be modified by the agent
+
 ## v1.9.8 - 2024-02-06
 
 ### ⛓️ Dependencies
