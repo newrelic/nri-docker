@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/nri-docker/src/raw"
 )
 
@@ -28,7 +29,7 @@ func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
 		ContainerID: container.ID,
 		Memory:      f.memoryMetrics(containerStats),
 		Network:     f.networkMetrics(containerStats),
-		CPU:         f.cpuMetrics(containerStats),
+		CPU:         f.cpuMetrics(container, containerStats),
 		Pids:        f.pidsMetrics(containerStats),
 		Blkio:       f.blkioMetrics(containerStats),
 	}
@@ -57,8 +58,27 @@ func (f *Fetcher) networkMetrics(containerStats types.StatsJSON) raw.Network {
 	return aggregatedMetrics
 }
 
-func (f *Fetcher) cpuMetrics(containerStats types.StatsJSON) raw.CPU {
-	return raw.CPU{}
+func (f *Fetcher) cpuMetrics(container types.ContainerJSON, containerStats types.StatsJSON) raw.CPU {
+	cpuStats := containerStats.CPUStats
+	var cpuShares uint64
+	if container.HostConfig == nil {
+		log.Debug("Could not fetch cpuShares since the container %q host configuration is not available", container.ID)
+	} else {
+		cpuShares = uint64(container.HostConfig.CPUShares)
+	}
+	return raw.CPU{
+		TotalUsage:        cpuStats.CPUUsage.TotalUsage,
+		UsageInUsermode:   cpuStats.CPUUsage.UsageInUsermode,
+		UsageInKernelmode: cpuStats.CPUUsage.UsageInKernelmode,
+		ThrottledPeriods:  cpuStats.ThrottlingData.ThrottledPeriods,
+		ThrottledTimeNS:   cpuStats.ThrottlingData.ThrottledTime,
+		SystemUsage:       cpuStats.SystemUsage,
+		OnlineCPUs:        uint(cpuStats.OnlineCPUs),
+		Shares:            cpuShares,
+		// PercpuUsage is not set in cgroups v2 (it is set to nil) but it is not reported by the integration,
+		// it is used to report the 'OnlineCPUs' value when online CPUs.
+		PercpuUsage: cpuStats.CPUUsage.PercpuUsage,
+	}
 }
 
 func (f *Fetcher) pidsMetrics(containerStats types.StatsJSON) raw.Pids {
