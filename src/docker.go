@@ -3,15 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"net/url"
 	"os"
 	"runtime"
-	"strings"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/newrelic/infra-integrations-sdk/log"
-
 	"github.com/newrelic/nri-docker/src/config"
 	"github.com/newrelic/nri-docker/src/nri"
 	"github.com/newrelic/nri-docker/src/raw"
@@ -31,66 +29,55 @@ var (
 func main() {
 	args := config.ArgumentList{}
 	i, err := integration.New(integrationName, integrationVersion, integration.Args(&args))
-	if err != nil {
-		log.Error(err.Error())
-		os.Exit(1)
-	}
+	exitOnErr(err)
 
 	if args.ShowVersion {
-		fmt.Printf(
-			"New Relic %s integration Version: %s, Platform: %s, GoVersion: %s, GitCommit: %s, BuildDate: %s\n",
-			strings.Title(strings.Replace(integrationName, "com.newrelic.", "", 1)),
-			integrationVersion,
-			fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
-			runtime.Version(),
-			gitCommit,
-			buildDate)
+		printVersion()
 		os.Exit(0)
 	}
 
 	log.SetupLogging(args.Verbose)
 
-	var fetcher raw.Fetcher
-	var docker raw.DockerClient
 	if args.Fargate {
-		var metadataBaseURL *url.URL
-		if metadataBaseURL, err = aws.MetadataV4BaseURL(); err != nil {
-			log.Debug("The Metadata endpoint V4 is not available, falling back to V3: %s", err.Error())
-			// If we do not find V4 we fall back to V3
-			metadataBaseURL, err = aws.MetadataV3BaseURL()
-		}
-		exitOnErr(err)
-
-		fetcher, err = aws.NewFargateFetcher(metadataBaseURL)
-		exitOnErr(err)
-
-		docker, err = aws.NewFargateInspector(metadataBaseURL)
-		exitOnErr(err)
+		populateFromFargate(i, args)
 	} else {
-		var tmpDocker *client.Client
-		tmpDocker, err = client.NewClientWithOpts(client.FromEnv, client.WithVersion(args.DockerClientVersion))
-		exitOnErr(err)
-		defer tmpDocker.Close()
-		docker = raw.NewCachedInfoDockerClient(tmpDocker)
-
-		detectedHostRoot, hostRootErr := raw.DetectHostRoot(args.HostRoot, raw.CanAccessDir)
-		exitOnErr(hostRootErr)
-
-		cgroupInfo, cgroupInfoErr := raw.GetCgroupInfo(context.Background(), docker)
-		exitOnErr(cgroupInfoErr)
-
-		fetcher, err = raw.NewCgroupsFetcher(
-			detectedHostRoot,
-			cgroupInfo,
-			raw.NewPosixSystemCPUReader(),
-			raw.NewNetDevNetworkStatsGetter(),
-		)
-		exitOnErr(err)
+		populateFromDocker(i, args)
 	}
-	sampler, err := nri.NewSampler(fetcher, docker, args)
-	exitOnErr(err)
-	exitOnErr(sampler.SampleAll(context.Background(), i))
+
 	exitOnErr(i.Publish())
+}
+
+func populateFromFargate(i *integration.Integration, args config.ArgumentList) {
+	metadataBaseURL, err := aws.GetMetadataBaseURL()
+	exitOnErr(err)
+
+	fargateFetcher, err := aws.NewFargateFetcher(metadataBaseURL)
+	exitOnErr(err)
+
+	fargateDockerClient, err := aws.NewFargateInspector(metadataBaseURL)
+	exitOnErr(err)
+
+	sampler, err := nri.NewSampler(fargateFetcher, fargateDockerClient, args)
+	exitOnErr(err)
+	// Info is currently used to get the Storage Driver stats that is not present on Fargate.
+	exitOnErr(sampler.SampleAll(context.Background(), i, types.Info{}))
+}
+
+func populateFromDocker(i *integration.Integration, args config.ArgumentList) {
+	withVersionOpt := client.WithVersion(args.DockerClientVersion)
+	dockerClient, err := client.NewClientWithOpts(client.FromEnv, withVersionOpt)
+	exitOnErr(err)
+	defer dockerClient.Close()
+
+	cgroupInfo, err := dockerClient.Info(context.Background())
+	exitOnErr(err)
+
+	fetcher, err := raw.NewCgroupFetcher(args.HostRoot, cgroupInfo)
+	exitOnErr(err)
+
+	sampler, err := nri.NewSampler(fetcher, dockerClient, args)
+	exitOnErr(err)
+	exitOnErr(sampler.SampleAll(context.Background(), i, cgroupInfo))
 }
 
 func exitOnErr(err error) {
@@ -98,4 +85,14 @@ func exitOnErr(err error) {
 		log.Error(err.Error())
 		os.Exit(-1)
 	}
+}
+
+func printVersion() {
+	fmt.Printf(
+		"New Relic Docker integration Version: %s, Platform: %s, GoVersion: %s, GitCommit: %s, BuildDate: %s\n",
+		integrationVersion,
+		fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
+		runtime.Version(),
+		gitCommit,
+		buildDate)
 }

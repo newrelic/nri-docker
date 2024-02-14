@@ -27,16 +27,14 @@ type CgroupsV2Fetcher struct {
 func NewCgroupsV2Fetcher(
 	hostRoot string,
 	cgroupDriver string,
-	cgroupDetector CgroupV2Detector,
 	systemCPUReader SystemCPUReader,
-	networkStatsGetter NetworkStatsGetter,
 ) (*CgroupsV2Fetcher, error) {
 	return &CgroupsV2Fetcher{
 		cgroupDriver:       cgroupDriver,
 		hostRoot:           hostRoot,
-		cgroupDetector:     cgroupDetector,
+		cgroupDetector:     NewCgroupV2PathParser(),
 		systemCPUReader:    systemCPUReader,
-		networkStatsGetter: networkStatsGetter,
+		networkStatsGetter: NewNetDevNetworkStatsGetter(),
 		cpuCounter:         countCpusetCPUsFromPath,
 	}, nil
 }
