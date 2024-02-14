@@ -17,7 +17,7 @@ func TestDockerAPIHelpers(t *testing.T) {
 	// The API Version can be set up using `args.DockerClientVersion` (defaults to 1.24 for now)
 	dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion("1.24"))
 	require.NoError(t, err)
-	f := dockerapi.NewFetcher(dockerClient)
+	fetcher := dockerapi.NewFetcher(dockerClient)
 
 	// run a container for testing purposes
 	containerID, dockerRM := stress(t, "stress-ng", "-c", "0", "-l", "0", "-t", "5m")
@@ -29,7 +29,7 @@ func TestDockerAPIHelpers(t *testing.T) {
 	logAsJSON(t, "Inspect data", &inspectData)
 
 	// fetch stats data
-	statsData, err := f.ContainerStats(context.Background(), containerID)
+	statsData, err := fetcher.Fetch(inspectData)
 	require.NoError(t, err)
 	logAsJSON(t, "Container Stats", &statsData)
 }
