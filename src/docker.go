@@ -74,7 +74,7 @@ func populateFromDocker(i *integration.Integration, args config.ArgumentList) {
 	exitOnErr(err)
 
 	var fetcher raw.Fetcher
-	if useDockerAPI(args, cgroupInfo.CgroupVersion) {
+	if useDockerAPI(args.UseDockerAPI, cgroupInfo.CgroupVersion) {
 		fetcher = dockerapi.NewFetcher(dockerClient)
 	} else { // use cgroups as source of data
 		fetcher, err = raw.NewCgroupFetcher(args.HostRoot, cgroupInfo)
@@ -86,8 +86,8 @@ func populateFromDocker(i *integration.Integration, args config.ArgumentList) {
 	exitOnErr(sampler.SampleAll(context.Background(), i, cgroupInfo))
 }
 
-func useDockerAPI(args config.ArgumentList, version string) bool {
-	if args.UseDockerAPI {
+func useDockerAPI(dockerAPIRequested bool, version string) bool {
+	if dockerAPIRequested {
 		if version == raw.CgroupV2 {
 			return true
 		}
