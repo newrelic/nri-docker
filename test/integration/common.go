@@ -6,28 +6,40 @@ import (
 	"log"
 	"os/exec"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/docker/docker/client"
+	"github.com/newrelic/infra-integrations-sdk/args"
+	"github.com/newrelic/nri-docker/src/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 const (
-	eventuallyTimeout       = time.Minute
-	eventuallyTick          = time.Second
-	testDockerClientVersion = "1.24"
-	imageTag                = "stress:latest"
-	containerName           = "nri_docker_test"
-	cpus                    = 0.5
-	memLimitStr             = "100M"
-	memLimit                = 100 * 1024 * 1024 // 100 MB of memory
+	eventuallyTimeout = time.Minute
+	eventuallyTick    = time.Second
+	imageTag          = "stress:latest"
+	containerName     = "nri_docker_test"
+	cpus              = 0.5
+	memLimitStr       = "100M"
+	memLimit          = 100 * 1024 * 1024 // 100 MB of memory
 )
+
+var once sync.Once
+var dockerClientVersion string
 
 func newDocker(t *testing.T) *client.Client {
 	t.Helper()
-	docker, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion(testDockerClientVersion))
+	// Get DockerClientVersion from default args avoiding parsing flags twice when executing multiple test.
+	once.Do(func() {
+		arg := config.ArgumentList{}
+		require.NoError(t, args.SetupArgs(&arg))
+		dockerClientVersion = arg.DockerClientVersion
+	})
+
+	docker, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion(dockerClientVersion))
 	require.NoError(t, err)
 	return docker
 }
