@@ -1,13 +1,9 @@
-package integration_test
+package integration
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -16,23 +12,12 @@ import (
 	"time"
 
 	"github.com/newrelic/nri-docker/src/biz"
-	"github.com/newrelic/nri-docker/test"
 
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/persist"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-)
-
-const (
-	eventuallyTimeout       = time.Minute
-	testDockerClientVersion = "1.24"
-	imageTag                = "stress:latest"
-	containerName           = "nri_docker_test"
-	cpus                    = 0.5
-	memLimitStr             = "100M"
-	memLimit                = 100 * 1024 * 1024 // 100 MB of memory
 )
 
 func TestHighCPU(t *testing.T) {
@@ -58,8 +43,7 @@ func TestHighCPU(t *testing.T) {
 	assert.InDelta(t, cpus, sample.CPU.LimitCores, 0.01)
 	assert.True(t, sample.Pids.Current >= 4, "pids need to be >= 4") // because we invoked stress-ng -c 4
 
-	test.Eventually(t, eventuallyTimeout, func(t require.TestingT) {
-		time.Sleep(100 * time.Millisecond)
+	assert.Eventually(t, func() bool {
 		sample, err := metrics.Process(containerID)
 		require.NoError(t, err)
 
@@ -78,7 +62,9 @@ func TestHighCPU(t *testing.T) {
 		assert.Truef(t, cpu.UserPercent+cpu.KernelPercent <= cpu.CPUPercent,
 			"user %v%% + kernel %v%% is not < total %v%%",
 			cpu.UserPercent, cpu.KernelPercent, cpu.CPUPercent)
-	})
+
+		return true
+	}, eventuallyTimeout, eventuallyTick)
 }
 
 func TestLowCPU(t *testing.T) {
@@ -104,8 +90,7 @@ func TestLowCPU(t *testing.T) {
 	assert.InDelta(t, cpus, sample.CPU.LimitCores, 0.01)
 	assert.True(t, sample.Pids.Current > 0, "pids can't be 0")
 
-	test.Eventually(t, eventuallyTimeout, func(t require.TestingT) {
-		time.Sleep(100 * time.Millisecond)
+	assert.Eventually(t, func() bool {
 		sample, err := metrics.Process(containerID)
 		require.NoError(t, err)
 
@@ -115,7 +100,9 @@ func TestLowCPU(t *testing.T) {
 		assert.InDelta(t, 0, cpu.CPUPercent, 10)
 		assert.InDelta(t, 0, cpu.UsedCoresPercent, 10)
 		assert.InDelta(t, 0, cpu.UsedCores, 0.1)
-	})
+
+		return true
+	}, eventuallyTimeout, eventuallyTick)
 }
 
 func TestMemory(t *testing.T) {
@@ -135,7 +122,7 @@ func TestMemory(t *testing.T) {
 		docker,
 		0)
 	// Then the Memory metrics are reported according to the usage and limits
-	test.Eventually(t, eventuallyTimeout, func(t require.TestingT) {
+	assert.Eventually(t, func() bool {
 		sample, err := metrics.Process(containerID)
 		require.NoError(t, err)
 
@@ -152,46 +139,9 @@ func TestMemory(t *testing.T) {
 		assert.True(t, mem.CacheUsageBytes > 0, "reported cache bytes %v should not be zero")
 
 		assert.EqualValues(t, memLimit, mem.MemLimitBytes)
-	})
-}
 
-func newDocker(t *testing.T) *client.Client {
-	t.Helper()
-	docker, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion(testDockerClientVersion))
-	require.NoError(t, err)
-	return docker
-}
-
-func stress(t *testing.T, args ...string) (containerID string, closeFunc func()) {
-	t.Helper()
-
-	arguments := []string{
-		"run", "-d",
-		"--name", containerName,
-		"--cpus", fmt.Sprint(cpus),
-		"--memory", memLimitStr,
-		imageTag}
-	arguments = append(arguments, args...)
-	cmd := exec.Command("docker", arguments...)
-	stdout := bytes.Buffer{}
-	cmd.Stdout = &stdout
-	stderr := bytes.Buffer{}
-	cmd.Stderr = &stderr
-	err := cmd.Run()
-	outb, _ := stdout.ReadBytes('\n')
-	log.Println(string(outb))
-	errb, _ := stderr.ReadBytes(0)
-	log.Println(string(errb))
-	assert.NoError(t, err)
-
-	return strings.Trim(string(outb), "\n\r"), func() {
-		cmd := exec.Command("docker", "rm", "-f", containerName)
-		out, err := cmd.CombinedOutput()
-		log.Println(string(out))
-		if err != nil {
-			log.Println("error removing container", err)
-		}
-	}
+		return true
+	}, eventuallyTimeout, eventuallyTick)
 }
 
 func TestExitedContainersWithTTL(t *testing.T) {
@@ -205,11 +155,13 @@ func TestExitedContainersWithTTL(t *testing.T) {
 
 	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 1*time.Second)
 
-	test.Eventually(t, eventuallyTimeout, func(t require.TestingT) {
+	assert.Eventually(t, func() bool {
 		samples, err := metrics.Process(containerID)
 		require.Error(t, err)
 		assert.Empty(t, samples)
-	})
+
+		return true
+	}, eventuallyTimeout, eventuallyTick)
 }
 
 func TestExitedContainersWithoutTTL(t *testing.T) {
@@ -223,11 +175,13 @@ func TestExitedContainersWithoutTTL(t *testing.T) {
 
 	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
 
-	test.Eventually(t, eventuallyTimeout, func(t require.TestingT) {
+	assert.Eventually(t, func() bool {
 		sample, err := metrics.Process(containerID)
 		require.Error(t, err)
 		assert.Empty(t, sample)
-	})
+
+		return true
+	}, eventuallyTimeout, eventuallyTick)
 }
 
 const (
@@ -293,6 +247,7 @@ func TestAllMetricsPresent(t *testing.T) {
 
 	// Create all the mocked fileSystem for the test
 	err := mockedFileSystem(t, hostRoot)
+	require.NoError(t, err)
 
 	// CgroupsFetcherMock is the raw CgroupsFetcher with mocked cpu.systemUsage and time
 	// The hostRoot is our mocked filesystem

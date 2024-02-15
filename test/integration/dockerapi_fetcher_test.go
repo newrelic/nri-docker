@@ -1,4 +1,4 @@
-package integration_test
+package integration
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/client"
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -14,10 +13,14 @@ import (
 
 // It currently it shows how to get container stats data and can be useful for development purposes.
 func TestDockerAPIFetcher(t *testing.T) {
-	// Build the client and the fetcher
-	// The API Version can be set up using `args.DockerClientVersion` (defaults to 1.24 for now)
-	dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion("1.24"))
+	dockerClient := newDocker(t)
+
+	info, err := dockerClient.Info(context.Background())
 	require.NoError(t, err)
+	if info.CgroupVersion != "2" {
+		t.Skip("DockerAPIFetcher only supports cgroups v2 version")
+	}
+
 	fetcher := dockerapi.NewFetcher(dockerClient)
 
 	// run a container for testing purposes
