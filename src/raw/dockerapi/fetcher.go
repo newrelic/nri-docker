@@ -40,24 +40,24 @@ func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
 func (f *Fetcher) memoryMetrics(containerStats types.StatsJSON, hostConfig *container.HostConfig) raw.Memory {
 	mem := raw.Memory{}
 
+	// mem.UsageLimit and mem.FuzzUsage are fetched in the same way that for the cgroup file fetchers.
 	if containerStats.MemoryStats.Usage != 0 {
 		mem.UsageLimit = containerStats.MemoryStats.Limit
 		mem.FuzzUsage = containerStats.MemoryStats.Usage
 	}
 
 	if hostConfig != nil {
-		// Set SwapUsage to zero since it's not reported in the docker API. We're doing the same for Fargate.
-		mem.SwapUsage = 0
+		// mem.SwapUsage is not reported in the docker API, we keep its zero value. We're doing the same for Fargate.
 		mem.SwapLimit = uint64(hostConfig.MemorySwap) - uint64(hostConfig.Memory)
 		mem.SoftLimit = uint64(hostConfig.MemoryReservation)
 	} else {
 		log.Debug("received a nil hostConfig")
 	}
 
-	mem.Cache = getOrWarning(containerStats.MemoryStats.Stats, "file", "memory_stats.stats")
-	mem.RSS = getOrWarning(containerStats.MemoryStats.Stats, "anon", "memory_stats.stats")
-	mem.KernelMemoryUsage = getOrWarning(containerStats.MemoryStats.Stats, "kernel_stack", "memory_stats.stats") +
-		getOrWarning(containerStats.MemoryStats.Stats, "slab", "memory_stats.stats")
+	mem.Cache = getOrDebuglog(containerStats.MemoryStats.Stats, "file", "memory_stats.stats")
+	mem.RSS = getOrDebuglog(containerStats.MemoryStats.Stats, "anon", "memory_stats.stats")
+	mem.KernelMemoryUsage = getOrDebuglog(containerStats.MemoryStats.Stats, "kernel_stack", "memory_stats.stats") +
+		getOrDebuglog(containerStats.MemoryStats.Stats, "slab", "memory_stats.stats")
 
 	return mem
 }
@@ -106,10 +106,10 @@ func (f *Fetcher) containerStats(ctx context.Context, containerID string) (types
 	return statsJSON, nil
 }
 
-func getOrWarning(m map[string]uint64, key string, metricsPath string) uint64 { // nolint:unparam
+func getOrDebuglog(m map[string]uint64, key string, metricsPath string) uint64 { // nolint:unparam
 	if val, ok := m[key]; ok {
 		return val
 	}
-	log.Warn("Could not fetch metric value from docker API: the key %q was not found in %s", key, metricsPath)
+	log.Debug("Could not fetch metric value from docker API: the key %q was not found in %s", key, metricsPath)
 	return 0
 }
