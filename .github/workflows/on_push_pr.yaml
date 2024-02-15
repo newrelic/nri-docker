@@ -15,7 +15,6 @@ jobs:
 
   test-integration-nix-cgroups-v1:
     name: Run integration tests on *Nix
-    needs: [push-pr]
     runs-on: ubuntu-20.04
     steps:
       - name: Check cgroups version
