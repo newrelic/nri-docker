@@ -51,6 +51,22 @@ var mockStats = types.StatsJSON{
 			SystemUsage: 31532890000000,
 			OnlineCPUs:  2,
 		},
+		BlkioStats: types.BlkioStats{
+			IoServiceBytesRecursive: []types.BlkioStatEntry{
+				{Op: "Read", Value: 5885952, Major: 202, Minor: 26468},
+				{Op: "Write", Value: 45056, Major: 202, Minor: 26468},
+				{Op: "Sync", Value: 5931008, Major: 202, Minor: 26468},
+				{Op: "Async", Value: 0, Major: 202, Minor: 26468},
+				{Op: "Total", Value: 5931008, Major: 202, Minor: 26468},
+			},
+			IoServicedRecursive: []types.BlkioStatEntry{
+				{Op: "Read", Value: 341, Major: 202, Minor: 26468},
+				{Op: "Write", Value: 11, Major: 202, Minor: 26468},
+				{Op: "Sync", Value: 352, Major: 202, Minor: 26468},
+				{Op: "Async", Value: 0, Major: 202, Minor: 26468},
+				{Op: "Total", Value: 352, Major: 202, Minor: 26468},
+			},
+		},
 	},
 }
 
@@ -121,4 +137,34 @@ func Test_CPUMetrics(t *testing.T) {
 	metricsNoHostConfig, err := fetcher.Fetch(containerWithNoHostConfig)
 	require.NoError(t, err)
 	assert.EqualValues(t, 0, metricsNoHostConfig.CPU.Shares, "When hostConfig is not available, cpu shares cannot be set")
+}
+
+func Test_BlkioMetrics(t *testing.T) {
+	client := mockDockerStatsClient{}
+	client.On("ContainerStats", mock.Anything).Return(mockStats)
+
+	fetcher := dockerapi.NewFetcher(&client)
+
+	expectedBlkioMetrics := raw.Blkio{
+		IoServiceBytesRecursive: []raw.BlkioEntry{
+			{Op: "Read", Value: 5885952},
+			{Op: "Write", Value: 45056},
+			{Op: "Sync", Value: 5931008},
+			{Op: "Async", Value: 0},
+			{Op: "Total", Value: 5931008},
+		},
+		IoServicedRecursive: []raw.BlkioEntry{
+			{Op: "Read", Value: 341},
+			{Op: "Write", Value: 11},
+			{Op: "Sync", Value: 352},
+			{Op: "Async", Value: 0},
+			{Op: "Total", Value: 352},
+		},
+	}
+
+	container := types.ContainerJSON{ContainerJSONBase: &types.ContainerJSONBase{ID: "test"}}
+	metrics, err := fetcher.Fetch(container)
+	require.NoError(t, err)
+
+	assert.Equal(t, expectedBlkioMetrics, metrics.Blkio)
 }

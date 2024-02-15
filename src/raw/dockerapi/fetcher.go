@@ -31,7 +31,7 @@ func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
 		Network:     f.networkMetrics(containerStats),
 		CPU:         f.cpuMetrics(container, containerStats.CPUStats),
 		Pids:        f.pidsMetrics(containerStats),
-		Blkio:       f.blkioMetrics(containerStats),
+		Blkio:       f.blkioMetrics(containerStats.BlkioStats),
 	}
 	return metrics, nil
 }
@@ -84,8 +84,11 @@ func (f *Fetcher) pidsMetrics(containerStats types.StatsJSON) raw.Pids {
 	return raw.Pids{}
 }
 
-func (f *Fetcher) blkioMetrics(containerStats types.StatsJSON) raw.Blkio {
-	return raw.Blkio{}
+func (f *Fetcher) blkioMetrics(blkioStats types.BlkioStats) raw.Blkio {
+	return raw.Blkio{
+		IoServiceBytesRecursive: toRawBlkioEntry(blkioStats.IoServiceBytesRecursive),
+		IoServicedRecursive:     toRawBlkioEntry(blkioStats.IoServicedRecursive),
+	}
 }
 
 func (f *Fetcher) containerStats(ctx context.Context, containerID string) (types.StatsJSON, error) {
@@ -100,4 +103,12 @@ func (f *Fetcher) containerStats(ctx context.Context, containerID string) (types
 		return types.StatsJSON{}, err
 	}
 	return statsJSON, nil
+}
+
+func toRawBlkioEntry(entries []types.BlkioStatEntry) []raw.BlkioEntry {
+	result := []raw.BlkioEntry{}
+	for _, entry := range entries {
+		result = append(result, raw.BlkioEntry{Op: entry.Op, Value: entry.Value})
+	}
+	return result
 }
