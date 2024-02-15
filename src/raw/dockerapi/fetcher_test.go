@@ -127,15 +127,7 @@ func Test_MemoryMetrics(t *testing.T) {
 	}})
 	require.NoError(t, err)
 
-	// Assert the fetched memory metrics match the expected outcome
-	assert.Equal(t, expectedMetrics.Memory.UsageLimit, metrics.Memory.UsageLimit)
-	assert.Equal(t, expectedMetrics.Memory.FuzzUsage, metrics.Memory.FuzzUsage)
-	assert.Equal(t, expectedMetrics.Memory.SwapUsage, metrics.Memory.SwapUsage)
-	assert.Equal(t, expectedMetrics.Memory.SwapLimit, metrics.Memory.SwapLimit)
-	assert.Equal(t, expectedMetrics.Memory.SoftLimit, metrics.Memory.SoftLimit)
-	assert.Equal(t, expectedMetrics.Memory.Cache, metrics.Memory.Cache)
-	assert.Equal(t, expectedMetrics.Memory.RSS, metrics.Memory.RSS)
-	assert.Equal(t, expectedMetrics.Memory.KernelMemoryUsage, metrics.Memory.KernelMemoryUsage)
+	assert.Equal(t, expectedMetrics.Memory, metrics.Memory)
 }
 
 func Test_CPUMetrics(t *testing.T) {
