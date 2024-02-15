@@ -2,9 +2,7 @@ package integration
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
-	"time"
 
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
 	"github.com/stretchr/testify/assert"
@@ -30,23 +28,14 @@ func TestDockerAPIFetcher(t *testing.T) {
 	// show container inspect data (it's done in biz/metrics)
 	inspectData, err := dockerClient.ContainerInspect(context.Background(), containerID)
 	require.NoError(t, err)
-	logAsJSON(t, "Inspect data", &inspectData)
 
-	// Let stress container have some stresful moments before fetching data.
-	time.Sleep(time.Second * 10)
+	assert.EventuallyWithT(t, func(t *assert.CollectT) {
+		statsData, err := fetcher.Fetch(inspectData)
+		require.NoError(t, err)
 
-	statsData, err := fetcher.Fetch(inspectData)
-	require.NoError(t, err)
-	logAsJSON(t, "Container Stats", &statsData)
-
-	// Network metrics
-	// Only RxBytes and RxPackets are generated
-	assert.NotZero(t, statsData.Network.RxBytes)
-	assert.NotZero(t, statsData.Network.RxPackets)
-}
-
-func logAsJSON(t *testing.T, title string, data any) {
-	b, err := json.Marshal(data)
-	require.NoError(t, err)
-	t.Logf("%s: %s", title, string(b))
+		// Network metrics
+		// Only RxBytes and RxPackets are generated
+		assert.NotZero(t, statsData.Network.RxBytes)
+		assert.NotZero(t, statsData.Network.RxPackets)
+	}, eventuallyTimeout, eventuallyTick)
 }
