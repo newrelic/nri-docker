@@ -18,13 +18,14 @@ import (
 )
 
 const (
-	eventuallyTimeout = time.Minute
-	eventuallyTick    = time.Second
-	imageTag          = "stress:latest"
-	containerName     = "nri_docker_test"
-	cpus              = 0.5
-	memLimitStr       = "100M"
-	memLimit          = 100 * 1024 * 1024 // 100 MB of memory
+	eventuallyTimeout  = time.Minute
+	eventuallyTick     = time.Second
+	eventuallySlowTick = time.Second * 10
+	imageTag           = "stress:latest"
+	containerName      = "nri_docker_test"
+	cpus               = 0.5
+	memLimitStr        = "100M"
+	memLimit           = 100 * 1024 * 1024 // 100 MB of memory
 )
 
 var once sync.Once

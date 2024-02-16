@@ -43,26 +43,31 @@ func TestHighCPU(t *testing.T) {
 	assert.InDelta(t, cpus, sample.CPU.LimitCores, 0.01)
 	assert.True(t, sample.Pids.Current >= 4, "pids need to be >= 4") // because we invoked stress-ng -c 4
 
-	assert.EventuallyWithT(t, func(t *assert.CollectT) {
-		sample, err := metrics.Process(containerID)
-		require.NoError(t, err)
+	assert.EventuallyWithT(t,
+		func(t *assert.CollectT) {
+			sample, err := metrics.Process(containerID)
+			require.NoError(t, err)
 
-		cpu := sample.CPU
+			cpu := sample.CPU
 
-		// AND the samples tend to show CPU metrics near to their limits
-		assert.InDelta(t, 100*cpus, cpu.CPUPercent, 15)
-		assert.InDelta(t, 100, cpu.UsedCoresPercent, 15)
-		assert.InDelta(t, cpus, cpu.UsedCores, 0.2)
+			// AND the samples tend to show CPU metrics near to their limits
+			assert.InDelta(t, 100*cpus, cpu.CPUPercent, 15)
+			assert.InDelta(t, 100, cpu.UsedCoresPercent, 15)
+			assert.InDelta(t, cpus, cpu.UsedCores, 0.2)
 
-		assert.True(t, cpu.UserPercent > 0,
-			"user percent not > 0")
-		assert.True(t, cpu.KernelPercent >= 0,
-			"kernel percent not >= 0")
+			assert.True(t, cpu.UserPercent > 0,
+				"user percent not > 0")
+			assert.True(t, cpu.KernelPercent >= 0,
+				"kernel percent not >= 0")
 
-		assert.Truef(t, cpu.UserPercent+cpu.KernelPercent <= cpu.CPUPercent,
-			"user %v%% + kernel %v%% is not < total %v%%",
-			cpu.UserPercent, cpu.KernelPercent, cpu.CPUPercent)
-	}, eventuallyTimeout, eventuallyTick)
+			assert.Truef(t, cpu.UserPercent+cpu.KernelPercent <= cpu.CPUPercent,
+				"user %v%% + kernel %v%% is not < total %v%%",
+				cpu.UserPercent, cpu.KernelPercent, cpu.CPUPercent)
+		},
+		eventuallyTimeout,
+		// Core metrics are calculated from metrics.Process time differences, using variables with seconds accuaracy. Use a tick larger than a second for accuracy.
+		eventuallySlowTick,
+	)
 }
 
 func TestLowCPU(t *testing.T) {
@@ -88,17 +93,23 @@ func TestLowCPU(t *testing.T) {
 	assert.InDelta(t, cpus, sample.CPU.LimitCores, 0.01)
 	assert.True(t, sample.Pids.Current > 0, "pids can't be 0")
 
-	assert.EventuallyWithT(t, func(t *assert.CollectT) {
-		sample, err := metrics.Process(containerID)
-		require.NoError(t, err)
+	assert.EventuallyWithT(
+		t,
+		func(t *assert.CollectT) {
+			sample, err := metrics.Process(containerID)
+			require.NoError(t, err)
 
-		cpu := sample.CPU
+			cpu := sample.CPU
 
-		// AND the samples tend to show CPU metrics near zero
-		assert.InDelta(t, 0, cpu.CPUPercent, 10)
-		assert.InDelta(t, 0, cpu.UsedCoresPercent, 10)
-		assert.InDelta(t, 0, cpu.UsedCores, 0.1)
-	}, eventuallyTimeout, eventuallyTick)
+			// AND the samples tend to show CPU metrics near zero
+			assert.InDelta(t, 0, cpu.CPUPercent, 10)
+			assert.InDelta(t, 0, cpu.UsedCoresPercent, 10)
+			assert.InDelta(t, 0, cpu.UsedCores, 0.1)
+		},
+		eventuallyTimeout,
+		// Core metrics are calculated from metrics.Process time differences,using variables with seconds accuaracy. Use a tick larger than a second for accuracy.
+		eventuallySlowTick,
+	)
 }
 
 func TestMemory(t *testing.T) {
