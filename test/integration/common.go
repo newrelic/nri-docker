@@ -24,6 +24,7 @@ const (
 	imageTag           = "stress:latest"
 	containerName      = "nri_docker_test"
 	cpus               = 0.5
+	pidsLimit          = "2000" // random limit for testing propouses
 	memLimitStr        = "100M"
 	memLimit           = 100 * 1024 * 1024 // 100 MB of memory
 )
@@ -53,6 +54,7 @@ func stress(t *testing.T, args ...string) (containerID string, closeFunc func())
 		"--name", containerName,
 		"--cpus", fmt.Sprint(cpus),
 		"--memory", memLimitStr,
+		"--pids-limit", pidsLimit,
 		imageTag}
 	arguments = append(arguments, args...)
 	cmd := exec.Command("docker", arguments...)
