@@ -54,6 +54,7 @@ func stress(t *testing.T, args ...string) (containerID string, closeFunc func())
 		"--name", containerName,
 		"--cpus", fmt.Sprint(cpus),
 		"--memory", memLimitStr,
+		"--pids-limit", pidsLimit,
 		imageTag}
 	arguments = append(arguments, args...)
 	cmd := exec.Command("docker", arguments...)
