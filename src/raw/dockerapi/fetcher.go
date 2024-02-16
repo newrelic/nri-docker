@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/nri-docker/src/raw"
 )
@@ -27,17 +28,38 @@ func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
 	metrics := raw.Metrics{
 		Time:        time.Now(), // nolint: staticcheck
 		ContainerID: container.ID,
-		Memory:      f.memoryMetrics(containerStats),
+		Memory:      f.memoryMetrics(containerStats, container.HostConfig),
 		Network:     f.networkMetrics(containerStats),
 		CPU:         f.cpuMetrics(container, containerStats.CPUStats),
-		Pids:        f.pidsMetrics(containerStats),
 		Blkio:       f.blkioMetrics(containerStats.BlkioStats),
+		Pids:        f.pidsMetrics(containerStats.PidsStats),
 	}
 	return metrics, nil
 }
 
-func (f *Fetcher) memoryMetrics(containerStats types.StatsJSON) raw.Memory {
-	return raw.Memory{}
+func (f *Fetcher) memoryMetrics(containerStats types.StatsJSON, hostConfig *container.HostConfig) raw.Memory {
+	mem := raw.Memory{}
+
+	// mem.UsageLimit and mem.FuzzUsage are fetched in the same way that for the cgroup file fetchers.
+	if containerStats.MemoryStats.Usage != 0 {
+		mem.UsageLimit = containerStats.MemoryStats.Limit
+		mem.FuzzUsage = containerStats.MemoryStats.Usage
+	}
+
+	if hostConfig != nil {
+		// mem.SwapUsage is not reported in the docker API, we keep its zero value. We're doing the same for Fargate.
+		mem.SwapLimit = uint64(hostConfig.MemorySwap) - uint64(hostConfig.Memory)
+		mem.SoftLimit = uint64(hostConfig.MemoryReservation)
+	} else {
+		log.Debug("received a nil hostConfig")
+	}
+
+	mem.Cache = getOrDebuglog(containerStats.MemoryStats.Stats, "file", "memory_stats.stats")
+	mem.RSS = getOrDebuglog(containerStats.MemoryStats.Stats, "anon", "memory_stats.stats")
+	mem.KernelMemoryUsage = getOrDebuglog(containerStats.MemoryStats.Stats, "kernel_stack", "memory_stats.stats") +
+		getOrDebuglog(containerStats.MemoryStats.Stats, "slab", "memory_stats.stats")
+
+	return mem
 }
 
 // networkMetrics aggregates and returns network metrics across all of a container's interfaces.
@@ -80,8 +102,11 @@ func (f *Fetcher) cpuMetrics(container types.ContainerJSON, cpuStats types.CPUSt
 	}
 }
 
-func (f *Fetcher) pidsMetrics(containerStats types.StatsJSON) raw.Pids {
-	return raw.Pids{}
+func (f *Fetcher) pidsMetrics(pidStats types.PidsStats) raw.Pids {
+	return raw.Pids{
+		Current: pidStats.Current,
+		Limit:   pidStats.Limit,
+	}
 }
 
 func (f *Fetcher) blkioMetrics(blkioStats types.BlkioStats) raw.Blkio {
@@ -111,4 +136,12 @@ func toRawBlkioEntry(entries []types.BlkioStatEntry) []raw.BlkioEntry {
 		result = append(result, raw.BlkioEntry{Op: entry.Op, Value: entry.Value})
 	}
 	return result
+}
+
+func getOrDebuglog(m map[string]uint64, key string, metricsPath string) uint64 { // nolint:unparam
+	if val, ok := m[key]; ok {
+		return val
+	}
+	log.Debug("Could not fetch metric value from docker API: the key %q was not found in %s", key, metricsPath)
+	return 0
 }
