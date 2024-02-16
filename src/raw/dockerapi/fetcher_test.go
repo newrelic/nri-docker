@@ -190,7 +190,6 @@ func Test_Fetch(t *testing.T) {
 
 		assert.Equal(t, expectedBlkioMetrics, metrics.Blkio)
 	})
-
 }
 
 func Test_NilHostConfig(t *testing.T) {
@@ -205,5 +204,4 @@ func Test_NilHostConfig(t *testing.T) {
 	assert.EqualValues(t, 0, metricsNoHostConfig.CPU.Shares, "When hostConfig is not available, cpu shares cannot be set")
 	assert.EqualValues(t, 0, metricsNoHostConfig.Memory.SwapLimit, "When hostConfig is not available, SwapLimit cannot be set")
 	assert.EqualValues(t, 0, metricsNoHostConfig.Memory.SoftLimit, "When hostConfig is not available, SoftLimit cannot be set")
-
 }
