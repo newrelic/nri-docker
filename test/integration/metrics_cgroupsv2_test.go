@@ -1,4 +1,4 @@
-package integration_test
+package integration
 
 import (
 	"io/ioutil"
@@ -15,7 +15,6 @@ import (
 )
 
 const (
-	cgroupDriver                              = "systemd"
 	InspectorPIDCgroupsV2                     = 667
 	relativePathToTestdataFilesystemCgroupsV2 = "testdata/cgroupsV2_host/"
 )
@@ -72,6 +71,7 @@ func TestCgroupsv2AllMetricsPresent(t *testing.T) {
 	hostRoot := t.TempDir()
 
 	err := mockedCgroupsV2FileSystem(t, hostRoot)
+	require.NoError(t, err)
 
 	previousCPUState := raw.CPU{
 		TotalUsage:        916236261000,
