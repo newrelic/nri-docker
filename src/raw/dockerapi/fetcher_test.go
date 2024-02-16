@@ -68,7 +68,6 @@ var mockStats = types.StatsJSON{
 	},
 }
 
-// All network metrics are monotonic counters,
 const mockMetricValue = 1
 
 var mockNetworkStats = types.NetworkStats{
@@ -87,7 +86,20 @@ func Test_Fetch(t *testing.T) {
 	client.On("ContainerStats", mock.Anything).Return(mockStats)
 
 	fetcher := dockerapi.NewFetcher(&client)
-	metrics, err := fetcher.Fetch(types.ContainerJSON{ContainerJSONBase: &types.ContainerJSONBase{ID: "test"}})
+
+	metrics, err := fetcher.Fetch(types.ContainerJSON{ContainerJSONBase: &types.ContainerJSONBase{
+		ID: "test",
+		HostConfig: &container.HostConfig{
+			Resources: container.Resources{
+				// Required by memory metrics test
+				Memory:            1024 * 1024 * 500, // 500 MB
+				MemoryReservation: 1024 * 1024 * 250, // 250 MB, for SoftLimit calculation
+				MemorySwap:        1024 * 1024 * 600, // Total memory + swap
+				// Required by cpu metric test
+				CPUShares: 2048,
+			},
+		},
+	}})
 	require.NoError(t, err)
 
 	t.Run("Network metrics", func(t *testing.T) {
@@ -106,75 +118,55 @@ func Test_Fetch(t *testing.T) {
 
 	t.Run("Pid metrics", func(t *testing.T) {
 		t.Parallel()
-		// Multiply by the number of interfaces since network metrics are aggregated across all net interfaces.
+
 		expectedValue := uint64(mockMetricValue)
 		assert.Equal(t, expectedValue, metrics.Pids.Current)
 		assert.Equal(t, expectedValue, metrics.Pids.Limit)
 	})
 
+	t.Run("Memory metrics", func(t *testing.T) {
+		expectedMemoryMetrics := raw.Memory{
+			UsageLimit:        1024 * 1024 * 500, // 500 MB total memory limit
+			FuzzUsage:         1024 * 1024 * 250, // 250 MB current memory usage
+			SwapUsage:         0,
+			SwapLimit:         1024 * 1024 * 100, // 100 MB
+			SoftLimit:         1024 * 1024 * 250, // 250 MB memory reservation (soft limit)
+			Cache:             1024 * 1024 * 25,  // 25 MB cache usage
+			RSS:               1024 * 1024 * 75,  // 75 MB RSS usage
+			KernelMemoryUsage: 1024 * 1024 * 10,  // 10 MB kernel memory usage (kernel_stack + slab)
+		}
+		assert.Equal(t, expectedMemoryMetrics, metrics.Memory)
+	})
+
+	t.Run("CPU metrics", func(t *testing.T) {
+		expectedCPUMetrics := raw.CPU{
+			TotalUsage:        11491000,
+			UsageInKernelmode: 5745000,
+			UsageInUsermode:   5745000,
+			PercpuUsage:       nil,
+			Shares:            2048,
+			ThrottledPeriods:  1,
+			ThrottledTimeNS:   20000,
+			SystemUsage:       31532890000000,
+			OnlineCPUs:        2,
+		}
+
+		assert.Equal(t, expectedCPUMetrics, metrics.CPU)
+	})
+
 }
-func Test_MemoryMetrics(t *testing.T) {
+
+func Test_NilHostConfig(t *testing.T) {
 	client := mockDockerStatsClient{}
 	client.On("ContainerStats", mock.Anything).Return(mockStats)
 
-	expectedMemoryMetrics := raw.Memory{
-		UsageLimit:        1024 * 1024 * 500, // 500 MB total memory limit
-		FuzzUsage:         1024 * 1024 * 250, // 250 MB current memory usage
-		SwapUsage:         0,
-		SwapLimit:         1024 * 1024 * 100, // 100 MB
-		SoftLimit:         1024 * 1024 * 250, // 250 MB memory reservation (soft limit)
-		Cache:             1024 * 1024 * 25,  // 25 MB cache usage
-		RSS:               1024 * 1024 * 75,  // 75 MB RSS usage
-		KernelMemoryUsage: 1024 * 1024 * 10,  // 10 MB kernel memory usage (kernel_stack + slab)
-	}
-
-	fetcher := dockerapi.NewFetcher(&client)
-	metrics, err := fetcher.Fetch(types.ContainerJSON{ContainerJSONBase: &types.ContainerJSONBase{
-		ID: "test",
-		HostConfig: &container.HostConfig{
-			Resources: container.Resources{
-				Memory:            1024 * 1024 * 500, // 500 MB
-				MemoryReservation: 1024 * 1024 * 250, // 250 MB, for SoftLimit calculation
-				MemorySwap:        1024 * 1024 * 600, // Total memory + swap
-			},
-		},
-	}})
-	require.NoError(t, err)
-
-	assert.Equal(t, expectedMemoryMetrics, metrics.Memory)
-}
-
-func Test_CPUMetrics(t *testing.T) {
-	client := mockDockerStatsClient{}
-	client.On("ContainerStats", mock.Anything).Return(mockStats)
-
 	fetcher := dockerapi.NewFetcher(&client)
 
-	expectedCPUMetrics := raw.CPU{
-		TotalUsage:        11491000,
-		UsageInKernelmode: 5745000,
-		UsageInUsermode:   5745000,
-		PercpuUsage:       nil,
-		Shares:            2048,
-		ThrottledPeriods:  1,
-		ThrottledTimeNS:   20000,
-		SystemUsage:       31532890000000,
-		OnlineCPUs:        2,
-	}
-
-	container := types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			ID:         "test",
-			HostConfig: &container.HostConfig{Resources: container.Resources{CPUShares: 2048}},
-		},
-	}
-	metrics, err := fetcher.Fetch(container)
+	metricsNoHostConfig, err := fetcher.Fetch(types.ContainerJSON{ContainerJSONBase: &types.ContainerJSONBase{ID: "test"}})
 	require.NoError(t, err)
 
-	assert.Equal(t, expectedCPUMetrics, metrics.CPU)
-
-	containerWithNoHostConfig := types.ContainerJSON{ContainerJSONBase: &types.ContainerJSONBase{ID: "test"}}
-	metricsNoHostConfig, err := fetcher.Fetch(containerWithNoHostConfig)
-	require.NoError(t, err)
 	assert.EqualValues(t, 0, metricsNoHostConfig.CPU.Shares, "When hostConfig is not available, cpu shares cannot be set")
+	assert.EqualValues(t, 0, metricsNoHostConfig.Memory.SwapLimit, "When hostConfig is not available, SwapLimit cannot be set")
+	assert.EqualValues(t, 0, metricsNoHostConfig.Memory.SoftLimit, "When hostConfig is not available, SoftLimit cannot be set")
+
 }
