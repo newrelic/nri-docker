@@ -31,7 +31,7 @@ func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
 		Memory:      f.memoryMetrics(containerStats, container.HostConfig),
 		Network:     f.networkMetrics(containerStats),
 		CPU:         f.cpuMetrics(container, containerStats.CPUStats),
-		Pids:        f.pidsMetrics(containerStats),
+		Pids:        f.pidsMetrics(containerStats.PidsStats),
 		Blkio:       f.blkioMetrics(containerStats),
 	}
 	return metrics, nil
@@ -102,8 +102,11 @@ func (f *Fetcher) cpuMetrics(container types.ContainerJSON, cpuStats types.CPUSt
 	}
 }
 
-func (f *Fetcher) pidsMetrics(containerStats types.StatsJSON) raw.Pids {
-	return raw.Pids{}
+func (f *Fetcher) pidsMetrics(pidStats types.PidsStats) raw.Pids {
+	return raw.Pids{
+		Current: pidStats.Current,
+		Limit:   pidStats.Limit,
+	}
 }
 
 func (f *Fetcher) blkioMetrics(containerStats types.StatsJSON) raw.Blkio {
