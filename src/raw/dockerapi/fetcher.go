@@ -31,8 +31,8 @@ func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
 		Memory:      f.memoryMetrics(containerStats, container.HostConfig),
 		Network:     f.networkMetrics(containerStats),
 		CPU:         f.cpuMetrics(container, containerStats.CPUStats),
+		Blkio:       f.blkioMetrics(containerStats.BlkioStats),
 		Pids:        f.pidsMetrics(containerStats.PidsStats),
-		Blkio:       f.blkioMetrics(containerStats),
 	}
 	return metrics, nil
 }
@@ -109,8 +109,11 @@ func (f *Fetcher) pidsMetrics(pidStats types.PidsStats) raw.Pids {
 	}
 }
 
-func (f *Fetcher) blkioMetrics(containerStats types.StatsJSON) raw.Blkio {
-	return raw.Blkio{}
+func (f *Fetcher) blkioMetrics(blkioStats types.BlkioStats) raw.Blkio {
+	return raw.Blkio{
+		IoServiceBytesRecursive: toRawBlkioEntry(blkioStats.IoServiceBytesRecursive),
+		IoServicedRecursive:     toRawBlkioEntry(blkioStats.IoServicedRecursive),
+	}
 }
 
 func (f *Fetcher) containerStats(ctx context.Context, containerID string) (types.StatsJSON, error) {
@@ -125,6 +128,14 @@ func (f *Fetcher) containerStats(ctx context.Context, containerID string) (types
 		return types.StatsJSON{}, err
 	}
 	return statsJSON, nil
+}
+
+func toRawBlkioEntry(entries []types.BlkioStatEntry) []raw.BlkioEntry {
+	result := []raw.BlkioEntry{}
+	for _, entry := range entries {
+		result = append(result, raw.BlkioEntry{Op: entry.Op, Value: entry.Value})
+	}
+	return result
 }
 
 func getOrDebuglog(m map[string]uint64, key string, metricsPath string) uint64 { // nolint:unparam
