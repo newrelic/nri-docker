@@ -42,6 +42,5 @@ func TestDockerAPIFetcher(t *testing.T) {
 		// Pids metrics
 		assert.Equal(t, pidsLimit, strconv.FormatUint(statsData.Pids.Limit, 10), "the limit has been set so it should be reported")
 		assert.NotZero(t, statsData.Pids.Current, "amount of processes or threads should be grater than 0")
-
 	}, eventuallyTimeout, eventuallyTick)
 }
