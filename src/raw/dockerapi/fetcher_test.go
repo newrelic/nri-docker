@@ -31,11 +31,6 @@ func (m *mockDockerStatsClient) ContainerStats(ctx context.Context, containerID 
 }
 
 var mockStats = types.StatsJSON{
-	Networks: map[string]types.NetworkStats{
-		"eth0": mockNetworkStats,
-		"eth1": mockNetworkStats,
-		"eth2": mockNetworkStats,
-	},
 	Stats: types.Stats{
 		CPUStats: types.CPUStats{
 			CPUUsage: types.CPUUsage{
@@ -51,6 +46,21 @@ var mockStats = types.StatsJSON{
 			SystemUsage: 31532890000000,
 			OnlineCPUs:  2,
 		},
+		MemoryStats: types.MemoryStats{
+			Usage: 1024 * 1024 * 250, // 250 MB current memory usage
+			Stats: map[string]uint64{
+				"file":         1024 * 1024 * 25, // 25 MB cache usage
+				"anon":         1024 * 1024 * 75, // 75 MB RSS usage
+				"kernel_stack": 1024 * 1024 * 5,  // 5 MB kernel stack usage
+				"slab":         1024 * 1024 * 5,  // 5 MB slab usage
+			},
+			Limit: 1024 * 1024 * 500, // 500 MB total memory limit
+		},
+	},
+	Networks: map[string]types.NetworkStats{
+		"eth0": mockNetworkStats,
+		"eth1": mockNetworkStats,
+		"eth2": mockNetworkStats,
 	},
 }
 
@@ -86,6 +96,36 @@ func Test_NetworkMetrics(t *testing.T) {
 	assert.Equal(t, expectedValue, metrics.Network.TxDropped)
 	assert.Equal(t, expectedValue, metrics.Network.TxErrors)
 	assert.Equal(t, expectedValue, metrics.Network.TxPackets)
+}
+func Test_MemoryMetrics(t *testing.T) {
+	client := mockDockerStatsClient{}
+	client.On("ContainerStats", mock.Anything).Return(mockStats)
+
+	expectedMemoryMetrics := raw.Memory{
+		UsageLimit:        1024 * 1024 * 500, // 500 MB total memory limit
+		FuzzUsage:         1024 * 1024 * 250, // 250 MB current memory usage
+		SwapUsage:         0,
+		SwapLimit:         1024 * 1024 * 100, // 100 MB
+		SoftLimit:         1024 * 1024 * 250, // 250 MB memory reservation (soft limit)
+		Cache:             1024 * 1024 * 25,  // 25 MB cache usage
+		RSS:               1024 * 1024 * 75,  // 75 MB RSS usage
+		KernelMemoryUsage: 1024 * 1024 * 10,  // 10 MB kernel memory usage (kernel_stack + slab)
+	}
+
+	fetcher := dockerapi.NewFetcher(&client)
+	metrics, err := fetcher.Fetch(types.ContainerJSON{ContainerJSONBase: &types.ContainerJSONBase{
+		ID: "test",
+		HostConfig: &container.HostConfig{
+			Resources: container.Resources{
+				Memory:            1024 * 1024 * 500, // 500 MB
+				MemoryReservation: 1024 * 1024 * 250, // 250 MB, for SoftLimit calculation
+				MemorySwap:        1024 * 1024 * 600, // Total memory + swap
+			},
+		},
+	}})
+	require.NoError(t, err)
+
+	assert.Equal(t, expectedMemoryMetrics, metrics.Memory)
 }
 
 func Test_CPUMetrics(t *testing.T) {
