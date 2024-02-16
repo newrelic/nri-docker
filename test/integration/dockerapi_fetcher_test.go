@@ -1,22 +1,24 @@
-package integration_test
+package integration
 
 import (
 	"context"
-	"encoding/json"
 	"testing"
 
-	"github.com/docker/docker/client"
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// TODO: this should extended/replaced when the fetcher actually fetches something.
 // It currently it shows how to get container stats data and can be useful for development purposes.
-func TestDockerAPIHelpers(t *testing.T) {
-	// Build the client and the fetcher
-	// The API Version can be set up using `args.DockerClientVersion` (defaults to 1.24 for now)
-	dockerClient, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion("1.24"))
+func TestDockerAPIFetcher(t *testing.T) {
+	dockerClient := newDocker(t)
+
+	info, err := dockerClient.Info(context.Background())
 	require.NoError(t, err)
+	if info.CgroupVersion != "2" {
+		t.Skip("DockerAPIFetcher only supports cgroups v2 version")
+	}
+
 	fetcher := dockerapi.NewFetcher(dockerClient)
 
 	// run a container for testing purposes
@@ -26,16 +28,14 @@ func TestDockerAPIHelpers(t *testing.T) {
 	// show container inspect data (it's done in biz/metrics)
 	inspectData, err := dockerClient.ContainerInspect(context.Background(), containerID)
 	require.NoError(t, err)
-	logAsJSON(t, "Inspect data", &inspectData)
 
-	// fetch stats data
-	statsData, err := fetcher.Fetch(inspectData)
-	require.NoError(t, err)
-	logAsJSON(t, "Container Stats", &statsData)
-}
+	assert.EventuallyWithT(t, func(t *assert.CollectT) {
+		statsData, err := fetcher.Fetch(inspectData)
+		require.NoError(t, err)
 
-func logAsJSON(t *testing.T, title string, data any) {
-	b, err := json.Marshal(data)
-	require.NoError(t, err)
-	t.Logf("%s: %s", title, string(b))
+		// Network metrics
+		// Only RxBytes and RxPackets are generated
+		assert.NotZero(t, statsData.Network.RxBytes)
+		assert.NotZero(t, statsData.Network.RxPackets)
+	}, eventuallyTimeout, eventuallyTick)
 }
