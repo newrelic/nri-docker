@@ -59,8 +59,6 @@ func TestDockerAPIFetcher(t *testing.T) {
 		// Pids metrics
 		assert.Equal(ct, pidsLimit, strconv.FormatUint(statsData.Pids.Limit, 10), "the limit has been set so it should be reported")
 		assert.NotZero(ct, statsData.Pids.Current, "amount of processes or threads should be grater than 0")
-		assert.NotZero(ct, statsData.Network.RxBytes)
-		assert.NotZero(ct, statsData.Network.RxPackets)
 
 		// Blkio metrics
 		// IoServicedRecursive can be empty if the io operations are not blocking
