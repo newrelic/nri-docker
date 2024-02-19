@@ -2,6 +2,7 @@ package nri
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -92,11 +93,15 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 	for _, container := range containers {
 		metrics, err := cs.metrics.Process(container.ID)
 		if err != nil {
-			if _, ok := err.(*biz.ErrExitedContainerExpired); ok {
-				log.Debug(err.Error())
+			switch {
+			case errors.Is(err, biz.ErrExitedContainerExpired):
+				log.Debug("skipping samples for container (%s): %s", container.ID, err.Error())
 				continue
+			case errors.Is(err, biz.ErrExitedContainerUnexpired):
+				log.Debug("skipping fetching metrics from container (%s): %s", container.ID, err.Error())
+			default:
+				log.Error("fetching metrics for container %v: %v", container.ID, err)
 			}
-			log.Error("error fetching metrics for container %v: %v", container.ID, err)
 		}
 
 		// Creating entity and populating metrics
