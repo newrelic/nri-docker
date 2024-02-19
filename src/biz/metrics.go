@@ -17,6 +17,9 @@ import (
 	"github.com/newrelic/nri-docker/src/raw"
 )
 
+var ErrExitedContainerExpired = errors.New("container exited TTL expired")
+var ErrExitedContainerUnexpired = errors.New("exited containers have no metrics to fetch")
+
 // Sample exports the valuable metrics from a container
 type Sample struct {
 	Pids         Pids
@@ -100,16 +103,6 @@ func (mc *MetricsFetcher) WithRuntimeNumCPUfunc(rcFunc func() int) {
 	mc.getRuntimeNumCPU = rcFunc
 }
 
-// ErrExitedContainerExpired is the error type used when exited containers have exceed the TTL that would allow the
-// integration to keep reporting them.
-type ErrExitedContainerExpired struct {
-	s string
-}
-
-func (e *ErrExitedContainerExpired) Error() string {
-	return e.s
-}
-
 // Process returns a metrics Sample of the container with the given ID
 func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 	metrics := Sample{}
@@ -127,26 +120,25 @@ func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 		log.Debug("invalid container %s JSON: missing State", containerID)
 	}
 
-	if mc.exitedContainerTTL != 0 && json.State != nil && strings.ToLower(json.State.Status) == "exited" {
-		exitTimestamp, err := time.Parse(time.RFC3339Nano, json.State.FinishedAt)
+	if json.State != nil && strings.ToLower(json.State.Status) == "exited" {
+		expired, err := mc.isExpired(json.State.FinishedAt) //nolint: govet //shadowed err
 		if err != nil {
-			return metrics, fmt.Errorf("invalid finished_at timestamp for exited container %s: %s (%v)",
-				containerID,
-				json.State.FinishedAt,
-				err,
-			)
+			return metrics, fmt.Errorf("verifying container expiration: %w", err)
 		}
-		if time.Since(exitTimestamp) > mc.exitedContainerTTL {
-			return metrics, &ErrExitedContainerExpired{
-				fmt.Sprintf("container %s exited after TTL (%v), skipping", containerID, mc.exitedContainerTTL),
-			}
+		if expired {
+			return metrics, ErrExitedContainerExpired
 		}
+
+		// There are no metrics to fetch from an exited container.
+		return metrics, ErrExitedContainerUnexpired
 	}
 
+	// Fetch metrics from non exited containers
 	rawMetrics, err := mc.fetcher.Fetch(json)
 	if err != nil {
 		return metrics, err
 	}
+
 	metrics.Network = Network(rawMetrics.Network)
 	metrics.BlkIO = mc.blkIO(rawMetrics.Blkio)
 	metrics.CPU = mc.cpu(rawMetrics, &json)
@@ -155,6 +147,23 @@ func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 	metrics.RestartCount = json.RestartCount
 
 	return metrics, nil
+}
+
+func (mc *MetricsFetcher) isExpired(finishedAt string) (bool, error) {
+	if mc.exitedContainerTTL == 0 {
+		return false, nil
+	}
+
+	exitTimestamp, err := time.Parse(time.RFC3339Nano, finishedAt)
+	if err != nil {
+		return false, fmt.Errorf("invalid finished_at timestamp: %s (%w)", finishedAt, err)
+	}
+
+	if time.Since(exitTimestamp) > mc.exitedContainerTTL {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CPU {
