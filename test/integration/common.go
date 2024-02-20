@@ -27,6 +27,9 @@ const (
 	pidsLimit          = "2000" // random limit for testing propouses
 	memLimitStr        = "100M"
 	memLimit           = 100 * 1024 * 1024 // 100 MB of memory
+	memReservationStr  = "95M"
+	memReservation     = 95 * 1024 * 1024 // 95MB of memory reservation
+	cpuShares          = 2048             // cpuShares value for testing purposes
 )
 
 var once sync.Once
@@ -53,8 +56,10 @@ func stress(t *testing.T, args ...string) (containerID string, closeFunc func())
 		"run", "-d",
 		"--name", containerName,
 		"--cpus", fmt.Sprint(cpus),
+		"--cpu-shares", fmt.Sprint(cpuShares),
 		"--memory", memLimitStr,
 		"--pids-limit", pidsLimit,
+		"--memory-reservation", memReservationStr,
 		imageTag}
 	arguments = append(arguments, args...)
 	cmd := exec.Command("docker", arguments...)
