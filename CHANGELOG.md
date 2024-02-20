@@ -9,6 +9,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+### bugfix
+- Metrics fetch is no longer executed for exited containers that was causing an error log line (`failed to open file: /proc/0/cgroup`) for each exited container. Exited containers samples are still being reported as they were, as far as the TTL (24hs by default) has not expired.
+
 ### Enhancement
 - Allow the path (TMP_DIR) to store container_cpus.json (cache file) to be modified by the agent
 
