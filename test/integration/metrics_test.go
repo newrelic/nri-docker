@@ -165,18 +165,14 @@ func TestExitedContainersWithTTL(t *testing.T) {
 	// Then once the container is in exit status for more than the TTL, an error should be returned.
 	assert.EventuallyWithT(t, func(t *assert.CollectT) {
 		samples, err := metrics.Process(containerID)
-		assert.IsType(t, &biz.ErrExitedContainerExpired{}, err)
+		assert.ErrorIs(t, err, biz.ErrExitedContainerExpired)
 		assert.Empty(t, samples)
 	}, eventuallyTimeout, eventuallyTick)
 }
 
 func TestExitedContainersWithoutTTL(t *testing.T) {
-	// After fixing this tests is failing with the following error:
-	// failed to parse cgroup paths error: failed to open file: /proc/0/cgroup, while detecting cgroup paths error: open /proc/0/cgroup: no such file or directory
-	t.SkipNow()
-
 	// Given a container that will exectue during 1s and then exit
-	containerID, dockerRM := stress(t, "stress-ng", "-c", "0", "-l", "0", "--vm", "1", "--vm-bytes", "60M", "-t", "1s")
+	containerID, dockerRM := stress(t, "stress-ng", "-c", "0", "-l", "0", "--vm", "1", "--vm-bytes", "60M", "-t", "5s")
 	defer dockerRM()
 
 	docker := newDocker(t)
@@ -187,11 +183,18 @@ func TestExitedContainersWithoutTTL(t *testing.T) {
 	// When using a TTL == 0
 	metrics := biz.NewProcessor(persist.NewInMemoryStore(), cgroupFetcher, docker, 0)
 
-	// Then once the container is in exit status it will still be collected
+	// Container metrics should be fetched when running.
 	assert.EventuallyWithT(t, func(t *assert.CollectT) {
 		sample, err := metrics.Process(containerID)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, sample)
+	}, eventuallyTimeout, eventuallyTick)
+
+	// Then once the container is in exit status metrics are not fetched.
+	assert.EventuallyWithT(t, func(t *assert.CollectT) {
+		sample, err := metrics.Process(containerID)
+		assert.ErrorIs(t, err, biz.ErrExitedContainerUnexpired)
+		assert.Empty(t, sample)
 	}, eventuallyTimeout, eventuallyTick)
 }
 
