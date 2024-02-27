@@ -36,10 +36,10 @@ func TestCgroupsv2AllMetricsPresent(t *testing.T) {
 			TxPackets: 3,
 		},
 		BlkIO: biz.BlkIO{
-			TotalReadCount:  14203,
-			TotalWriteCount: 40554,
-			TotalReadBytes:  135932,
-			TotalWriteBytes: 207296,
+			TotalReadCount:  float64ToPointer(14203),
+			TotalWriteCount: float64ToPointer(40554),
+			TotalReadBytes:  float64ToPointer(135932),
+			TotalWriteBytes: float64ToPointer(207296),
 		},
 		CPU: biz.CPU{
 			CPUPercent:       191.3611027027027,

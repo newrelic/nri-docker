@@ -43,10 +43,10 @@ func TestFargateMetrics(t *testing.T) {
 	assert.Equal(t, uint64(11), samples.Pids.Current)
 	assert.Equal(t, uint64(0), samples.Pids.Limit)
 
-	assert.Equal(t, float64(0), samples.BlkIO.TotalReadBytes)
-	assert.Equal(t, float64(0), samples.BlkIO.TotalReadCount)
-	assert.Equal(t, float64(7839744), samples.BlkIO.TotalWriteBytes)
-	assert.Equal(t, float64(957), samples.BlkIO.TotalWriteCount)
+	assert.Equal(t, float64(0), *samples.BlkIO.TotalReadBytes)
+	assert.Equal(t, float64(0), *samples.BlkIO.TotalReadCount)
+	assert.Equal(t, float64(7839744), *samples.BlkIO.TotalWriteBytes)
+	assert.Equal(t, float64(957), *samples.BlkIO.TotalWriteCount)
 
 	assert.Empty(t, samples.Network)
 }
@@ -76,10 +76,10 @@ func TestFargateMetricsV4(t *testing.T) {
 	assert.Equal(t, uint64(0x3), samples.Pids.Current)
 	assert.Equal(t, uint64(0), samples.Pids.Limit)
 
-	assert.Equal(t, float64(0), samples.BlkIO.TotalReadBytes)
-	assert.Equal(t, float64(0), samples.BlkIO.TotalReadCount)
-	assert.Equal(t, float64(0), samples.BlkIO.TotalWriteBytes)
-	assert.Equal(t, float64(0), samples.BlkIO.TotalWriteCount)
+	assert.Nil(t, samples.BlkIO.TotalReadBytes)
+	assert.Nil(t, samples.BlkIO.TotalReadCount)
+	assert.Nil(t, samples.BlkIO.TotalWriteBytes)
+	assert.Nil(t, samples.BlkIO.TotalWriteCount)
 
 	assert.Equal(t, int64(84), samples.Network.RxBytes)
 	assert.Equal(t, int64(0), samples.Network.RxDropped)
@@ -89,7 +89,6 @@ func TestFargateMetricsV4(t *testing.T) {
 	assert.Equal(t, int64(0), samples.Network.TxDropped)
 	assert.Equal(t, int64(3), samples.Network.TxErrors)
 	assert.Equal(t, int64(2), samples.Network.TxPackets)
-
 }
 
 func startMetadataEndpointStub(t *testing.T, taskID string) (server *httptest.Server, cleanup func()) {
