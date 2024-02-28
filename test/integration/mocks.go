@@ -1,11 +1,15 @@
 package integration
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
 	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/newrelic/nri-docker/src/raw"
+	"github.com/stretchr/testify/mock"
 )
 
 const cgroupDriver = "systemd"
@@ -122,4 +126,18 @@ func (i InspectorMock) ContainerInspect(_ context.Context, _ string) (types.Cont
 
 func (i InspectorMock) Info(_ context.Context) (types.Info, error) {
 	return types.Info{}, nil
+}
+
+type mockDockerStatsClient struct {
+	mock.Mock
+}
+
+func (m *mockDockerStatsClient) ContainerStats(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
+	args := m.Called()
+
+	statsJSON, _ := json.Marshal(args.Get(0).(types.StatsJSON))
+
+	return types.ContainerStats{
+		Body: io.NopCloser(bytes.NewReader(statsJSON)),
+	}, nil
 }
