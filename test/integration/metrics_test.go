@@ -12,11 +12,14 @@ import (
 	"time"
 
 	"github.com/newrelic/nri-docker/src/biz"
+	"github.com/newrelic/nri-docker/src/raw/dockerapi"
 
+	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/persist"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 )
 
@@ -223,10 +226,10 @@ func TestAllMetricsPresent(t *testing.T) {
 			TxPackets: 4,
 		},
 		BlkIO: biz.BlkIO{
-			TotalReadCount:  39,
-			TotalWriteCount: 89,
-			TotalReadBytes:  2387968,
-			TotalWriteBytes: 50,
+			TotalReadCount:  float64ToPointer(39),
+			TotalWriteCount: float64ToPointer(89),
+			TotalReadBytes:  float64ToPointer(2387968),
+			TotalWriteBytes: float64ToPointer(50),
 		},
 		CPU: biz.CPU{
 			CPUPercent:    28.546433726285464,
@@ -278,6 +281,90 @@ func TestAllMetricsPresent(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, expectedSample, sample)
 	})
+}
+
+// As mentioned in the docker API docs (https://docs.docker.com/engine/api/v1.44/#tag/Container/operation/ContainerStats)
+// the only field set in `blkio_stats` is `io_service_bytes_recursive`.
+func TestBlkIOMetrics(t *testing.T) {
+	cases := []struct {
+		Name          string
+		MockStats     types.StatsJSON
+		ExpectedBlkIO biz.BlkIO
+	}{
+		{
+			Name: "With IoServiceBytesRecursive and IoServicedRecursive",
+			MockStats: types.StatsJSON{
+				Stats: types.Stats{
+					BlkioStats: types.BlkioStats{
+						IoServiceBytesRecursive: []types.BlkioStatEntry{
+							{Op: "Read", Value: 5885952},
+							{Op: "Write", Value: 45056},
+						},
+						IoServicedRecursive: []types.BlkioStatEntry{
+							{Op: "Read", Value: 39},
+							{Op: "Write", Value: 11},
+						},
+					},
+				},
+			},
+			ExpectedBlkIO: biz.BlkIO{
+				TotalReadCount:  float64ToPointer(39),
+				TotalWriteCount: float64ToPointer(11),
+				TotalReadBytes:  float64ToPointer(5885952),
+				TotalWriteBytes: float64ToPointer(45056),
+			},
+		},
+		{
+			Name: "Without IoServiceBytesRecursive and IoServicedRecursive",
+			MockStats: types.StatsJSON{
+				Stats: types.Stats{
+					BlkioStats: types.BlkioStats{},
+				},
+			},
+			ExpectedBlkIO: biz.BlkIO{
+				TotalReadCount:  nil,
+				TotalWriteCount: nil,
+				TotalReadBytes:  nil,
+				TotalWriteBytes: nil,
+			},
+		},
+		{
+			Name: "With Only IoServiceBytesRecursive",
+			MockStats: types.StatsJSON{
+				Stats: types.Stats{
+					BlkioStats: types.BlkioStats{
+						IoServiceBytesRecursive: []types.BlkioStatEntry{
+							{Op: "Read", Value: 5885952},
+							{Op: "Write", Value: 45056},
+						},
+					},
+				},
+			},
+			ExpectedBlkIO: biz.BlkIO{
+				TotalReadCount:  nil,
+				TotalWriteCount: nil,
+				TotalReadBytes:  float64ToPointer(5885952),
+				TotalWriteBytes: float64ToPointer(45056),
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.Name, func(t *testing.T) {
+			client := mockDockerStatsClient{}
+			client.On("ContainerStats", mock.Anything).Return(tc.MockStats)
+			dockerAPIFetcher := dockerapi.NewFetcher(&client)
+
+			storer := inMemoryStorerWithPreviousCPUState()
+			inspector := NewInspectorMock(InspectorContainerID, InspectorPID, 2)
+
+			metrics := biz.NewProcessor(storer, dockerAPIFetcher, inspector, 0)
+
+			sample, err := metrics.Process(InspectorContainerID)
+			require.NoError(t, err)
+			assert.Equal(t, tc.ExpectedBlkIO, sample.BlkIO)
+		})
+	}
 }
 
 // fetcher is a helper function that returns a Fetcher.
