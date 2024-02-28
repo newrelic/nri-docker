@@ -38,10 +38,10 @@ type Network raw.Network
 
 // BlkIO stands for Block I/O stats
 type BlkIO struct {
-	TotalReadCount  float64
-	TotalWriteCount float64
-	TotalReadBytes  float64
-	TotalWriteBytes float64
+	TotalReadCount  *float64
+	TotalWriteCount *float64
+	TotalReadBytes  *float64
+	TotalWriteBytes *float64
 }
 
 // CPU metrics
@@ -297,22 +297,36 @@ func (mc *MetricsFetcher) blkIO(blkio raw.Blkio) BlkIO {
 		if len(svc.Op) == 0 {
 			continue
 		}
+		var count = float64(svc.Value)
 		switch svc.Op[0] {
 		case 'r', 'R':
-			bio.TotalReadCount += float64(svc.Value)
+			if bio.TotalReadCount == nil {
+				bio.TotalReadCount = new(float64)
+			}
+			*bio.TotalReadCount += count
 		case 'w', 'W':
-			bio.TotalWriteCount += float64(svc.Value)
+			if bio.TotalWriteCount == nil {
+				bio.TotalWriteCount = new(float64)
+			}
+			*bio.TotalWriteCount += count
 		}
 	}
 	for _, bytes := range blkio.IoServiceBytesRecursive {
 		if len(bytes.Op) == 0 {
 			continue
 		}
+		var bCount = float64(bytes.Value)
 		switch bytes.Op[0] {
 		case 'r', 'R':
-			bio.TotalReadBytes += float64(bytes.Value)
+			if bio.TotalReadBytes == nil {
+				bio.TotalReadBytes = new(float64)
+			}
+			*bio.TotalReadBytes += bCount
 		case 'w', 'W':
-			bio.TotalWriteBytes += float64(bytes.Value)
+			if bio.TotalWriteBytes == nil {
+				bio.TotalWriteBytes = new(float64)
+			}
+			*bio.TotalWriteBytes += bCount
 		}
 	}
 	return bio
