@@ -98,8 +98,8 @@ func TestCompareMetrics(t *testing.T) {
 			assert.InDelta(t, sampleCGroup.CPU.ThrottlePeriods, sampleAPI.CPU.ThrottlePeriods, 30, "ThrottlePeriods")
 			assert.InDelta(t, sampleCGroup.CPU.ThrottledTimeMS, sampleAPI.CPU.ThrottledTimeMS, 30, "ThrottledTimeMS")
 
-			assert.InDelta(t, sampleCGroup.BlkIO.TotalReadBytes, sampleAPI.BlkIO.TotalReadBytes, 20000000, "TotalReadBytes")
-			assert.InDelta(t, sampleCGroup.BlkIO.TotalWriteBytes, sampleAPI.BlkIO.TotalWriteBytes, 20000000, "TotalWriteBytes")
+			assert.InDelta(t, *sampleCGroup.BlkIO.TotalReadBytes, *sampleAPI.BlkIO.TotalReadBytes, 20000000, "TotalReadBytes")
+			assert.InDelta(t, *sampleCGroup.BlkIO.TotalWriteBytes, *sampleAPI.BlkIO.TotalWriteBytes, 20000000, "TotalWriteBytes")
 		},
 		eventuallyTimeout,
 		// Core metrics are calculated from metrics.Process time differences, using variables with seconds accuaracy. Use a tick larger than a second for accuracy.
