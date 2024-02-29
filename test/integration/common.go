@@ -30,6 +30,7 @@ const (
 	memReservationStr  = "95M"
 	memReservation     = 95 * 1024 * 1024 // 95MB of memory reservation
 	cpuShares          = 2048             // cpuShares value for testing purposes
+	swapBytes          = "200M"           // swapBytes is the total Memory + swap available and should be bigger than memLimit
 )
 
 var once sync.Once
@@ -57,6 +58,8 @@ func stress(t *testing.T, args ...string) (containerID string, closeFunc func())
 		"--name", containerName,
 		"--cpus", fmt.Sprint(cpus),
 		"--cpu-shares", fmt.Sprint(cpuShares),
+		"--memory-swap", swapBytes,
+		"--memory-swappiness", "100",
 		"--memory", memLimitStr,
 		"--pids-limit", pidsLimit,
 		"--memory-reservation", memReservationStr,
