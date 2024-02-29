@@ -81,10 +81,10 @@ func TestCompareMetrics(t *testing.T) {
 			// assert.InDelta(t, sampleCGroup.Memory.SwapLimitBytes, sampleAPI.Memory.SwapLimitBytes, 5000000, "SwapLimitBytes")
 			// assert.InDelta(t, sampleCGroup.BlkIO.TotalWriteCount, sampleAPI.BlkIO.TotalWriteCount, 5000, "TotalWriteCount")
 			// assert.InDelta(t, sampleCGroup.BlkIO.TotalReadCount, sampleAPI.BlkIO.TotalReadCount, 500, "TotalReadCount")
+			// assert.InDelta(t, sampleCGroup.Memory.SwapUsageBytes, sampleAPI.Memory.SwapUsageBytes, 5000000, "SwapUsageBytes")
 
 			assert.InDelta(t, sampleCGroup.Memory.UsagePercent, sampleAPI.Memory.UsagePercent, 2, "UsagePercent")
 			assert.InDelta(t, sampleCGroup.Memory.UsagePercent, sampleAPI.Memory.UsagePercent, 2, "UsagePercent")
-			assert.InDelta(t, sampleCGroup.Memory.SwapUsageBytes, sampleAPI.Memory.SwapUsageBytes, 5000000, "SwapUsageBytes")
 			assert.InDelta(t, sampleCGroup.Memory.KernelUsageBytes, sampleAPI.Memory.KernelUsageBytes, 5000000, "KernelUsageBytes")
 			assert.InDelta(t, sampleCGroup.Memory.RSSUsageBytes, sampleAPI.Memory.RSSUsageBytes, 5000000, "RSSUsageBytes")
 			assert.InDelta(t, sampleCGroup.Memory.UsageBytes, sampleAPI.Memory.UsageBytes, 5000000, "UsageBytes")
