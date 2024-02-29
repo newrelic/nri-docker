@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"encoding/json"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -11,17 +12,100 @@ import (
 	"testing"
 	"time"
 
-	"github.com/newrelic/nri-docker/src/biz"
-	"github.com/newrelic/nri-docker/src/raw/dockerapi"
-
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
+	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/infra-integrations-sdk/persist"
-	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/newrelic/nri-docker/src/biz"
+	"github.com/newrelic/nri-docker/src/raw"
+	"github.com/newrelic/nri-docker/src/raw/dockerapi"
 )
+
+func TestCompareMetrics(t *testing.T) {
+	// GIVEN a container consuming a lot of CPU
+	containerID, dockerRM := stress(t, "stress-ng", "-c", "2", "-l", "50", "-t", "5m", "--vm", "1", "--vm-bytes", "140M", "--iomix", "10")
+	defer dockerRM()
+
+	// WHEN its metrics are sampled and processed from CGroups
+	dockerClient := newDocker(t)
+	defer dockerClient.Close()
+
+	cgroupFetcher := fetcher(t, dockerClient)
+	metricsCGroup := biz.NewProcessor(
+		persist.NewInMemoryStore(),
+		cgroupFetcher,
+		dockerClient,
+		0)
+	sampleCGroup, err := metricsCGroup.Process(containerID)
+	require.NoError(t, err)
+
+	// WHEN its metrics are sampled and processed from API Server
+	info, err := dockerClient.Info(context.Background())
+	require.NoError(t, err)
+	if info.CgroupVersion != "2" {
+		t.Skip("DockerAPIFetcher only supports cgroups v2 version")
+	}
+
+	fetcherAPI := dockerapi.NewFetcher(dockerClient)
+	metricsAPI := biz.NewProcessor(
+		persist.NewInMemoryStore(),
+		fetcherAPI,
+		dockerClient,
+		0)
+	sampleAPI, err := metricsAPI.Process(containerID)
+	require.NoError(t, err)
+
+	// Core metrics are calculated from metrics.Process time differences, using variables with seconds accuaracy. Use a tick larger than a second for accuracy.
+	assert.EventuallyWithT(t,
+		func(t *assert.CollectT) {
+			sampleAPI, err = metricsAPI.Process(containerID)
+			require.NoError(t, err)
+			data, _ := json.Marshal(sampleAPI)
+			log.Error("sampleAPI: %q", string(data))
+
+			sampleCGroup, err = metricsCGroup.Process(containerID)
+			require.NoError(t, err)
+			data, _ = json.Marshal(sampleCGroup)
+			log.Error("sampleCGroup: %q", string(data))
+
+			// TODO this comparisons should be enabled back as soon as they are fixed for cgroupsV2
+			// assert.InDelta(t, sampleCGroup.Memory.SoftLimitBytes, sampleAPI.Memory.SoftLimitBytes, 50000, "SoftLimitBytes")
+			// assert.InDelta(t, sampleCGroup.CPU.Shares, sampleAPI.CPU.Shares, 200, "Shares")
+
+			// These metrics are not available for fargate and through the DockerAPI
+			// assert.InDelta(t, sampleCGroup.Memory.SwapOnlyUsageBytes, sampleAPI.Memory.SwapOnlyUsageBytes, 50000, "SwapOnlyUsageBytes")
+			// assert.InDelta(t, sampleCGroup.Memory.SwapLimitBytes, sampleAPI.Memory.SwapLimitBytes, 5000000, "SwapLimitBytes")
+			// assert.InDelta(t, sampleCGroup.BlkIO.TotalWriteCount, sampleAPI.BlkIO.TotalWriteCount, 5000, "TotalWriteCount")
+			// assert.InDelta(t, sampleCGroup.BlkIO.TotalReadCount, sampleAPI.BlkIO.TotalReadCount, 500, "TotalReadCount")
+			// assert.InDelta(t, sampleCGroup.Memory.SwapUsageBytes, sampleAPI.Memory.SwapUsageBytes, 5000000, "SwapUsageBytes")
+
+			assert.InDelta(t, sampleCGroup.Memory.UsagePercent, sampleAPI.Memory.UsagePercent, 2, "UsagePercent")
+			assert.InDelta(t, sampleCGroup.Memory.UsagePercent, sampleAPI.Memory.UsagePercent, 2, "UsagePercent")
+			assert.InDelta(t, sampleCGroup.Memory.KernelUsageBytes, sampleAPI.Memory.KernelUsageBytes, 5000000, "KernelUsageBytes")
+			assert.InDelta(t, sampleCGroup.Memory.RSSUsageBytes, sampleAPI.Memory.RSSUsageBytes, 5000000, "RSSUsageBytes")
+			assert.InDelta(t, sampleCGroup.Memory.UsageBytes, sampleAPI.Memory.UsageBytes, 5000000, "UsageBytes")
+			assert.InDelta(t, sampleCGroup.Memory.MemLimitBytes, sampleAPI.Memory.MemLimitBytes, 5000000, "MemLimitBytes")
+
+			assert.InDelta(t, sampleCGroup.CPU.KernelPercent, sampleAPI.CPU.KernelPercent, 3, "KernelPercent")
+			assert.InDelta(t, sampleCGroup.CPU.UserPercent, sampleAPI.CPU.UserPercent, 3, "UserPercent")
+			assert.InDelta(t, sampleCGroup.CPU.UsedCoresPercent, sampleAPI.CPU.UsedCoresPercent, 3, "UsedCoresPercent")
+			assert.InDelta(t, sampleCGroup.CPU.UsedCores, sampleAPI.CPU.UsedCores, 0.3, "UsedCores")
+			assert.InDelta(t, sampleCGroup.CPU.LimitCores, sampleAPI.CPU.LimitCores, 0.2, "LimitCores")
+			assert.InDelta(t, sampleCGroup.CPU.ThrottlePeriods, sampleAPI.CPU.ThrottlePeriods, 30, "ThrottlePeriods")
+			assert.InDelta(t, sampleCGroup.CPU.ThrottledTimeMS, sampleAPI.CPU.ThrottledTimeMS, 30, "ThrottledTimeMS")
+
+			assert.InDelta(t, *sampleCGroup.BlkIO.TotalReadBytes, *sampleAPI.BlkIO.TotalReadBytes, 20000000, "TotalReadBytes")
+			assert.InDelta(t, *sampleCGroup.BlkIO.TotalWriteBytes, *sampleAPI.BlkIO.TotalWriteBytes, 20000000, "TotalWriteBytes")
+		},
+		eventuallyTimeout,
+		// Core metrics are calculated from metrics.Process time differences, using variables with seconds accuaracy. Use a tick larger than a second for accuracy.
+		eventuallySlowTick,
+	)
+}
 
 func TestHighCPU(t *testing.T) {
 	// GIVEN a container consuming a lot of CPU

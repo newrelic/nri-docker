@@ -48,7 +48,7 @@ compile-deps:
 
 bin/$(BINARY_NAME):
 	@echo "=== $(INTEGRATION) === [ compile ]: building $(BINARY_NAME)..."
-	@$(GO) build -v -o bin/$(BINARY_NAME) $(GO_FILES)
+	@CGO_ENABLED=0 $(GO) build -v -o bin/$(BINARY_NAME) $(GO_FILES)
 
 compile: compile-deps bin/$(BINARY_NAME)
 
