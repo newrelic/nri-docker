@@ -221,3 +221,82 @@ func TestSampleAll(t *testing.T) {
 	// container attributes are not populated with emtpy values
 	assert.NotContains(t, i.Entities[0].Metrics[0].Metrics, "state")
 }
+
+func TestMemoryMetrics(t *testing.T) {
+	var tests = []struct {
+		name  string
+		input *biz.Memory
+		check []entry
+	}{
+		{
+			name: "all metrics presents",
+			input: &biz.Memory{
+				UsageBytes:       1,
+				CacheUsageBytes:  2,
+				RSSUsageBytes:    3,
+				MemLimitBytes:    4,
+				UsagePercent:     5,
+				KernelUsageBytes: 6,
+				SoftLimitBytes:   7,
+				SwapLimitBytes:   8,
+				// Without thrse metrics none is set
+				// SwapUsageBytes:        nil,
+				// SwapOnlyUsageBytes:    nil,
+				// SwapLimitUsagePercent: nil,
+			},
+			check: []entry{
+				{Name: "memoryCacheBytes", Value: uint64(2)},
+				{Name: "memoryUsageBytes", Value: uint64(1)},
+				{Name: "memoryResidentSizeBytes", Value: uint64(3)},
+				{Name: "memoryKernelUsageBytes", Value: uint64(6)},
+				{Name: "memorySizeLimitBytes", Value: uint64(4)},
+				{Name: "memoryUsageLimitPercent", Value: float64(5)},
+				{Name: "memorySoftLimitBytes", Value: uint64(7)},
+				{Name: "memorySwapLimitBytes", Value: uint64(8)},
+			},
+		},
+		{
+			name: "all metrics presents",
+			input: &biz.Memory{
+				UsageBytes:            1,
+				CacheUsageBytes:       2,
+				RSSUsageBytes:         3,
+				MemLimitBytes:         4,
+				UsagePercent:          5,
+				KernelUsageBytes:      0,
+				SoftLimitBytes:        7,
+				SwapLimitBytes:        8,
+				SwapUsageBytes:        uint64ToPointer(9),
+				SwapOnlyUsageBytes:    uint64ToPointer(10),
+				SwapLimitUsagePercent: float64ToPointer(11),
+			},
+			check: []entry{
+				{Name: "memoryCacheBytes", Value: uint64(2)},
+				{Name: "memoryUsageBytes", Value: uint64(1)},
+				{Name: "memoryResidentSizeBytes", Value: uint64(3)},
+				{Name: "memoryKernelUsageBytes", Value: uint64(0)},
+				{Name: "memorySizeLimitBytes", Value: uint64(4)},
+				{Name: "memoryUsageLimitPercent", Value: float64(5)},
+				{Name: "memorySoftLimitBytes", Value: uint64(7)},
+				{Name: "memorySwapLimitBytes", Value: uint64(8)},
+				{Name: "memorySwapLimitUsagePercent", Value: float64(11)},
+				{Name: "memorySwapUsageBytes", Value: uint64(9)},
+				{Name: "memorySwapOnlyUsageBytes", Value: uint64(10)},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			res := memory(tt.input)
+			assert.Equal(t, tt.check, res)
+		})
+	}
+}
+
+func uint64ToPointer(u uint64) *uint64 {
+	return &u
+}
+
+func float64ToPointer(f float64) *float64 {
+	return &f
+}

@@ -24,7 +24,6 @@ func fargateRawMetrics(fargateStats FargateStats) map[string]*raw.Metrics {
 				UsageLimit: stats.MemoryStats.Limit,
 				Cache:      stats.MemoryStats.Stats["cache"],
 				RSS:        stats.MemoryStats.Stats["rss"],
-				SwapUsage:  0,
 				FuzzUsage:  0,
 			},
 			Network: network,

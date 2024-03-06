@@ -27,7 +27,7 @@ type Memory struct {
 	UsageLimit        uint64
 	Cache             uint64
 	RSS               uint64
-	SwapUsage         uint64
+	SwapUsage         *uint64
 	FuzzUsage         uint64
 	KernelMemoryUsage uint64
 	SwapLimit         uint64

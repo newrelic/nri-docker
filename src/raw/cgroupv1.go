@@ -211,7 +211,7 @@ func (cg *CgroupsV1Fetcher) memory(metric *cgroupstats.Metrics) (Memory, error) 
 	}
 	mem.Cache = metric.Memory.Cache
 	mem.RSS = metric.Memory.RSS
-	mem.SwapUsage = metric.Memory.Swap.Usage
+	mem.SwapUsage = &metric.Memory.Swap.Usage
 	mem.SwapLimit = metric.Memory.Swap.Limit
 	mem.KernelMemoryUsage = metric.Memory.Kernel.Usage
 	return mem, nil
