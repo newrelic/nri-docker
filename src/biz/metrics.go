@@ -59,17 +59,19 @@ type CPU struct {
 
 // Memory metrics
 type Memory struct {
-	UsageBytes            uint64
-	CacheUsageBytes       uint64
-	RSSUsageBytes         uint64
-	MemLimitBytes         uint64
-	UsagePercent          float64 // Usage percent from the limit, if any
-	KernelUsageBytes      uint64
-	SwapUsageBytes        uint64
-	SwapOnlyUsageBytes    uint64
-	SwapLimitBytes        uint64
-	SwapLimitUsagePercent float64
-	SoftLimitBytes        uint64
+	UsageBytes       uint64
+	CacheUsageBytes  uint64
+	RSSUsageBytes    uint64
+	MemLimitBytes    uint64
+	UsagePercent     float64 // Usage percent from the limit, if any
+	KernelUsageBytes uint64
+	SoftLimitBytes   uint64
+	SwapLimitBytes   uint64
+
+	// The swap metrics depending on swap usage are computed only if it is reported
+	SwapUsageBytes        *uint64
+	SwapOnlyUsageBytes    *uint64
+	SwapLimitUsagePercent *float64
 }
 
 // Processer defines the most essential interface of an exportable container Processer
@@ -235,35 +237,6 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 		usagePercent = 100 * float64(mem.RSS) / float64(memLimits)
 	}
 
-	/* https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
-	For efficiency, as other kernel components, memory cgroup uses some optimization
-	to avoid unnecessary cacheline false sharing. usage_in_bytes is affected by the
-	method and doesn't show 'exact' value of memory (and swap) usage, it's a fuzz
-	value for efficient access. (Of course, when necessary, it's synchronized.)
-	If you want to know more exact memory usage, you should use RSS+CACHE(+SWAP)
-	value in memory.stat(see 5.2).
-	However, as the `docker stats` cli tool does, page cache is intentionally
-	excluded to avoid misinterpretation of the output.
-	Also mem.SwapUsage is parsed from memory.memsw.usage_in_bytes, which
-	according to the documentation reports the sum of current memory usage
-	plus swap space used by processes in the cgroup (in bytes). That's why
-	Usage is subtracted from the Swap: to get the actual swap.
-	*/
-	var swapOnlyUsage uint64
-	if mem.SwapUsage != 0 { // for systems that have swap disabled
-		swapOnlyUsage = mem.SwapUsage - mem.FuzzUsage
-	}
-	swapUsage := mem.RSS + swapOnlyUsage
-
-	swapLimit := mem.SwapLimit
-	if mem.SwapLimit > math.MaxInt64/2 {
-		swapLimit = 0
-	}
-	swapLimitUsagePercent := float64(0)
-	if swapLimit > 0 {
-		swapLimitUsagePercent = 100 * float64(swapUsage) / float64(swapLimit)
-	}
-
 	/* Dockers includes non-swap memory into the swap limit
 	(https://docs.docker.com/config/containers/resource_constraints/#--memory-swap-details)
 	convention followed for metric naming:
@@ -276,19 +249,56 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 		softLimit = 0
 	}
 
-	return Memory{
-		MemLimitBytes:         memLimits,
-		CacheUsageBytes:       mem.Cache,
-		RSSUsageBytes:         mem.RSS,
-		UsageBytes:            mem.RSS,
-		UsagePercent:          usagePercent,
-		KernelUsageBytes:      mem.KernelMemoryUsage,
-		SwapUsageBytes:        swapUsage,
-		SwapOnlyUsageBytes:    swapOnlyUsage,
-		SwapLimitBytes:        swapLimit,
-		SoftLimitBytes:        softLimit,
-		SwapLimitUsagePercent: swapLimitUsagePercent,
+	swapLimit := mem.SwapLimit
+	if mem.SwapLimit > math.MaxInt64/2 {
+		swapLimit = 0
 	}
+
+	m := Memory{
+		MemLimitBytes:    memLimits,
+		CacheUsageBytes:  mem.Cache,
+		RSSUsageBytes:    mem.RSS,
+		UsageBytes:       mem.RSS,
+		UsagePercent:     usagePercent,
+		KernelUsageBytes: mem.KernelMemoryUsage,
+		SoftLimitBytes:   softLimit,
+		SwapLimitBytes:   swapLimit,
+	}
+
+	/*
+			https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
+
+		For efficiency, as other kernel components, memory cgroup uses some optimization
+		to avoid unnecessary cacheline false sharing. usage_in_bytes is affected by the
+		method and doesn't show 'exact' value of memory (and swap) usage, it's a fuzz
+		value for efficient access. (Of course, when necessary, it's synchronized.)
+		If you want to know more exact memory usage, you should use RSS+CACHE(+SWAP)
+		value in memory.stat(see 5.2).
+		However, as the `docker stats` cli tool does, page cache is intentionally
+		excluded to avoid misinterpretation of the output.
+		Also mem.SwapUsage is parsed from memory.memsw.usage_in_bytes, which
+		according to the documentation reports the sum of current memory usage
+		plus swap space used by processes in the cgroup (in bytes). That's why
+		Usage is subtracted from the Swap: to get the actual swap.
+	*/
+	if mem.SwapUsage != nil {
+		var swapOnlyUsage uint64
+		if *mem.SwapUsage != 0 { // for systems that have swap disabled
+			swapOnlyUsage = *mem.SwapUsage - mem.FuzzUsage
+		}
+		swapUsage := mem.RSS + swapOnlyUsage
+
+		swapLimitUsagePercent := float64(0)
+		if swapLimit > 0 {
+			swapLimitUsagePercent = 100 * float64(swapUsage) / float64(swapLimit)
+		}
+
+		m.SwapUsageBytes = &swapUsage
+		m.SwapOnlyUsageBytes = &swapOnlyUsage
+		m.SwapLimitUsagePercent = &swapLimitUsagePercent
+	}
+
+	return m
 }
 
 func (mc *MetricsFetcher) blkIO(blkio raw.Blkio) BlkIO {

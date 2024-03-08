@@ -144,7 +144,6 @@ func Test_Fetch(t *testing.T) {
 		expectedMemoryMetrics := raw.Memory{
 			UsageLimit:        1024 * 1024 * 500, // 500 MB total memory limit
 			FuzzUsage:         1024 * 1024 * 250, // 250 MB current memory usage
-			SwapUsage:         0,
 			SwapLimit:         1024 * 1024 * 100, // 100 MB
 			SoftLimit:         1024 * 1024 * 250, // 250 MB memory reservation (soft limit)
 			Cache:             1024 * 1024 * 25,  // 25 MB cache usage

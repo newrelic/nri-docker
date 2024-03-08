@@ -34,11 +34,10 @@ func TestMetricsFetcher_memory(t *testing.T) {
 			name: "swap metrics",
 			args: args{
 				raw.Memory{
-
 					UsageLimit:        314572800,
 					Cache:             339968,
 					RSS:               312569856,
-					SwapUsage:         371634176,
+					SwapUsage:         uint64ToPointer(371634176),
 					FuzzUsage:         314449920,
 					KernelMemoryUsage: 1626112,
 					SwapLimit:         419430400,
@@ -52,10 +51,10 @@ func TestMetricsFetcher_memory(t *testing.T) {
 				MemLimitBytes:         314572800,
 				UsagePercent:          99.36328125,
 				KernelUsageBytes:      1626112,
-				SwapUsageBytes:        369754112,
-				SwapOnlyUsageBytes:    57184256,
+				SwapUsageBytes:        uint64ToPointer(369754112),
+				SwapOnlyUsageBytes:    uint64ToPointer(57184256),
 				SwapLimitBytes:        419430400,
-				SwapLimitUsagePercent: 88.15625,
+				SwapLimitUsagePercent: float64ToPointer(88.15625),
 				SoftLimitBytes:        262144000,
 			},
 		},
@@ -67,7 +66,7 @@ func TestMetricsFetcher_memory(t *testing.T) {
 					UsageLimit:        9223372036854771712,
 					Cache:             7839744,
 					RSS:               104759296,
-					SwapUsage:         115326976,
+					SwapUsage:         uint64ToPointer(115326976),
 					FuzzUsage:         115326976,
 					KernelMemoryUsage: 1830912,
 					SwapLimit:         9223372036854771712,
@@ -81,11 +80,36 @@ func TestMetricsFetcher_memory(t *testing.T) {
 				MemLimitBytes:         0,
 				UsagePercent:          0.0,
 				KernelUsageBytes:      1830912,
-				SwapUsageBytes:        104759296,
-				SwapOnlyUsageBytes:    0,
+				SwapUsageBytes:        uint64ToPointer(104759296),
+				SwapOnlyUsageBytes:    uint64ToPointer(0),
 				SwapLimitBytes:        0,
-				SwapLimitUsagePercent: 0.0,
+				SwapLimitUsagePercent: float64ToPointer(0.0),
 				SoftLimitBytes:        0,
+			},
+		},
+		{
+			name: "no swap reported",
+			args: args{
+				raw.Memory{
+					UsageLimit:        9223372036854771712,
+					Cache:             7839744,
+					RSS:               104759296,
+					SwapUsage:         nil, // we assume this is not reported
+					FuzzUsage:         115326976,
+					KernelMemoryUsage: 1830912,
+					SwapLimit:         9223372036854771712,
+					SoftLimit:         9223372036854771712,
+				},
+			},
+			want: Memory{
+				UsageBytes:       104759296,
+				CacheUsageBytes:  7839744,
+				RSSUsageBytes:    104759296,
+				MemLimitBytes:    0,
+				UsagePercent:     0.0,
+				KernelUsageBytes: 1830912,
+				SwapLimitBytes:   0,
+				SoftLimitBytes:   0,
 			},
 		},
 	}
@@ -221,4 +245,12 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 			assert.Equal(t, tt.want, got.LimitCores)
 		})
 	}
+}
+
+func uint64ToPointer(u uint64) *uint64 {
+	return &u
+}
+
+func float64ToPointer(f float64) *float64 {
+	return &f
 }

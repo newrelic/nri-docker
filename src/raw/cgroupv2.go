@@ -129,7 +129,7 @@ func (cg *CgroupsV2Fetcher) memory(metric *cgroupstatsV2.Metrics) (Memory, error
 
 	mem.Cache = metric.Memory.File
 	mem.RSS = metric.Memory.Anon
-	mem.SwapUsage = metric.Memory.SwapUsage
+	mem.SwapUsage = &metric.Memory.SwapUsage
 	mem.SwapLimit = metric.Memory.SwapLimit
 	mem.KernelMemoryUsage = metric.Memory.KernelStack + metric.Memory.Slab
 
