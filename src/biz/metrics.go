@@ -265,44 +265,38 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 		SwapLimitBytes:   swapLimit,
 	}
 
+	/*
+			https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
+
+		For efficiency, as other kernel components, memory cgroup uses some optimization
+		to avoid unnecessary cacheline false sharing. usage_in_bytes is affected by the
+		method and doesn't show 'exact' value of memory (and swap) usage, it's a fuzz
+		value for efficient access. (Of course, when necessary, it's synchronized.)
+		If you want to know more exact memory usage, you should use RSS+CACHE(+SWAP)
+		value in memory.stat(see 5.2).
+		However, as the `docker stats` cli tool does, page cache is intentionally
+		excluded to avoid misinterpretation of the output.
+		Also mem.SwapUsage is parsed from memory.memsw.usage_in_bytes, which
+		according to the documentation reports the sum of current memory usage
+		plus swap space used by processes in the cgroup (in bytes). That's why
+		Usage is subtracted from the Swap: to get the actual swap.
+	*/
 	if mem.SwapUsage != nil {
-		m = populateSwapUsageMetrics(mem, m, swapLimit)
+		var swapOnlyUsage uint64
+		if *mem.SwapUsage != 0 { // for systems that have swap disabled
+			swapOnlyUsage = *mem.SwapUsage - mem.FuzzUsage
+		}
+		swapUsage := mem.RSS + swapOnlyUsage
+
+		swapLimitUsagePercent := float64(0)
+		if swapLimit > 0 {
+			swapLimitUsagePercent = 100 * float64(swapUsage) / float64(swapLimit)
+		}
+
+		m.SwapUsageBytes = &swapUsage
+		m.SwapOnlyUsageBytes = &swapOnlyUsage
+		m.SwapLimitUsagePercent = &swapLimitUsagePercent
 	}
-
-	return m
-}
-
-/*
-	https://www.kernel.org/doc/Documentation/cgroup-v1/memory.txt
-
-For efficiency, as other kernel components, memory cgroup uses some optimization
-to avoid unnecessary cacheline false sharing. usage_in_bytes is affected by the
-method and doesn't show 'exact' value of memory (and swap) usage, it's a fuzz
-value for efficient access. (Of course, when necessary, it's synchronized.)
-If you want to know more exact memory usage, you should use RSS+CACHE(+SWAP)
-value in memory.stat(see 5.2).
-However, as the `docker stats` cli tool does, page cache is intentionally
-excluded to avoid misinterpretation of the output.
-Also mem.SwapUsage is parsed from memory.memsw.usage_in_bytes, which
-according to the documentation reports the sum of current memory usage
-plus swap space used by processes in the cgroup (in bytes). That's why
-Usage is subtracted from the Swap: to get the actual swap.
-*/
-func populateSwapUsageMetrics(mem raw.Memory, m Memory, swapLimit uint64) Memory {
-	var swapOnlyUsage uint64
-	if *mem.SwapUsage != 0 { // for systems that have swap disabled
-		swapOnlyUsage = *mem.SwapUsage - mem.FuzzUsage
-	}
-	swapUsage := mem.RSS + swapOnlyUsage
-
-	swapLimitUsagePercent := float64(0)
-	if swapLimit > 0 {
-		swapLimitUsagePercent = 100 * float64(swapUsage) / float64(swapLimit)
-	}
-
-	m.SwapUsageBytes = &swapUsage
-	m.SwapOnlyUsageBytes = &swapOnlyUsage
-	m.SwapLimitUsagePercent = &swapLimitUsagePercent
 
 	return m
 }
