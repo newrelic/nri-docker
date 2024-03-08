@@ -9,7 +9,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/docker/docker/api/types"
 	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/infra-integrations-sdk/persist"
@@ -159,12 +158,12 @@ func processFargateLabels(labels map[string]string) map[string]string {
 
 // clusterNameFromARN extracts the cluster name from an ECS cluster ARN.
 func clusterNameFromARN(ecsClusterARN string) string {
-	a, err := arn.Parse(ecsClusterARN)
+	a, err := parseARN(ecsClusterARN)
 	if err != nil {
 		return ""
 	}
 
-	resourceParts := strings.Split(a.Resource, "/")
+	resourceParts := strings.Split(a.resource, "/")
 	if len(resourceParts) < 2 || resourceParts[0] != "cluster" {
 		return ""
 	}
@@ -175,10 +174,10 @@ func clusterNameFromARN(ecsClusterARN string) string {
 // regionFromTaskARN returns the aws region from the task ARN.
 // Example of task ARN: arn:aws:ecs:us-west-2:xxxxxxxx:task/ecs-local-cluster/37e873f6-37b4-42a7-af47-eac7275c6152
 func regionFromTaskARN(taskARN string) string {
-	a, err := arn.Parse(taskARN)
+	a, err := parseARN(taskARN)
 	if err != nil {
 		return ""
 	}
 
-	return a.Region
+	return a.region
 }
