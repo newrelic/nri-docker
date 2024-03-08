@@ -90,3 +90,7 @@ func stress(t *testing.T, args ...string) (containerID string, closeFunc func())
 func float64ToPointer(f float64) *float64 {
 	return &f
 }
+
+func uint64ToPointer(u uint64) *uint64 {
+	return &u
+}

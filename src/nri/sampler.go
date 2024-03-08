@@ -238,8 +238,6 @@ func memory(mem *biz.Memory) []entry {
 		metricMemoryUsageBytes(mem.UsageBytes),
 		metricMemoryResidentSizeBytes(mem.RSSUsageBytes),
 		metricMemoryKernelUsageBytes(mem.KernelUsageBytes),
-		metricMemorySwapUsageBytes(mem.SwapUsageBytes),
-		metricMemorySwapOnlyUsageBytes(mem.SwapOnlyUsageBytes),
 	}
 	if mem.MemLimitBytes > 0 {
 		metrics = append(metrics,
@@ -247,16 +245,20 @@ func memory(mem *biz.Memory) []entry {
 			metricMemoryUsageLimitPercent(mem.UsagePercent),
 		)
 	}
-	if mem.SwapLimitBytes > 0 {
-		metrics = append(metrics,
-			metricMemorySwapLimitBytes(mem.SwapLimitBytes),
-			metricMemorySwapLimitUsagePercent(mem.SwapLimitUsagePercent),
-		)
-	}
 	if mem.SoftLimitBytes > 0 {
-		metrics = append(metrics,
-			metricMemorySoftLimitBytes(mem.SoftLimitBytes),
-		)
+		metrics = append(metrics, metricMemorySoftLimitBytes(mem.SoftLimitBytes))
+	}
+	if mem.SwapLimitBytes > 0 {
+		metrics = append(metrics, metricMemorySwapLimitBytes(mem.SwapLimitBytes))
+	}
+	if mem.SwapLimitBytes > 0 && mem.SwapLimitUsagePercent != nil {
+		metrics = append(metrics, metricMemorySwapLimitUsagePercent(*mem.SwapLimitUsagePercent))
+	}
+	if mem.SwapUsageBytes != nil {
+		metrics = append(metrics, metricMemorySwapUsageBytes(*mem.SwapUsageBytes))
+	}
+	if mem.SwapOnlyUsageBytes != nil {
+		metrics = append(metrics, metricMemorySwapOnlyUsageBytes(*mem.SwapOnlyUsageBytes))
 	}
 	return metrics
 }
