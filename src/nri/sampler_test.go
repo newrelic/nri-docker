@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/system"
 
 	"github.com/stretchr/testify/mock"
 
@@ -118,7 +119,7 @@ func TestECSLabelRename(t *testing.T) {
 
 	i, err := integration.New("test", "test-version")
 	assert.NoError(t, err)
-	assert.NoError(t, sampler.SampleAll(context.Background(), i, types.Info{}))
+	assert.NoError(t, sampler.SampleAll(context.Background(), i, system.Info{}))
 
 	for expectedName, expectedValue := range expectedLabels {
 		value, ok := i.Entities[0].Metrics[0].Metrics[expectedName]
@@ -155,7 +156,7 @@ func TestExitedContainerTTLExpired(t *testing.T) {
 	i, err := integration.New("test", "test-version")
 	assert.NoError(t, err)
 
-	err = sampler.SampleAll(context.Background(), i, types.Info{})
+	err = sampler.SampleAll(context.Background(), i, system.Info{})
 	assert.NoError(t, err)
 	assert.Empty(t, i.Entities)
 }
@@ -323,7 +324,7 @@ var container = types.Container{
 		"noValue": "",
 	},
 }
-var cgroupInfo = types.Info{
+var cgroupInfo = system.Info{
 	Driver: "devicemapper",
 	DriverStatus: [][2]string{
 		{"Data Space Used", "1920.92 MB"},

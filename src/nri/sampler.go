@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/system"
 	"github.com/newrelic/infra-integrations-sdk/data/attribute"
 	"github.com/newrelic/infra-integrations-sdk/data/metric"
 	"github.com/newrelic/infra-integrations-sdk/integration"
@@ -68,7 +69,7 @@ func NewSampler(fetcher raw.Fetcher, docker raw.DockerClient, config config.Argu
 // running and non-running
 //
 //nolint:gocyclo
-func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integration, cgroupInfo types.Info) error {
+func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integration, cgroupInfo system.Info) error {
 	defer func() {
 		if err := cs.store.Save(); err != nil {
 			log.Warn("persisting previous metrics: %s", err.Error())
