@@ -176,7 +176,7 @@ func attributes(container types.Container) []entry {
 		metricStatus(container.Status),
 	}
 
-	// Removes attributes with emtpy values to avoid be reported.
+	// Removes attributes with empty values to avoid be reported.
 	sanitizedEntries := []entry{}
 	for _, entry := range entries {
 		if !isAttributeValueEmpty(entry) {
@@ -274,16 +274,16 @@ func blkio(bio *biz.BlkIO) []entry {
 	var entries []entry
 
 	if bio.TotalReadCount != nil {
-		entries = append(entries, metricIOTotalReadCount(bio.TotalReadCount), metricIOReadCountPerSecond(bio.TotalReadCount))
+		entries = append(entries, metricIOTotalReadCount(*bio.TotalReadCount), metricIOReadCountPerSecond(*bio.TotalReadCount))
 	}
 	if bio.TotalWriteCount != nil {
-		entries = append(entries, metricIOTotalWriteCount(bio.TotalWriteCount), metricIOWriteCountPerSecond(bio.TotalWriteCount))
+		entries = append(entries, metricIOTotalWriteCount(*bio.TotalWriteCount), metricIOWriteCountPerSecond(*bio.TotalWriteCount))
 	}
 	if bio.TotalReadBytes != nil {
-		entries = append(entries, metricIOTotalReadBytes(bio.TotalReadBytes), metricIOReadBytesPerSecond(bio.TotalReadBytes))
+		entries = append(entries, metricIOTotalReadBytes(*bio.TotalReadBytes), metricIOReadBytesPerSecond(*bio.TotalReadBytes))
 	}
 	if bio.TotalWriteBytes != nil {
-		entries = append(entries, metricIOTotalWriteBytes(bio.TotalWriteBytes), metricIOWriteBytesPerSecond(bio.TotalWriteBytes))
+		entries = append(entries, metricIOTotalWriteBytes(*bio.TotalWriteBytes), metricIOWriteBytesPerSecond(*bio.TotalWriteBytes))
 	}
 
 	if bio.TotalReadBytes != nil || bio.TotalWriteBytes != nil {

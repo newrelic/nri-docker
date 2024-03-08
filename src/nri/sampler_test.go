@@ -7,6 +7,7 @@ import (
 
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/docker/docker/api/types"
 
@@ -48,6 +49,15 @@ func (m *mockStorer) Delete(key string) error {
 }
 func (m *mockStorer) Save() error {
 	return m.Called().Error(0)
+}
+
+func storerMock() *mockStorer {
+	mStore := mockStorer{}
+	mStore.On("Save").Return(nil)
+	mStore.On("Get", mock.Anything, mock.Anything).Return(int64(0), nil)
+	mStore.On("Set", mock.Anything, mock.Anything).Return(int64(0))
+
+	return &mStore
 }
 
 type mockFetcher struct {
@@ -98,8 +108,7 @@ func TestECSLabelRename(t *testing.T) {
 	}, nil)
 	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{}, nil)
 
-	mStore := &mockStorer{}
-	mStore.On("Save").Return(nil)
+	mStore := storerMock()
 
 	sampler := ContainerSampler{
 		metrics: biz.NewProcessor(mStore, nil, mocker, 0),
@@ -125,14 +134,7 @@ func TestECSLabelRename(t *testing.T) {
 
 func TestExitedContainerTTLExpired(t *testing.T) {
 	mocker := &mocker{}
-	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{
-		{
-			ID:      "containerid",
-			Names:   []string{"Container 1"},
-			Image:   "my_image",
-			ImageID: "my_image_id",
-		},
-	}, nil)
+	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{container}, nil)
 	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{
 		ContainerJSONBase: &types.ContainerJSONBase{
 			State: &types.ContainerState{
@@ -141,8 +143,8 @@ func TestExitedContainerTTLExpired(t *testing.T) {
 			},
 		},
 	}, nil)
-	mStore := &mockStorer{}
-	mStore.On("Save").Return(nil)
+
+	mStore := storerMock()
 
 	sampler := ContainerSampler{
 		metrics: biz.NewProcessor(mStore, nil, mocker, 30*time.Minute),
@@ -158,44 +160,23 @@ func TestExitedContainerTTLExpired(t *testing.T) {
 	assert.Empty(t, i.Entities)
 }
 
+//nolint:funlen // this is a test
 func TestSampleAll(t *testing.T) {
 	mocker := &mocker{}
-	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{
-		{
-			ID:      "containerid",
-			Names:   []string{"Container 1"},
-			Image:   "my_image",
-			ImageID: "my_image_id",
-			State:   "",
-			Labels: map[string]string{
-				"value":   "foo",
-				"noValue": "",
-			},
-		},
-	}, nil)
+	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{container}, nil)
 	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{
 		ContainerJSONBase: &types.ContainerJSONBase{
 			State: &types.ContainerState{
-				Status:     "exited",
-				FinishedAt: time.Now().Add(-15 * time.Minute).Format(time.RFC3339Nano),
+				Status: "running",
 			},
+			RestartCount: 1,
 		},
 	}, nil)
 
-	info := types.Info{
-		Driver: "devicemapper",
-		DriverStatus: [][2]string{
-			{"Data Space Total", "102 GB"},
-		},
-	}
-
-	mStore := &mockStorer{}
-	mStore.On("Save").Return(nil)
-	mStore.On("Get", mock.Anything, mock.Anything).Return(int64(0), nil)
-	mStore.On("Set", mock.Anything, mock.Anything).Return(int64(0))
+	mStore := storerMock()
 
 	fetcher := &mockFetcher{}
-	fetcher.On("Fetch", mock.Anything).Return(raw.Metrics{}, nil)
+	fetcher.On("Fetch", mock.Anything).Return(allMetrics(), nil)
 
 	sampler := ContainerSampler{
 		metrics: biz.NewProcessor(mStore, fetcher, mocker, 30*time.Minute),
@@ -206,97 +187,216 @@ func TestSampleAll(t *testing.T) {
 	i, err := integration.New("test", "test-version")
 	assert.NoError(t, err)
 
-	err = sampler.SampleAll(context.Background(), i, info)
+	err = sampler.SampleAll(context.Background(), i, cgroupInfo)
 	assert.NoError(t, err)
-	assert.Len(t, i.Entities, 1)
-	assert.Equal(t, i.Entities[0].Metadata.Name, "containerid")
-	assert.Equal(t, i.Entities[0].Metrics[0].Metrics["storageDataTotalBytes"], 102e9)
+	require.Len(t, i.Entities, 1)
+	require.Len(t, i.Entities[0].Metrics, 1)
 
-	assert.Equal(t, i.Entities[0].Metrics[0].Metrics["image"], "my_image_id")
-	assert.Equal(t, i.Entities[0].Metrics[0].Metrics["label.value"], "foo")
+	metrics := i.Entities[0].Metrics[0].Metrics
 
-	// emtpy labels are populated
-	assert.Equal(t, i.Entities[0].Metrics[0].Metrics["label.noValue"], "")
+	assert.Equal(t, i.Entities[0].Metadata.Name, containerID)
 
-	// container attributes are not populated with emtpy values
-	assert.NotContains(t, i.Entities[0].Metrics[0].Metrics, "state")
+	// Container attributes
+	assert.Equal(t, "image_id", metrics["image"])
+	assert.Equal(t, "command", metrics["commandLine"])
+	assert.Equal(t, "image", metrics["imageName"])
+	assert.Equal(t, "name", metrics["name"])
+	assert.Equal(t, "running", metrics["status"])
+	assert.Equal(t, float64(1), metrics["restartCount"])
+	assert.NotContains(t, metrics, "state", "container attributes are not populated with empty values")
+
+	// Labels
+	assert.Equal(t, metrics["label.noValue"], "", "empty label value should be preserved")
+	assert.Equal(t, metrics["label.value"], "foo")
+
+	// DataStorage
+	assert.NotZero(t, metrics["storageDataUsedBytes"])
+	assert.NotZero(t, metrics["storageDataAvailableBytes"])
+	assert.NotZero(t, metrics["storageDataTotalBytes"])
+	assert.NotZero(t, metrics["storageDataUsagePercent"])
+	assert.NotZero(t, metrics["storageMetadataUsedBytes"])
+	assert.NotZero(t, metrics["storageMetadataAvailableBytes"])
+	assert.NotZero(t, metrics["storageMetadataTotalBytes"])
+	assert.NotZero(t, metrics["storageMetadataUsagePercent"])
+
+	// Memory
+	assert.NotZero(t, metrics["memoryUsageBytes"])
+	assert.NotZero(t, metrics["memoryCacheBytes"])
+	assert.NotZero(t, metrics["memoryResidentSizeBytes"])
+	assert.NotZero(t, metrics["memorySizeLimitBytes"])
+	assert.NotZero(t, metrics["memoryUsageLimitPercent"])
+	assert.NotZero(t, metrics["memoryKernelUsageBytes"])
+	assert.NotZero(t, metrics["memorySwapUsageBytes"])
+	assert.NotZero(t, metrics["memorySwapOnlyUsageBytes"])
+	assert.NotZero(t, metrics["memorySwapLimitBytes"])
+	assert.NotZero(t, metrics["memorySwapLimitUsagePercent"])
+	assert.NotZero(t, metrics["memorySoftLimitBytes"])
+
+	// Pids
+	assert.NotZero(t, metrics["threadCount"])
+	assert.NotZero(t, metrics["threadCountLimit"])
+
+	// Network
+	// Missing persecond metrics that needs store to be calculated
+	assert.NotZero(t, metrics["networkRxBytes"])
+	assert.NotZero(t, metrics["networkRxDropped"])
+	assert.NotZero(t, metrics["networkRxErrors"])
+	assert.NotZero(t, metrics["networkRxPackets"])
+	assert.NotZero(t, metrics["networkTxBytes"])
+	assert.NotZero(t, metrics["networkTxDropped"])
+	assert.NotZero(t, metrics["networkTxErrors"])
+	assert.NotZero(t, metrics["networkTxPackets"])
+
+	// Missing CPU metrics that needs store to be calculated
+
+	// io
+	// Missing persecond metrics that needs store to be calculated
+	assert.NotZero(t, metrics["ioTotalReadCount"])
+	assert.NotZero(t, metrics["ioTotalWriteCount"])
+	assert.NotZero(t, metrics["ioTotalReadBytes"])
+	assert.NotZero(t, metrics["ioTotalWriteBytes"])
+	assert.NotZero(t, metrics["ioTotalBytes"])
 }
 
-func TestMemoryMetrics(t *testing.T) {
-	var tests = []struct {
-		name  string
-		input *biz.Memory
-		check []entry
-	}{
-		{
-			name: "all metrics presents",
-			input: &biz.Memory{
-				UsageBytes:       1,
-				CacheUsageBytes:  2,
-				RSSUsageBytes:    3,
-				MemLimitBytes:    4,
-				UsagePercent:     5,
-				KernelUsageBytes: 6,
-				SoftLimitBytes:   7,
-				SwapLimitBytes:   8,
-				// Without thrse metrics none is set
-				// SwapUsageBytes:        nil,
-				// SwapOnlyUsageBytes:    nil,
-				// SwapLimitUsagePercent: nil,
-			},
-			check: []entry{
-				{Name: "memoryCacheBytes", Value: uint64(2)},
-				{Name: "memoryUsageBytes", Value: uint64(1)},
-				{Name: "memoryResidentSizeBytes", Value: uint64(3)},
-				{Name: "memoryKernelUsageBytes", Value: uint64(6)},
-				{Name: "memorySizeLimitBytes", Value: uint64(4)},
-				{Name: "memoryUsageLimitPercent", Value: float64(5)},
-				{Name: "memorySoftLimitBytes", Value: uint64(7)},
-				{Name: "memorySwapLimitBytes", Value: uint64(8)},
-			},
+func TestSampleAllMissingMetrics(t *testing.T) {
+	mocker := &mocker{}
+	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{container}, nil)
+	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{
+		ContainerJSONBase: &types.ContainerJSONBase{State: &types.ContainerState{Status: "running"}}},
+		nil,
+	)
+
+	mStore := storerMock()
+
+	fetcher := &mockFetcher{}
+	fetcher.On("Fetch", mock.Anything).Return(requiredMetrics(), nil)
+
+	sampler := ContainerSampler{
+		metrics: biz.NewProcessor(mStore, fetcher, mocker, 30*time.Minute),
+		docker:  mocker,
+		store:   mStore,
+	}
+
+	i, err := integration.New("test", "test-version")
+	assert.NoError(t, err)
+
+	err = sampler.SampleAll(context.Background(), i, cgroupInfo)
+	assert.NoError(t, err)
+	require.Len(t, i.Entities, 1)
+	require.Len(t, i.Entities[0].Metrics, 1)
+
+	metrics := i.Entities[0].Metrics[0].Metrics
+
+	// not required metrics should not be present
+	// IO
+	assert.NotContains(t, metrics, "ioTotalReadCount")
+	assert.NotContains(t, metrics, "ioTotalWriteCount")
+	assert.NotContains(t, metrics, "ioTotalReadBytes")
+	assert.NotContains(t, metrics, "ioTotalWriteBytes")
+	assert.NotContains(t, metrics, "ioTotalBytes")
+	// Memory
+	assert.NotContains(t, metrics, "memorySwapUsageBytes")
+	assert.NotContains(t, metrics, "memorySwapOnlyUsageBytes")
+	assert.NotContains(t, metrics, "memorySwapLimitUsagePercent")
+
+	// check required metrics are collected
+	assert.NotZero(t, metrics["memoryUsageBytes"])
+}
+
+const (
+	nonZeroUint uint64 = 100
+	nonZero     int64  = 100
+)
+
+const containerID = "containerid"
+
+var container = types.Container{
+	ID:      containerID,
+	Names:   []string{"name"},
+	Image:   "image",
+	ImageID: "image_id",
+	State:   "",
+	Status:  "running",
+	Command: "command",
+	Labels: map[string]string{
+		"value":   "foo",
+		"noValue": "",
+	},
+}
+var cgroupInfo = types.Info{
+	Driver: "devicemapper",
+	DriverStatus: [][2]string{
+		{"Data Space Used", "1920.92 MB"},
+		{"Data Space Total", "102 GB"},
+		{"Data Space Available", "100.13 GB"},
+		{"Metadata Space Used", "147.5 kB"},
+		{"Metadata Space Total", "1.07 GB"},
+		{"Metadata Space Available", "1.069 GB"},
+	},
+}
+
+func requiredMetrics() raw.Metrics {
+	m := allMetrics()
+	// Remove metrics that are not required
+	m.Blkio.IoServiceBytesRecursive = nil
+	m.Blkio.IoServicedRecursive = nil
+
+	m.Memory.SwapUsage = nil
+
+	return m
+}
+
+func allMetrics() raw.Metrics {
+	// must be grater than FuzzUsage to avoid having onlySwap metric equal zero
+	swapValue := nonZeroUint * 2
+	return raw.Metrics{
+		ContainerID: containerID,
+		Memory: raw.Memory{
+			UsageLimit:        nonZeroUint,
+			Cache:             nonZeroUint,
+			RSS:               nonZeroUint,
+			SwapUsage:         &swapValue,
+			FuzzUsage:         nonZeroUint,
+			KernelMemoryUsage: nonZeroUint,
+			SwapLimit:         nonZeroUint,
+			SoftLimit:         nonZeroUint,
 		},
-		{
-			name: "all metrics presents",
-			input: &biz.Memory{
-				UsageBytes:            1,
-				CacheUsageBytes:       2,
-				RSSUsageBytes:         3,
-				MemLimitBytes:         4,
-				UsagePercent:          5,
-				KernelUsageBytes:      0,
-				SoftLimitBytes:        7,
-				SwapLimitBytes:        8,
-				SwapUsageBytes:        uint64ToPointer(9),
-				SwapOnlyUsageBytes:    uint64ToPointer(10),
-				SwapLimitUsagePercent: float64ToPointer(11),
+		Network: raw.Network{
+			RxBytes:   nonZero,
+			RxDropped: nonZero,
+			RxErrors:  nonZero,
+			RxPackets: nonZero,
+			TxBytes:   nonZero,
+			TxDropped: nonZero,
+			TxErrors:  nonZero,
+			TxPackets: nonZero,
+		},
+		CPU: raw.CPU{},
+		Pids: raw.Pids{
+			Current: nonZeroUint,
+			Limit:   nonZeroUint,
+		},
+		Blkio: raw.Blkio{
+			IoServiceBytesRecursive: []raw.BlkioEntry{
+				{
+					Op:    "Read",
+					Value: nonZeroUint,
+				},
+				{
+					Op:    "Write",
+					Value: nonZeroUint,
+				},
 			},
-			check: []entry{
-				{Name: "memoryCacheBytes", Value: uint64(2)},
-				{Name: "memoryUsageBytes", Value: uint64(1)},
-				{Name: "memoryResidentSizeBytes", Value: uint64(3)},
-				{Name: "memoryKernelUsageBytes", Value: uint64(0)},
-				{Name: "memorySizeLimitBytes", Value: uint64(4)},
-				{Name: "memoryUsageLimitPercent", Value: float64(5)},
-				{Name: "memorySoftLimitBytes", Value: uint64(7)},
-				{Name: "memorySwapLimitBytes", Value: uint64(8)},
-				{Name: "memorySwapLimitUsagePercent", Value: float64(11)},
-				{Name: "memorySwapUsageBytes", Value: uint64(9)},
-				{Name: "memorySwapOnlyUsageBytes", Value: uint64(10)},
+			IoServicedRecursive: []raw.BlkioEntry{
+				{
+					Op:    "Read",
+					Value: nonZeroUint,
+				},
+				{
+					Op:    "Write",
+					Value: nonZeroUint,
+				},
 			},
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			res := memory(tt.input)
-			assert.Equal(t, tt.check, res)
-		})
-	}
-}
-
-func uint64ToPointer(u uint64) *uint64 {
-	return &u
-}
-
-func float64ToPointer(f float64) *float64 {
-	return &f
 }
