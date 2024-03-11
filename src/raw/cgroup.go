@@ -24,7 +24,7 @@ func NewCgroupFetcher(hostRoot string, cgroupInfo system.Info) (Fetcher, error) 
 	if cgroupInfo.CgroupVersion == CgroupV2 {
 		return NewCgroupsV2Fetcher(detectedHostRoot, cgroupInfo.CgroupDriver, NewPosixSystemCPUReader())
 	}
-	// if cgroupInfo.Version == CgroupV1
+
 	return NewCgroupsV1Fetcher(detectedHostRoot, NewPosixSystemCPUReader())
 }
 
