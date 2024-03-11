@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/system"
 	"github.com/newrelic/infra-integrations-sdk/data/attribute"
 	"github.com/newrelic/infra-integrations-sdk/data/metric"
 	"github.com/newrelic/infra-integrations-sdk/integration"
@@ -68,7 +69,7 @@ func NewSampler(fetcher raw.Fetcher, docker raw.DockerClient, config config.Argu
 // running and non-running
 //
 //nolint:gocyclo
-func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integration, cgroupInfo types.Info) error {
+func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integration, cgroupInfo system.Info) error {
 	defer func() {
 		if err := cs.store.Save(); err != nil {
 			log.Warn("persisting previous metrics: %s", err.Error())
@@ -176,7 +177,7 @@ func attributes(container types.Container) []entry {
 		metricStatus(container.Status),
 	}
 
-	// Removes attributes with emtpy values to avoid be reported.
+	// Removes attributes with empty values to avoid be reported.
 	sanitizedEntries := []entry{}
 	for _, entry := range entries {
 		if !isAttributeValueEmpty(entry) {
@@ -274,16 +275,16 @@ func blkio(bio *biz.BlkIO) []entry {
 	var entries []entry
 
 	if bio.TotalReadCount != nil {
-		entries = append(entries, metricIOTotalReadCount(bio.TotalReadCount), metricIOReadCountPerSecond(bio.TotalReadCount))
+		entries = append(entries, metricIOTotalReadCount(*bio.TotalReadCount), metricIOReadCountPerSecond(*bio.TotalReadCount))
 	}
 	if bio.TotalWriteCount != nil {
-		entries = append(entries, metricIOTotalWriteCount(bio.TotalWriteCount), metricIOWriteCountPerSecond(bio.TotalWriteCount))
+		entries = append(entries, metricIOTotalWriteCount(*bio.TotalWriteCount), metricIOWriteCountPerSecond(*bio.TotalWriteCount))
 	}
 	if bio.TotalReadBytes != nil {
-		entries = append(entries, metricIOTotalReadBytes(bio.TotalReadBytes), metricIOReadBytesPerSecond(bio.TotalReadBytes))
+		entries = append(entries, metricIOTotalReadBytes(*bio.TotalReadBytes), metricIOReadBytesPerSecond(*bio.TotalReadBytes))
 	}
 	if bio.TotalWriteBytes != nil {
-		entries = append(entries, metricIOTotalWriteBytes(bio.TotalWriteBytes), metricIOWriteBytesPerSecond(bio.TotalWriteBytes))
+		entries = append(entries, metricIOTotalWriteBytes(*bio.TotalWriteBytes), metricIOWriteBytesPerSecond(*bio.TotalWriteBytes))
 	}
 
 	if bio.TotalReadBytes != nil || bio.TotalWriteBytes != nil {

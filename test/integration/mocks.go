@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/system"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/stretchr/testify/mock"
 )
@@ -124,8 +125,8 @@ func (i InspectorMock) ContainerInspect(_ context.Context, _ string) (types.Cont
 	}, nil
 }
 
-func (i InspectorMock) Info(_ context.Context) (types.Info, error) {
-	return types.Info{}, nil
+func (i InspectorMock) Info(_ context.Context) (system.Info, error) {
+	return system.Info{}, nil
 }
 
 type mockDockerStatsClient struct {

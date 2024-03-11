@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/system"
 )
 
 const (
@@ -15,7 +15,7 @@ const (
 )
 
 // NewCgroupFetcher returns either a V2Fetcher or a V1Fetcher depending on the cgroupInfo
-func NewCgroupFetcher(hostRoot string, cgroupInfo types.Info) (Fetcher, error) {
+func NewCgroupFetcher(hostRoot string, cgroupInfo system.Info) (Fetcher, error) {
 	detectedHostRoot, err := DetectHostRoot(hostRoot, CanAccessDir)
 	if err != nil {
 		return nil, err
