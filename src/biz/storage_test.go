@@ -4,12 +4,12 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/system"
 )
 
 func Test_ParseDeviceMapperStats(t *testing.T) {
 	type args struct {
-		info types.Info
+		info system.Info
 	}
 	tests := []struct {
 		name    string
@@ -20,7 +20,7 @@ func Test_ParseDeviceMapperStats(t *testing.T) {
 		{
 			name: "parse ok",
 			args: args{
-				info: types.Info{
+				info: system.Info{
 					Driver: "devicemapper",
 					DriverStatus: [][2]string{
 						{"Data Space Used", "1920.92 MB"},
@@ -46,7 +46,7 @@ func Test_ParseDeviceMapperStats(t *testing.T) {
 		{
 			name: "missing metrics",
 			args: args{
-				info: types.Info{
+				info: system.Info{
 					Driver: "devicemapper",
 					DriverStatus: [][2]string{
 						{"Data Space Used", "1920.92 MB"},
@@ -68,7 +68,7 @@ func Test_ParseDeviceMapperStats(t *testing.T) {
 		{
 			name: "not supported Driver",
 			args: args{
-				info: types.Info{
+				info: system.Info{
 					Driver: "overlay2",
 				},
 			},
@@ -78,7 +78,7 @@ func Test_ParseDeviceMapperStats(t *testing.T) {
 		{
 			name: "empty DriverStatus",
 			args: args{
-				info: types.Info{
+				info: system.Info{
 					Driver: "devicemapper",
 				},
 			},

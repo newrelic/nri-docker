@@ -6,7 +6,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/integration"
 	"github.com/newrelic/infra-integrations-sdk/log"
@@ -61,7 +61,7 @@ func populateFromFargate(i *integration.Integration, args config.ArgumentList) {
 	sampler, err := nri.NewSampler(fargateFetcher, fargateDockerClient, args)
 	exitOnErr(err)
 	// Info is currently used to get the Storage Driver stats that is not present on Fargate.
-	exitOnErr(sampler.SampleAll(context.Background(), i, types.Info{}))
+	exitOnErr(sampler.SampleAll(context.Background(), i, system.Info{}))
 }
 
 func populateFromDocker(i *integration.Integration, args config.ArgumentList) {
