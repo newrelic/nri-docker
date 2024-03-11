@@ -3,7 +3,7 @@ package biz
 import (
 	"fmt"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/system"
 	humanize "github.com/dustin/go-humanize"
 )
 
@@ -21,7 +21,7 @@ type DeviceMapperStats struct {
 
 // ParseDeviceMapperStats parses the output from the info DriverStatus info Array. This information is not consider stable by
 // Docker and could change anytime according to API the docs.
-func ParseDeviceMapperStats(info types.Info) (*DeviceMapperStats, error) {
+func ParseDeviceMapperStats(info system.Info) (*DeviceMapperStats, error) {
 
 	if info.Driver != "devicemapper" {
 		return nil, fmt.Errorf("only devicemapper is supported")
