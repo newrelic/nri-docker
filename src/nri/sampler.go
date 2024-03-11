@@ -50,7 +50,7 @@ func NewSampler(fetcher raw.Fetcher, docker raw.DockerClient, config config.Argu
 
 	// SDK Storer to keep metric values between executions (e.g. for rates and deltas)
 	store, err := persist.NewFileStore(
-		persist.DefaultPath("container_cpus"),
+		persist.TmpPath(config.TempDir, "container_cpus"),
 		log.NewStdErr(true),
 		cacheTTL)
 	if err != nil {
