@@ -12,11 +12,14 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 ### enhancement
 - Add metrics collection from DockerAPI to support nodes with cgroup V2 on ECS clusters.
 
+### bugfix
+- Blkio metrics `TotalReadCount`, `TotalWriteCount`, `TotalReadBytes` and `TotalWriteBytes` will not be sent if not present. Before they were being reported with value `0` (#221)
+
 ### security
 - Updated logrus dependency to remediate vulnerability
 
 ### breaking
-- Memory swap metrics `memorySwapUsageBytes`, `memorySwapOnlyUsageBytes` and `memorySwapLimitUsagePercent` will not be sent if not present. Before they were being reported with value `0` (#224)
+- Memory swap metrics `memorySwapUsageBytes`, `memorySwapOnlyUsageBytes` and `memorySwapLimitUsagePercent` will not be sent if not present. This will mainly affect when the integration is running in Fargate where these metrics were being reported with incorrect values (#224)
 
 ## v1.10.1 - 2024-03-05
 
