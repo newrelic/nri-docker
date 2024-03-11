@@ -9,8 +9,14 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
-### bugfix
+### enhancement
+- Add metrics collection from DockerAPI to support nodes with cgroup V2 on ECS clusters.
+
+### security
 - Updated logrus dependency to remediate vulnerability
+
+### breaking
+- Memory swap metrics `memorySwapUsageBytes`, `memorySwapOnlyUsageBytes` and `memorySwapLimitUsagePercent` will not be sent if not present. Before they were being reported with value `0` (#224)
 
 ## v1.10.1 - 2024-03-05
 
