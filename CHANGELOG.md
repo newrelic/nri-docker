@@ -9,15 +9,20 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
-### enhancement
-- Add metrics collection from DockerAPI to support nodes with cgroup V2 on ECS clusters.
+## v2.0.0 - 2024-03-12
 
-### security
-- Updated logrus dependency to remediate vulnerability
-
-### breaking
+### ⚠️️ Breaking changes ⚠️
 - Memory swap metrics `memorySwapUsageBytes`, `memorySwapOnlyUsageBytes` and `memorySwapLimitUsagePercent` will not be sent if not present. This will mainly affect when the integration is running in Fargate where these metrics were being reported with incorrect values (#224)
 - Blkio metrics `TotalReadCount`, `TotalWriteCount`, `TotalReadBytes` and `TotalWriteBytes` will not be sent if not present. Before they were being reported with value `0` (#221)
+
+### 🛡️ Security notices
+- Updated logrus dependency to remediate vulnerability
+
+### 🚀 Enhancements
+- Add metrics collection from DockerAPI to support nodes with cgroup V2 on ECS clusters.
+
+### ⛓️ Dependencies
+- Updated github.com/aws/aws-sdk-go to v1.50.36 - [Changelog 🔗](https://github.com/aws/aws-sdk-go/releases/tag/v1.50.36)
 
 ## v1.10.1 - 2024-03-05
 
