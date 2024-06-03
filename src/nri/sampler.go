@@ -261,6 +261,21 @@ func memory(mem *biz.Memory) []entry {
 	if mem.SwapOnlyUsageBytes != nil {
 		metrics = append(metrics, metricMemorySwapOnlyUsageBytes(*mem.SwapOnlyUsageBytes))
 	}
+
+
+	if mem.Commit > 0 {
+		metrics = append(metrics, metricMemoryCommit(*&mem.Commit))
+	}
+	if mem.CommitPeak > 0 {
+		metrics = append(metrics, metricMemoryCommitPeak(*&mem.CommitPeak))
+	}
+	if mem.PrivateWorkingSet > 0 {
+		metrics = append(metrics, metricMemoryPrivateWorkingSet(*&mem.PrivateWorkingSet))
+	}
+	if mem.UsagePercent > 0 {
+		metrics = append(metrics, metricMemoryUsagePercent(*&mem.UsagePercent))
+	}
+
 	return metrics
 }
 
@@ -328,6 +343,7 @@ func cpu(cpu *biz.CPU) []entry {
 		metricCPUUsedCoresPercent(cpu.UsedCoresPercent),
 		metricCPULimitCores(cpu.LimitCores),
 		metricCPUPercent(cpu.CPUPercent),
+		metricNumProcs(cpu.NumProcs),
 		metricCPUKernelPercent(cpu.KernelPercent),
 		metricCPUUserPercent(cpu.UserPercent),
 		metricCPUThrottlePeriods(cpu.ThrottlePeriods),

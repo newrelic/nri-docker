@@ -1,4 +1,4 @@
-// +build linux
+// +build windows
 
 package main
 
@@ -76,12 +76,7 @@ func populateFromDocker(i *integration.Integration, args config.ArgumentList) {
 	exitOnErr(err)
 
 	var fetcher raw.Fetcher
-	if useDockerAPI(args.UseDockerAPI, cgroupInfo.CgroupVersion) {
-		fetcher = dockerapi.NewFetcher(dockerClient)
-	} else { // use cgroups as source of data
-		fetcher, err = raw.NewCgroupFetcher(args.HostRoot, cgroupInfo)
-		exitOnErr(err)
-	}
+	fetcher = dockerapi.NewFetcher(dockerClient)
 
 	sampler, err := nri.NewSampler(fetcher, dockerClient, args)
 	exitOnErr(err)
@@ -89,14 +84,7 @@ func populateFromDocker(i *integration.Integration, args config.ArgumentList) {
 }
 
 func useDockerAPI(dockerAPIRequested bool, version string) bool {
-	if dockerAPIRequested {
-		if version == raw.CgroupV2 {
-			return true
-		}
-		log.Debug("UseDockerAPI config is not available on CgroupV1")
-		return false
-	}
-	return false
+	return true
 }
 
 func exitOnErr(err error) {

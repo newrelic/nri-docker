@@ -13,6 +13,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/infra-integrations-sdk/persist"
+	gops_mem "github.com/shirou/gopsutil/mem"
 
 	"github.com/newrelic/nri-docker/src/raw"
 )
@@ -55,6 +56,7 @@ type CPU struct {
 	ThrottlePeriods  uint64
 	ThrottledTimeMS  float64
 	Shares           uint64
+	NumProcs         uint32
 }
 
 // Memory metrics
@@ -72,6 +74,11 @@ type Memory struct {
 	SwapUsageBytes        *uint64
 	SwapOnlyUsageBytes    *uint64
 	SwapLimitUsagePercent *float64
+
+	// windows memory
+	Commit              uint64
+	CommitPeak          uint64
+	PrivateWorkingSet   uint64
 }
 
 // Processer defines the most essential interface of an exportable container Processer
@@ -142,10 +149,10 @@ func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 	}
 
 	metrics.Network = Network(rawMetrics.Network)
-	metrics.BlkIO = mc.blkIO(rawMetrics.Blkio)
+	metrics.BlkIO = mc.blkIO(rawMetrics.Blkio, rawMetrics.Platform)
 	metrics.CPU = mc.cpu(rawMetrics, &json)
 	metrics.Pids = Pids(rawMetrics.Pids)
-	metrics.Memory = mc.memory(rawMetrics.Memory)
+	metrics.Memory = mc.memory(rawMetrics.Memory, rawMetrics.Platform)
 	metrics.RestartCount = json.RestartCount
 
 	return metrics, nil
@@ -205,7 +212,13 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CP
 
 	maxVal := float64(metrics.CPU.OnlineCPUsWithFallback() * 100)
 
-	cpu.CPUPercent = cpuPercent(previous.CPU, metrics.CPU)
+	if json.Platform == "windows" { 
+		cpu.CPUPercent = calculateCPUPercentWindows(metrics.CPU.Read, metrics.CPU.PreRead, metrics.CPU.NumProcs, metrics.CPU.TotalUsage, previous.CPU.TotalUsage)
+		cpu.NumProcs = metrics.CPU.NumProcs
+	} else {
+		cpu.CPUPercent = cpuPercent(previous.CPU, metrics.CPU)
+	}
+
 
 	userDelta := float64(metrics.CPU.UsageInUsermode - previous.CPU.UsageInUsermode)
 	cpu.UserPercent = math.Min(maxVal, userDelta*100/durationNS)
@@ -225,12 +238,14 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CP
 	return cpu
 }
 
-func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
+func (mc *MetricsFetcher) memory(mem raw.Memory, platform string) Memory {
 	memLimits := mem.UsageLimit
 	// ridiculously large memory limits are set to 0 (no limit)
 	if memLimits > math.MaxInt64/2 {
 		memLimits = 0
 	}
+
+	
 
 	usagePercent := float64(0)
 	if memLimits > 0 {
@@ -298,10 +313,24 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 		m.SwapLimitUsagePercent = &swapLimitUsagePercent
 	}
 
+	if platform == "windows" {
+		m.Commit = mem.Commit
+		m.CommitPeak = mem.CommitPeak
+		m.PrivateWorkingSet = mem.PrivateWorkingSet
+
+		vmem, err := gops_mem.VirtualMemory()
+		if err != nil {
+			panic(err)
+		}
+		totalMemory := vmem.Total
+		memoryUsagePercent := float64(m.PrivateWorkingSet) / float64(totalMemory) * 100
+		m.UsagePercent = memoryUsagePercent
+	}
+
 	return m
 }
 
-func (mc *MetricsFetcher) blkIO(blkio raw.Blkio) BlkIO {
+func (mc *MetricsFetcher) blkIO(blkio raw.Blkio, platform string) BlkIO {
 	bio := BlkIO{}
 	for _, svc := range blkio.IoServicedRecursive {
 		if len(svc.Op) == 0 {
@@ -339,6 +368,18 @@ func (mc *MetricsFetcher) blkIO(blkio raw.Blkio) BlkIO {
 			*bio.TotalWriteBytes += bCount
 		}
 	}
+
+	if platform == "windows" {
+		if bio.TotalReadBytes == nil {
+			bio.TotalReadBytes = new(float64)
+		}
+		*bio.TotalReadBytes = float64(blkio.BlkReadSizeBytes)
+		if bio.TotalWriteBytes == nil {
+			bio.TotalWriteBytes = new(float64)
+		}
+		*bio.TotalWriteBytes = float64(blkio.BlkWriteSizeBytes)
+	}
+
 	return bio
 }
 
@@ -356,4 +397,20 @@ func cpuPercent(previous, current raw.CPU) float64 {
 		cpuPercent = (cpuDelta / systemDelta) * onlineCPUs * 100.0
 	}
 	return cpuPercent
+}
+
+func calculateCPUPercentWindows(read time.Time, preread time.Time, numprocs uint32, totalUsage uint64, preTotalUsage uint64) float64 {
+	// Max number of 100ns intervals between the previous time read and now
+	possIntervals := uint64(read.Sub(preread).Nanoseconds()) // Start with number of ns intervals
+	possIntervals /= 100                                         // Convert to number of 100ns intervals
+	possIntervals *= uint64(numprocs)                          // Multiple by the number of processors
+
+	// Intervals used
+	intervalsUsed := totalUsage - preTotalUsage
+
+	// Percentage avoiding divide-by-zero
+	if possIntervals > 0 {
+		return float64(intervalsUsed) / float64(possIntervals) * 100.0
+	}
+	return 0.00
 }
