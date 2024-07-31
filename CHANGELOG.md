@@ -9,7 +9,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
-### bugfix
+## v2.0.6 - 2024-07-31
+
+### 🐞 Bug fixes
 - Updated github.com/docker/docker to v24.1.4+incompatible
 - Updated golang.org/x/net to 0.23.0
 
