@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/system"
 
 	"github.com/stretchr/testify/mock"
@@ -23,7 +24,7 @@ type mocker struct {
 	mock.Mock
 }
 
-func (m *mocker) ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error) {
+func (m *mocker) ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error) {
 	args := m.Called(ctx, options)
 	return args.Get(0).([]types.Container), args.Error(1)
 }
@@ -135,7 +136,7 @@ func TestECSLabelRename(t *testing.T) {
 
 func TestExitedContainerTTLExpired(t *testing.T) {
 	mocker := &mocker{}
-	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{container}, nil)
+	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{testingContainer}, nil)
 	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{
 		ContainerJSONBase: &types.ContainerJSONBase{
 			State: &types.ContainerState{
@@ -164,7 +165,7 @@ func TestExitedContainerTTLExpired(t *testing.T) {
 //nolint:funlen // this is a test
 func TestSampleAll(t *testing.T) {
 	mocker := &mocker{}
-	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{container}, nil)
+	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{testingContainer}, nil)
 	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{
 		ContainerJSONBase: &types.ContainerJSONBase{
 			State: &types.ContainerState{
@@ -261,7 +262,7 @@ func TestSampleAll(t *testing.T) {
 
 func TestSampleAllMissingMetrics(t *testing.T) {
 	mocker := &mocker{}
-	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{container}, nil)
+	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{testingContainer}, nil)
 	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{
 		ContainerJSONBase: &types.ContainerJSONBase{State: &types.ContainerState{Status: "running"}}},
 		nil,
@@ -311,7 +312,7 @@ const (
 
 const containerID = "containerid"
 
-var container = types.Container{
+var testingContainer = types.Container{
 	ID:      containerID,
 	Names:   []string{"name"},
 	Image:   "image",

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/log"
 	"github.com/newrelic/infra-integrations-sdk/persist"
 )
@@ -38,7 +39,7 @@ func NewFargateInspector(baseURL *url.URL) (*FargateInspector, error) {
 
 // ContainerList lists containers that the current Fargate container can see (only the container in the same
 // task). It completely ignores any listing option for the moment.
-func (i *FargateInspector) ContainerList(_ context.Context, _ types.ContainerListOptions) ([]types.Container, error) {
+func (i *FargateInspector) ContainerList(_ context.Context, _ container.ListOptions) ([]types.Container, error) {
 	var taskResponse TaskResponse
 	err := i.taskResponseFromCacheOrNew(&taskResponse)
 	if err != nil {
