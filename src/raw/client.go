@@ -2,7 +2,9 @@ package raw
 
 import (
 	"context"
+
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 )
 
 // DockerInspector includes `Informer` and a method to inspect a specific container.
@@ -13,7 +15,7 @@ type DockerInspector interface {
 // DockerClient defines the required methods to query docker.
 type DockerClient interface {
 	DockerInspector
-	ContainerList(ctx context.Context, options types.ContainerListOptions) ([]types.Container, error)
+	ContainerList(ctx context.Context, options container.ListOptions) ([]types.Container, error)
 }
 
 // DockerStatsClient defines how to access docker container stats through the docker API.

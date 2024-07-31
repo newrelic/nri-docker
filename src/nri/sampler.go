@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/system"
 	"github.com/newrelic/infra-integrations-sdk/data/attribute"
 	"github.com/newrelic/infra-integrations-sdk/data/metric"
@@ -77,7 +78,7 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 	}()
 
 	// todo: configure to retrieve only the running containers
-	containers, err := cs.docker.ContainerList(ctx, types.ContainerListOptions{All: true})
+	containers, err := cs.docker.ContainerList(ctx, container.ListOptions{All: true})
 	if err != nil {
 		return err
 	}
