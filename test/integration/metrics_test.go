@@ -73,7 +73,6 @@ func TestCompareMetrics(t *testing.T) {
 			log.Error("sampleCGroup: %q", string(data))
 
 			// TODO this comparisons should be enabled back as soon as they are fixed for cgroupsV2
-			// assert.InDelta(t, sampleCGroup.CPU.Shares, sampleAPI.CPU.Shares, 200, "Shares")
 
 			// These metrics are not available for fargate and through the DockerAPI
 			// assert.InDelta(t, sampleCGroup.Memory.SwapOnlyUsageBytes, sampleAPI.Memory.SwapOnlyUsageBytes, 50000, "SwapOnlyUsageBytes")
@@ -88,6 +87,7 @@ func TestCompareMetrics(t *testing.T) {
 			assert.InDelta(t, sampleCGroup.Memory.UsageBytes, sampleAPI.Memory.UsageBytes, 5000000, "UsageBytes")
 			assert.InDelta(t, sampleCGroup.Memory.MemLimitBytes, sampleAPI.Memory.MemLimitBytes, 5000000, "MemLimitBytes")
 			assert.Equal(t, sampleCGroup.Memory.SoftLimitBytes, sampleAPI.Memory.SoftLimitBytes, "SoftLimitBytes")
+			assert.Equal(t, sampleCGroup.CPU.Shares, sampleAPI.CPU.Shares, "CPUShares")
 
 			assert.InDelta(t, sampleCGroup.CPU.KernelPercent, sampleAPI.CPU.KernelPercent, 3, "KernelPercent")
 			assert.InDelta(t, sampleCGroup.CPU.UserPercent, sampleAPI.CPU.UserPercent, 3, "UserPercent")

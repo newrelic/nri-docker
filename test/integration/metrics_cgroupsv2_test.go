@@ -19,6 +19,7 @@ const (
 	InspectorPIDCgroupsV2                     = 667
 	relativePathToTestdataFilesystemCgroupsV2 = "testdata/cgroupsV2_host/"
 	memoryReservationValue                    = 104857600
+	cpuSharesValue                            = 2048
 )
 
 func TestCgroupsv2AllMetricsPresent(t *testing.T) {
@@ -52,7 +53,7 @@ func TestCgroupsv2AllMetricsPresent(t *testing.T) {
 			UsedCoresPercent: 177.00902,
 			ThrottlePeriods:  0,
 			ThrottledTimeMS:  0,
-			Shares:           100,
+			Shares:           2048,
 		},
 		Memory: biz.Memory{
 			UsageBytes:            141561856,
@@ -90,6 +91,7 @@ func TestCgroupsv2AllMetricsPresent(t *testing.T) {
 
 	hostConfig := &container.HostConfig{}
 	hostConfig.MemoryReservation = memoryReservationValue
+	hostConfig.CPUShares = cpuSharesValue
 	inspector := NewInspectorMock(InspectorContainerID, InspectorPIDCgroupsV2, 2, hostConfig)
 
 	currentSystemUsage := 75 * 1e9 // seconds in ns
