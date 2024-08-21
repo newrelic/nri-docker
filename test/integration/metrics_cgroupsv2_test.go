@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/nri-docker/src/biz"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/stretchr/testify/assert"
@@ -17,6 +18,7 @@ import (
 const (
 	InspectorPIDCgroupsV2                     = 667
 	relativePathToTestdataFilesystemCgroupsV2 = "testdata/cgroupsV2_host/"
+	memoryReservationValue                    = 104857600
 )
 
 func TestCgroupsv2AllMetricsPresent(t *testing.T) {
@@ -63,7 +65,7 @@ func TestCgroupsv2AllMetricsPresent(t *testing.T) {
 			SwapOnlyUsageBytes:    uint64ToPointer(18446744073274032228),
 			SwapLimitBytes:        0,
 			SwapLimitUsagePercent: float64ToPointer(0),
-			SoftLimitBytes:        2,
+			SoftLimitBytes:        104857600,
 		},
 		RestartCount: 2,
 	}
@@ -86,7 +88,9 @@ func TestCgroupsv2AllMetricsPresent(t *testing.T) {
 	}
 	storer := inMemoryStorerWithCustomPreviousCPUState(previousCPUState)
 
-	inspector := NewInspectorMock(InspectorContainerID, InspectorPIDCgroupsV2, 2)
+	hostConfig := &container.HostConfig{}
+	hostConfig.MemoryReservation = memoryReservationValue
+	inspector := NewInspectorMock(InspectorContainerID, InspectorPIDCgroupsV2, 2, hostConfig)
 
 	currentSystemUsage := 75 * 1e9 // seconds in ns
 	cgroupFetcher, err := NewCgroupsV2FetcherMock(hostRoot, mockedTimeForAllMetricsTest, uint64(currentSystemUsage))

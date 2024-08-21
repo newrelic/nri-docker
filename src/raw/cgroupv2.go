@@ -81,7 +81,7 @@ func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		log.Error("couldn't get cpu count: %v", err)
 	}
 
-	if stats.Memory, err = cg.memory(metrics); err != nil {
+	if stats.Memory, err = cg.memory(metrics, c); err != nil {
 		log.Error("couldn't read memory stats: %v", err)
 	}
 
@@ -117,7 +117,7 @@ func (cg *CgroupsV2Fetcher) cpu(metric *cgroupstatsV2.Metrics) (CPU, error) {
 	return cpu, err
 }
 
-func (cg *CgroupsV2Fetcher) memory(metric *cgroupstatsV2.Metrics) (Memory, error) {
+func (cg *CgroupsV2Fetcher) memory(metric *cgroupstatsV2.Metrics, c types.ContainerJSON) (Memory, error) {
 	mem := Memory{}
 	if metric.Memory == nil {
 		return mem, errors.New("no Memory metrics information")
@@ -133,8 +133,10 @@ func (cg *CgroupsV2Fetcher) memory(metric *cgroupstatsV2.Metrics) (Memory, error
 	mem.SwapLimit = metric.Memory.SwapLimit
 	mem.KernelMemoryUsage = metric.Memory.KernelStack + metric.Memory.Slab
 
-	if metric.MemoryEvents != nil {
-		mem.SoftLimit = metric.MemoryEvents.Low
+	if c.HostConfig != nil {
+		mem.SoftLimit = uint64(c.HostConfig.MemoryReservation)
+	} else {
+		log.Debug("Memory soft limit could not be fetched for container %q because host configuration is not available", c.ID)
 	}
 
 	return mem, nil
