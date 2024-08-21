@@ -41,11 +41,11 @@ func NewCgroupsV2Fetcher(
 
 // Fetch get the metrics that can be found in cgroups v2 file system
 // Unlike v1, cgroup v2 has only single hierarchy.
-func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
+func (cg *CgroupsV2Fetcher) Fetch(containerInfo types.ContainerJSON) (Metrics, error) {
 	stats := Metrics{}
 
-	pid := c.State.Pid
-	containerID := c.ID
+	pid := containerInfo.State.Pid
+	containerID := containerInfo.ID
 
 	cgroupInfo, err := cg.cgroupDetector.Paths(cg.hostRoot, pid)
 	if err != nil {
@@ -81,7 +81,7 @@ func (cg *CgroupsV2Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
 		log.Error("couldn't get cpu count: %v", err)
 	}
 
-	if stats.Memory, err = cg.memory(metrics, c); err != nil {
+	if stats.Memory, err = cg.memory(metrics, containerInfo); err != nil {
 		log.Error("couldn't read memory stats: %v", err)
 	}
 
@@ -117,7 +117,7 @@ func (cg *CgroupsV2Fetcher) cpu(metric *cgroupstatsV2.Metrics) (CPU, error) {
 	return cpu, err
 }
 
-func (cg *CgroupsV2Fetcher) memory(metric *cgroupstatsV2.Metrics, c types.ContainerJSON) (Memory, error) {
+func (cg *CgroupsV2Fetcher) memory(metric *cgroupstatsV2.Metrics, containerInfo types.ContainerJSON) (Memory, error) {
 	mem := Memory{}
 	if metric.Memory == nil {
 		return mem, errors.New("no Memory metrics information")
@@ -133,10 +133,10 @@ func (cg *CgroupsV2Fetcher) memory(metric *cgroupstatsV2.Metrics, c types.Contai
 	mem.SwapLimit = metric.Memory.SwapLimit
 	mem.KernelMemoryUsage = metric.Memory.KernelStack + metric.Memory.Slab
 
-	if c.HostConfig != nil {
-		mem.SoftLimit = uint64(c.HostConfig.MemoryReservation)
+	if containerInfo.HostConfig != nil {
+		mem.SoftLimit = uint64(containerInfo.HostConfig.MemoryReservation)
 	} else {
-		log.Debug("Memory soft limit could not be fetched for container %q because host configuration is not available", c.ID)
+		log.Debug("Memory soft limit could not be fetched for container %q because host configuration is not available", containerInfo.ID)
 	}
 
 	return mem, nil
