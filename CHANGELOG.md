@@ -9,6 +9,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+### Bugfix
+- Fetch the `SoftLimitBytes` metric from docker inspect for cgroups-v2.
+
 ## v2.0.7 - 2024-08-06
 
 ### ⛓️ Dependencies

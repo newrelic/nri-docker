@@ -73,7 +73,6 @@ func TestCompareMetrics(t *testing.T) {
 			log.Error("sampleCGroup: %q", string(data))
 
 			// TODO this comparisons should be enabled back as soon as they are fixed for cgroupsV2
-			// assert.InDelta(t, sampleCGroup.Memory.SoftLimitBytes, sampleAPI.Memory.SoftLimitBytes, 50000, "SoftLimitBytes")
 			// assert.InDelta(t, sampleCGroup.CPU.Shares, sampleAPI.CPU.Shares, 200, "Shares")
 
 			// These metrics are not available for fargate and through the DockerAPI
@@ -84,11 +83,11 @@ func TestCompareMetrics(t *testing.T) {
 			// assert.InDelta(t, sampleCGroup.Memory.SwapUsageBytes, sampleAPI.Memory.SwapUsageBytes, 5000000, "SwapUsageBytes")
 
 			assert.InDelta(t, sampleCGroup.Memory.UsagePercent, sampleAPI.Memory.UsagePercent, 2, "UsagePercent")
-			assert.InDelta(t, sampleCGroup.Memory.UsagePercent, sampleAPI.Memory.UsagePercent, 2, "UsagePercent")
 			assert.InDelta(t, sampleCGroup.Memory.KernelUsageBytes, sampleAPI.Memory.KernelUsageBytes, 5000000, "KernelUsageBytes")
 			assert.InDelta(t, sampleCGroup.Memory.RSSUsageBytes, sampleAPI.Memory.RSSUsageBytes, 5000000, "RSSUsageBytes")
 			assert.InDelta(t, sampleCGroup.Memory.UsageBytes, sampleAPI.Memory.UsageBytes, 5000000, "UsageBytes")
 			assert.InDelta(t, sampleCGroup.Memory.MemLimitBytes, sampleAPI.Memory.MemLimitBytes, 5000000, "MemLimitBytes")
+			assert.Equal(t, sampleCGroup.Memory.SoftLimitBytes, sampleAPI.Memory.SoftLimitBytes, "SoftLimitBytes")
 
 			assert.InDelta(t, sampleCGroup.CPU.KernelPercent, sampleAPI.CPU.KernelPercent, 3, "KernelPercent")
 			assert.InDelta(t, sampleCGroup.CPU.UserPercent, sampleAPI.CPU.UserPercent, 3, "UserPercent")
@@ -356,7 +355,7 @@ func TestAllMetricsPresent(t *testing.T) {
 	require.NoError(t, err)
 
 	storer := inMemoryStorerWithPreviousCPUState()
-	inspector := NewInspectorMock(InspectorContainerID, InspectorPID, 2)
+	inspector := NewInspectorMock(InspectorContainerID, InspectorPID, 2, nil)
 
 	t.Run("Given a mockedFilesystem and previous CPU state Then processed metrics are as expected", func(t *testing.T) {
 		metrics := biz.NewProcessor(storer, cgroupFetcher, inspector, 0)
@@ -440,7 +439,7 @@ func TestBlkIOMetrics(t *testing.T) {
 			dockerAPIFetcher := dockerapi.NewFetcher(&client)
 
 			storer := inMemoryStorerWithPreviousCPUState()
-			inspector := NewInspectorMock(InspectorContainerID, InspectorPID, 2)
+			inspector := NewInspectorMock(InspectorContainerID, InspectorPID, 2, nil)
 
 			metrics := biz.NewProcessor(storer, dockerAPIFetcher, inspector, 0)
 

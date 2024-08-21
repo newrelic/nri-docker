@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/system"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/stretchr/testify/mock"
@@ -103,13 +104,15 @@ type InspectorMock struct {
 	containerID  string
 	pid          int
 	restartCount int
+	hostConfig   *container.HostConfig
 }
 
-func NewInspectorMock(containerID string, pid, restartCount int) InspectorMock {
+func NewInspectorMock(containerID string, pid, restartCount int, hostConfig *container.HostConfig) InspectorMock {
 	return InspectorMock{
 		containerID:  containerID,
 		pid:          pid,
 		restartCount: restartCount,
+		hostConfig:   hostConfig,
 	}
 }
 
@@ -121,6 +124,7 @@ func (i InspectorMock) ContainerInspect(_ context.Context, _ string) (types.Cont
 				Pid: i.pid,
 			},
 			RestartCount: i.restartCount,
+			HostConfig:   i.hostConfig,
 		},
 	}, nil
 }
