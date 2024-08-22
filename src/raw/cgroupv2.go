@@ -72,8 +72,10 @@ func (cg *CgroupsV2Fetcher) Fetch(containerInfo types.ContainerJSON) (Metrics, e
 		log.Error("couldn't read cpu stats: %v", err)
 	}
 
-	if stats.CPU.Shares, err = cgroupInfo.getSingleFileUintStat("cpu.weight"); err != nil {
-		log.Error("couldn't read cpu weight: %v", err)
+	if containerInfo.HostConfig != nil {
+		stats.CPU.Shares = uint64(containerInfo.HostConfig.CPUShares)
+	} else {
+		log.Debug("CPUShares metric could not be fetched for container %q because host configuration is not available")
 	}
 
 	cpusetPath := filepath.Join(cgroupInfo.getFullPath(), "cpuset.cpus.effective")
