@@ -299,7 +299,7 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 	swapUsage := mem.RSS + swapOnlyUsage
 
 	swapLimitUsagePercent := float64(0)
-	// Notice that swapLimit could be 0 also if the container has swap enabled (=-1)
+	// Notice that swapLimit could be 0 also if the container swap has no limit (=-1)
 	// This happens because is transformed into MaxInt-1 (due to the uint conversion)
 	// that is then ignored since it is bigger than math.MaxInt64/2
 	if swapLimit > 0 {

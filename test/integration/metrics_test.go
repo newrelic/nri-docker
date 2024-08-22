@@ -146,9 +146,9 @@ func TestHighCPU(t *testing.T) {
 			assert.True(t, cpu.KernelPercent >= 0,
 				"kernel percent not >= 0")
 
-			// This test is flaky, the +2 should not be needed, but we noticed that from time to time due to race conditions,
+			// This test is flaky, the +1 should not be needed, but we noticed that from time to time due to race conditions,
 			// such value is slightly higher
-			assert.Truef(t, cpu.UserPercent+cpu.KernelPercent <= cpu.CPUPercent+1,
+			assert.True(t, cpu.UserPercent+cpu.KernelPercent < cpu.CPUPercent+1,
 				"user %v%% + kernel %v%% is not < total %v%%",
 				cpu.UserPercent, cpu.KernelPercent, cpu.CPUPercent)
 		},
