@@ -59,7 +59,6 @@ func stress(t *testing.T, args ...string) (containerID string, closeFunc func())
 		"--cpus", fmt.Sprint(cpus),
 		"--cpu-shares", fmt.Sprint(cpuShares),
 		"--memory-swap", swapBytes,
-		"--memory-swappiness", "100",
 		"--memory", memLimitStr,
 		"--pids-limit", pidsLimit,
 		"--memory-reservation", memReservationStr,

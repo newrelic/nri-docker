@@ -59,7 +59,7 @@ func TestMetricsFetcher_memory(t *testing.T) {
 			},
 		},
 		{
-			//docker run stress stress-ng --vm 1 --vm-bytes 100m
+			// docker run stress stress-ng --vm 1 --vm-bytes 100m
 			name: "no swap",
 			args: args{
 				raw.Memory{
@@ -84,6 +84,35 @@ func TestMetricsFetcher_memory(t *testing.T) {
 				SwapOnlyUsageBytes:    uint64ToPointer(0),
 				SwapLimitBytes:        0,
 				SwapLimitUsagePercent: float64ToPointer(0.0),
+				SoftLimitBytes:        0,
+			},
+		},
+		{
+			// docker run stress stress-ng --vm 1 --vm-bytes 100m
+			name: "swap smaller then Fuzz",
+			args: args{
+				raw.Memory{
+					UsageLimit:        9223372036854771712,
+					Cache:             7839744,
+					RSS:               104759296,
+					SwapUsage:         uint64ToPointer(16),
+					FuzzUsage:         115326976,
+					KernelMemoryUsage: 1830912,
+					SwapLimit:         9223372036854771712,
+					SoftLimit:         9223372036854771712,
+				},
+			},
+			want: Memory{
+				UsageBytes:            104759296,
+				CacheUsageBytes:       7839744,
+				RSSUsageBytes:         104759296,
+				MemLimitBytes:         0,
+				UsagePercent:          0.0,
+				KernelUsageBytes:      1830912,
+				SwapUsageBytes:        nil,
+				SwapOnlyUsageBytes:    nil,
+				SwapLimitBytes:        0,
+				SwapLimitUsagePercent: nil,
 				SoftLimitBytes:        0,
 			},
 		},
