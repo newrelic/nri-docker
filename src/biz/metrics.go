@@ -281,22 +281,34 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 		plus swap space used by processes in the cgroup (in bytes). That's why
 		Usage is subtracted from the Swap: to get the actual swap.
 	*/
-	if mem.SwapUsage != nil {
-		var swapOnlyUsage uint64
-		if *mem.SwapUsage != 0 { // for systems that have swap disabled
-			swapOnlyUsage = *mem.SwapUsage - mem.FuzzUsage
-		}
-		swapUsage := mem.RSS + swapOnlyUsage
-
-		swapLimitUsagePercent := float64(0)
-		if swapLimit > 0 {
-			swapLimitUsagePercent = 100 * float64(swapUsage) / float64(swapLimit)
-		}
-
-		m.SwapUsageBytes = &swapUsage
-		m.SwapOnlyUsageBytes = &swapOnlyUsage
-		m.SwapLimitUsagePercent = &swapLimitUsagePercent
+	if mem.SwapUsage == nil {
+		return m
 	}
+
+	// We should make sure that FuzzUsage is never > that SwapUsage (when SwapUsage != 0),
+	// otherwise we face an overflow since both are unsigned integers
+	if *mem.SwapUsage != 0 && mem.FuzzUsage > *mem.SwapUsage {
+		log.Debug("Swap metrics not collected since %d>%d", mem.FuzzUsage, *mem.SwapUsage)
+		return m
+	}
+
+	var swapOnlyUsage uint64
+	if *mem.SwapUsage != 0 { // for systems that have swap disabled
+		swapOnlyUsage = *mem.SwapUsage - mem.FuzzUsage
+	}
+	swapUsage := mem.RSS + swapOnlyUsage
+
+	swapLimitUsagePercent := float64(0)
+	// Notice that swapLimit could be 0 also if the container swap has no limit (=-1)
+	// This happens because is transformed into MaxInt-1 (due to the uint conversion)
+	// that is then ignored since it is bigger than math.MaxInt64/2
+	if swapLimit > 0 {
+		swapLimitUsagePercent = 100 * float64(swapUsage) / float64(swapLimit)
+	}
+
+	m.SwapUsageBytes = &swapUsage
+	m.SwapOnlyUsageBytes = &swapOnlyUsage
+	m.SwapLimitUsagePercent = &swapLimitUsagePercent
 
 	return m
 }

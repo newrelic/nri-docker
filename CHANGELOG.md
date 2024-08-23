@@ -12,6 +12,7 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 ### Bugfix
 - Fetch the `SoftLimitBytes` metric from docker inspect for cgroups-v2.
 - Fetch the `CPUShares` metric from docker inspect for cgroups-v2.
+- Swap related metrics when called from cGroups were incorrect due to an overflow whenever the FuzzMemory metric was not calculated properly.
 
 ## v2.0.7 - 2024-08-06
 
