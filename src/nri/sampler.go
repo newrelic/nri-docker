@@ -39,11 +39,6 @@ type ContainerSampler struct {
 
 // NewSampler returns a ContainerSampler instance.
 func NewSampler(fetcher raw.Fetcher, docker raw.DockerClient, config config.ArgumentList) (*ContainerSampler, error) {
-	cacheTTL, err := time.ParseDuration(config.CacheTTL)
-	if err != nil {
-		return nil, err
-	}
-
 	exitedContainerTTL, err := time.ParseDuration(config.ExitedContainersTTL)
 	if err != nil {
 		return nil, err
@@ -53,7 +48,7 @@ func NewSampler(fetcher raw.Fetcher, docker raw.DockerClient, config config.Argu
 	store, err := persist.NewFileStore(
 		persist.TmpPath(config.TempDir, "container_cpus"),
 		log.NewStdErr(true),
-		cacheTTL)
+		config.CacheTTL)
 	if err != nil {
 		return nil, err
 	}
