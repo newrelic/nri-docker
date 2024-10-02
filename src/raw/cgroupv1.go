@@ -14,7 +14,7 @@ import (
 	"github.com/containerd/cgroups"
 	cgroupstats "github.com/containerd/cgroups/stats/v1"
 	"github.com/docker/docker/api/types"
-	"github.com/newrelic/infra-integrations-sdk/log"
+	"github.com/newrelic/infra-integrations-sdk/v3/log"
 )
 
 const nanoSecondsPerSecond = 1e9

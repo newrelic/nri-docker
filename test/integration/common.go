@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/client"
-	"github.com/newrelic/infra-integrations-sdk/args"
+	"github.com/newrelic/infra-integrations-sdk/v3/args"
 	"github.com/newrelic/nri-docker/src/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

@@ -1,6 +1,6 @@
 package config
 
-import "github.com/newrelic/infra-integrations-sdk/args"
+import "github.com/newrelic/infra-integrations-sdk/v3/args"
 
 type ArgumentList struct {
 	args.DefaultArgumentList

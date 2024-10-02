@@ -2,7 +2,7 @@
 // by the New Relic Infrastructure Agent
 package nri
 
-import "github.com/newrelic/infra-integrations-sdk/data/metric"
+import "github.com/newrelic/infra-integrations-sdk/v3/data/metric"
 
 var (
 	metricCommandLine                 = metricFunc("commandLine", metric.ATTRIBUTE)

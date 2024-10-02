@@ -3,7 +3,7 @@ package aws
 import (
 	"time"
 
-	"github.com/newrelic/infra-integrations-sdk/log"
+	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/nri-docker/src/raw"
 )
 
