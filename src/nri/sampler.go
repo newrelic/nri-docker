@@ -9,11 +9,11 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/system"
-	"github.com/newrelic/infra-integrations-sdk/data/attribute"
-	"github.com/newrelic/infra-integrations-sdk/data/metric"
-	"github.com/newrelic/infra-integrations-sdk/integration"
-	"github.com/newrelic/infra-integrations-sdk/log"
-	"github.com/newrelic/infra-integrations-sdk/persist"
+	"github.com/newrelic/infra-integrations-sdk/v3/data/attribute"
+	"github.com/newrelic/infra-integrations-sdk/v3/data/metric"
+	"github.com/newrelic/infra-integrations-sdk/v3/integration"
+	"github.com/newrelic/infra-integrations-sdk/v3/log"
+	"github.com/newrelic/infra-integrations-sdk/v3/persist"
 
 	"github.com/newrelic/nri-docker/src/biz"
 	"github.com/newrelic/nri-docker/src/config"
@@ -39,11 +39,6 @@ type ContainerSampler struct {
 
 // NewSampler returns a ContainerSampler instance.
 func NewSampler(fetcher raw.Fetcher, docker raw.DockerClient, config config.ArgumentList) (*ContainerSampler, error) {
-	cacheTTL, err := time.ParseDuration(config.CacheTTL)
-	if err != nil {
-		return nil, err
-	}
-
 	exitedContainerTTL, err := time.ParseDuration(config.ExitedContainersTTL)
 	if err != nil {
 		return nil, err
@@ -53,7 +48,7 @@ func NewSampler(fetcher raw.Fetcher, docker raw.DockerClient, config config.Argu
 	store, err := persist.NewFileStore(
 		persist.TmpPath(config.TempDir, "container_cpus"),
 		log.NewStdErr(true),
-		cacheTTL)
+		config.CacheTTL)
 	if err != nil {
 		return nil, err
 	}

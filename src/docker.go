@@ -8,8 +8,8 @@ import (
 
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/client"
-	"github.com/newrelic/infra-integrations-sdk/integration"
-	"github.com/newrelic/infra-integrations-sdk/log"
+	"github.com/newrelic/infra-integrations-sdk/v3/integration"
+	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/nri-docker/src/config"
 	"github.com/newrelic/nri-docker/src/nri"
 	"github.com/newrelic/nri-docker/src/raw"

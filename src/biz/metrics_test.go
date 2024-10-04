@@ -8,7 +8,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
-	"github.com/newrelic/infra-integrations-sdk/persist"
+	"github.com/newrelic/infra-integrations-sdk/v3/persist"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/stretchr/testify/assert"
 )
