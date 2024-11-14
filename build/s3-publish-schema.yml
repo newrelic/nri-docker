@@ -11,3 +11,11 @@
     - 386
     - arm
     - arm64
+
+- src: "{app_name}_linux_{version}_{arch}_fips.tar.gz"
+  uploads:
+    - type: file
+      dest: "{dest_prefix}binaries/linux/{arch}/{src}"
+  arch:
+    - amd64
+    - arm64
