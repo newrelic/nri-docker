@@ -1,3 +1,6 @@
+---
+version: 2
+project_name: nri-docker
 builds:
   - id: nri-nix
     main: ./src
@@ -13,12 +16,38 @@ builds:
       - amd64
       - arm
       - arm64
-
+  - id: nri-nix-fips
+    main: ./src
+    binary: nri-docker
+    ldflags:
+      - -s -w -X main.integrationVersion={{.Version}} -X main.gitCommit={{.Commit}} -X main.buildDate={{.Date}}
+    env:
+      - CGO_ENABLED=1
+      - GOEXPERIMENT=boringcrypto
+      - >-
+        {{- if eq .Arch "arm64" -}}
+        CC=aarch64-linux-gnu-gcc
+        {{- end }}
+    goos:
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    tags:
+      - fips
 archives:
   - id: nri-nix
     builds:
       - nri-nix
     name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Version }}_{{ .Arch }}_dirty"
+    files:
+      - docker-config.yml
+      - docker-definition.yml
+    format: tar.gz
+  - id: nri-nix-fips
+    builds:
+      - nri-nix-fips
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Version }}_{{ .Arch }}_fips_dirty"
     files:
       - docker-config.yml
       - docker-definition.yml

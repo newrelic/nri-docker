@@ -17,5 +17,6 @@ jobs:
       run_test_windows: false
       run_build-win-packages: false
       publish_schema: custom
+      dest_prefix: "infrastructure_agent/"
       publish_schema_url: "https://raw.githubusercontent.com/newrelic/nri-docker/${{ github.event.release.tag_name }}/build/s3-publish-schema.yml"
     secrets: inherit
