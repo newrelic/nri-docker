@@ -1,12 +1,16 @@
-INTEGRATION     := docker
-BINARY_NAME      = nri-$(INTEGRATION)
-SRC_DIR          = ./src/
-VALIDATE_DEPS    = golang.org/x/lint/golint
-INTEGRATIONS_DIR = /var/db/newrelic-infra/newrelic-integrations/
-CONFIG_DIR       = /etc/newrelic-infra/integrations.d
-GO_FILES        := ./src/
-GOOS             = GOOS=linux
-GO               = $(GOOS) go
+INTEGRATION     	:= docker
+BINARY_NAME      	= nri-$(INTEGRATION)
+SRC_DIR          	= ./src/
+VALIDATE_DEPS    	= golang.org/x/lint/golint
+INTEGRATIONS_DIR 	= /var/db/newrelic-infra/newrelic-integrations/
+CONFIG_DIR       	= /etc/newrelic-infra/integrations.d
+GO_FILES        	:= ./src/
+GOOS             	= GOOS=linux
+GO               	= $(GOOS) go
+GO_VERSION 			?= "1.23.2"
+UBUNTU_VERSION 		?= "16.04"
+BUILDER_IMAGE_TAG 	?= "latest"
+BUILDER_IMAGE 		?= "ghcr.io/newrelic/coreint-automation:latest-go$(GO_VERSION)-ubuntu$(UBUNTU_VERSION)"
 
 all: build
 
