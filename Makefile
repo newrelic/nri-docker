@@ -8,9 +8,7 @@ GO_FILES        	:= ./src/
 GOOS             	= GOOS=linux
 GO               	= $(GOOS) go
 GO_VERSION 			?= $(shell grep '^go ' go.mod | awk '{print $$2}')
-UBUNTU_VERSION 		?= "16.04"
-BUILDER_IMAGE_TAG 	?= "latest"
-BUILDER_IMAGE 		?= "ghcr.io/newrelic/coreint-automation:latest-go$(GO_VERSION)-ubuntu$(UBUNTU_VERSION)"
+BUILDER_IMAGE 		?= "ghcr.io/newrelic/coreint-automation:latest-go$(GO_VERSION)-ubuntu16.04"
 
 all: build
 
