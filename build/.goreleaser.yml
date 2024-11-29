@@ -16,6 +16,20 @@ builds:
       - amd64
       - arm
       - arm64
+
+  - id: nri-win
+    main: ./src
+    binary: nri-docker
+    ldflags:
+      - -s -w -X main.integrationVersion={{.Version}} -X main.gitCommit={{.Commit}} -X main.buildDate={{.Date}}
+    env:
+      - CGO_ENBABLED=0
+    goos:
+      - windows
+    goarch:
+      - 386
+      - amd64
+
   - id: nri-nix-fips
     main: ./src
     binary: nri-docker
@@ -44,6 +58,14 @@ archives:
       - docker-config.yml
       - docker-definition.yml
     format: tar.gz
+  - id: nri-win
+    builds:
+      - nri-win
+    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Version }}_{{ .Arch }}_dirty"
+    files:
+      - docker-config.yml
+      - docker-definition.yml
+    format: zip
   - id: nri-nix-fips
     builds:
       - nri-nix-fips
