@@ -28,16 +28,17 @@ func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
 	metrics := raw.Metrics{
 		Time:        time.Now(), // nolint: staticcheck
 		ContainerID: container.ID,
-		Memory:      f.memoryMetrics(containerStats, container.HostConfig),
+		Memory:      f.memoryMetrics(containerStats, container.HostConfig, container.Platform),
 		Network:     f.networkMetrics(containerStats),
-		CPU:         f.cpuMetrics(container, containerStats.CPUStats),
-		Blkio:       f.blkioMetrics(containerStats.BlkioStats),
+		CPU:         f.cpuMetrics(container, containerStats),
+		Blkio:       f.blkioMetrics(containerStats.BlkioStats, containerStats.StorageStats),
 		Pids:        f.pidsMetrics(containerStats.PidsStats),
+		Platform: container.Platform,
 	}
 	return metrics, nil
 }
 
-func (f *Fetcher) memoryMetrics(containerStats types.StatsJSON, hostConfig *container.HostConfig) raw.Memory {
+func (f *Fetcher) memoryMetrics(containerStats types.StatsJSON, hostConfig *container.HostConfig, platform string) raw.Memory {
 	mem := raw.Memory{}
 
 	// mem.UsageLimit and mem.FuzzUsage are fetched in the same way that for the cgroup file fetchers.
@@ -58,6 +59,12 @@ func (f *Fetcher) memoryMetrics(containerStats types.StatsJSON, hostConfig *cont
 	mem.RSS = getOrDebuglog(containerStats.MemoryStats.Stats, "anon", "memory_stats.stats")
 	mem.KernelMemoryUsage = getOrDebuglog(containerStats.MemoryStats.Stats, "kernel_stack", "memory_stats.stats") +
 		getOrDebuglog(containerStats.MemoryStats.Stats, "slab", "memory_stats.stats")
+
+	if platform == "windows" {
+		mem.Commit = containerStats.MemoryStats.Commit
+		mem.CommitPeak = containerStats.MemoryStats.CommitPeak
+		mem.PrivateWorkingSet = containerStats.MemoryStats.PrivateWorkingSet
+	}
 
 	return mem
 }
@@ -80,7 +87,8 @@ func (f *Fetcher) networkMetrics(containerStats types.StatsJSON) raw.Network {
 	return aggregatedMetrics
 }
 
-func (f *Fetcher) cpuMetrics(container types.ContainerJSON, cpuStats types.CPUStats) raw.CPU {
+func (f *Fetcher) cpuMetrics(container types.ContainerJSON, containerStats types.StatsJSON) raw.CPU {
+	cpuStats := containerStats.CPUStats
 	var cpuShares uint64
 	if container.HostConfig == nil {
 		log.Debug("Could not fetch cpuShares since the container %q host configuration is not available", container.ID)
@@ -99,6 +107,9 @@ func (f *Fetcher) cpuMetrics(container types.ContainerJSON, cpuStats types.CPUSt
 		// PercpuUsage is not set in cgroups v2 (it is set to nil) but it is not reported by the integration,
 		// it is used to report the 'OnlineCPUs' value when online CPUs cannot be fetched.
 		PercpuUsage: cpuStats.CPUUsage.PercpuUsage,
+		NumProcs: containerStats.NumProcs,
+		PreRead: containerStats.PreRead,
+		Read: containerStats.Read,
 	}
 }
 
@@ -109,8 +120,10 @@ func (f *Fetcher) pidsMetrics(pidStats types.PidsStats) raw.Pids {
 	}
 }
 
-func (f *Fetcher) blkioMetrics(blkioStats types.BlkioStats) raw.Blkio {
+func (f *Fetcher) blkioMetrics(blkioStats types.BlkioStats, storageStats types.StorageStats) raw.Blkio {
 	return raw.Blkio{
+		BlkReadSizeBytes:        storageStats.ReadSizeBytes,
+		BlkWriteSizeBytes:       storageStats.WriteSizeBytes,
 		IoServiceBytesRecursive: toRawBlkioEntry(blkioStats.IoServiceBytesRecursive),
 		IoServicedRecursive:     toRawBlkioEntry(blkioStats.IoServicedRecursive),
 	}
@@ -144,4 +157,20 @@ func getOrDebuglog(m map[string]uint64, key string, metricsPath string) uint64 {
 	}
 	log.Debug("Could not fetch metric value from docker API: the key %q was not found in %s", key, metricsPath)
 	return 0
+}
+
+func calculateCPUPercentWindows(v types.StatsJSON) float64 {
+	// Max number of 100ns intervals between the previous time read and now
+	possIntervals := uint64(v.Read.Sub(v.PreRead).Nanoseconds()) // Start with number of ns intervals
+	possIntervals /= 100                                         // Convert to number of 100ns intervals
+	possIntervals *= uint64(v.NumProcs)                          // Multiple by the number of processors
+
+	// Intervals used
+	intervalsUsed := v.CPUStats.CPUUsage.TotalUsage - v.PreCPUStats.CPUUsage.TotalUsage
+
+	// Percentage avoiding divide-by-zero
+	if possIntervals > 0 {
+		return float64(intervalsUsed) / float64(possIntervals) * 100.0
+	}
+	return 0.00
 }

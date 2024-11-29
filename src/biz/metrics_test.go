@@ -150,7 +150,7 @@ func TestMetricsFetcher_memory(t *testing.T) {
 				inspector:          tt.fields.inspector,
 				exitedContainerTTL: tt.fields.exitedContainerTTL,
 			}
-			if got := mc.memory(tt.args.mem); !reflect.DeepEqual(got, tt.want) {
+			if got := mc.memory(tt.args.mem, "linux"); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MetricsFetcher.memory() = %v, want %v", got, tt.want)
 			}
 		})
