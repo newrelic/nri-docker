@@ -12,7 +12,7 @@
     - arm
     - arm64
 
-- src: "{app_name}_linux_{version}_{arch}_fips.tar.gz"
+- src: "{app_name}-fips_linux_{version}_{arch}.tar.gz"
   uploads:
     - type: file
       dest: "{dest_prefix}binaries/linux/{arch}/{src}"
