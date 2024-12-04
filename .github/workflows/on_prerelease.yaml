@@ -14,8 +14,6 @@ jobs:
       tag: ${{ github.event.release.tag_name }}
       integration: "docker"
       test_package: false
-      run_test_windows: false
-      run_build-win-packages: false
       publish_schema: custom
       dest_prefix: "infrastructure_agent/" # path prefix where the artifacts will be stored in the S3 bucket (use for testing)
       publish_schema_url: "https://raw.githubusercontent.com/newrelic/nri-docker/${{ github.event.release.tag_name }}/build/s3-publish-schema.yml"
