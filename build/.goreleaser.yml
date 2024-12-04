@@ -58,14 +58,16 @@ archives:
       - docker-config.yml
       - docker-definition.yml
     format: tar.gz
+  
   - id: nri-win
     builds:
       - nri-win
-    name_template: "{{ .ProjectName }}_{{ .Os }}_{{ .Version }}_{{ .Arch }}_dirty"
+    name_template: "{{ .ProjectName }}-{{ .Arch }}.{{ .Version }}_dirty"
     files:
       - docker-config.yml
       - docker-definition.yml
     format: zip
+  
   - id: nri-nix-fips
     builds:
       - nri-nix-fips
