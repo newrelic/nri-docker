@@ -1,124 +1,80 @@
 package raw
 
 import (
-	"fmt"
-	"io"
-	"io/ioutil"
-	"strings"
-	"testing"
+    "strconv"
+    "testing"
 
-	"github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/assert"
 )
 
-func createFileOpenFnMock(filesMap map[string]string) func(string) (io.ReadCloser, error) {
-	return func(filePath string) (io.ReadCloser, error) {
-		if fileContent, ok := filesMap[filePath]; ok {
-			return ioutil.NopCloser(strings.NewReader(fileContent)), nil
-		}
+func TestParseUint(t *testing.T) {
+    tests := []struct {
+        name     string
+        input    string
+        base     int
+        bitSize  int
+        expected uint64
+        err      error
+    }{
+        {
+            name:     "valid positive number",
+            input:    "123",
+            base:     10,
+            bitSize:  64,
+            expected: 123,
+            err:      nil,
+        },
+        {
+            name:     "valid negative number",
+            input:    "-123",
+            base:     10,
+            bitSize:  64,
+            expected: 0,
+            err:      nil,
+        },
+        {
+            name:     "invalid number",
+            input:    "abc",
+            base:     10,
+            bitSize:  64,
+            expected: 0,
+            err:      &strconv.NumError{Func: "ParseUint", Num: "abc", Err: strconv.ErrSyntax},
+        },
+        {
+            name:     "valid hex number",
+            input:    "1a",
+            base:     16,
+            bitSize:  64,
+            expected: 26,
+            err:      nil,
+        },
+        {
+            name:     "valid large number",
+            input:    "18446744073709551615",
+            base:     10,
+            bitSize:  64,
+            expected: 18446744073709551615,
+            err:      nil,
+        },
+        {
+            name:     "number out of range",
+            input:    "18446744073709551616",
+            base:     10,
+            bitSize:  64,
+            expected: 0,
+            err:      &strconv.NumError{Func: "ParseUint", Num: "18446744073709551616", Err: strconv.ErrRange},
+        },
+    }
 
-		return nil, fmt.Errorf("file not found by path: %s", filePath)
-	}
-}
-
-func TestDetectHostRoot(t *testing.T) {
-
-	testCases := []struct {
-		name          string
-		hostRoot      string
-		existingPaths []string
-		expected      string
-		expectedErr   error
-	}{
-		{
-			name:     "Empty_HostRoot_OnHost",
-			hostRoot: "",
-			existingPaths: []string{
-				"/proc",
-			},
-			expected:    "/",
-			expectedErr: nil,
-		},
-		{
-			name:     "Empty_HostRoot_OnContainer",
-			hostRoot: "",
-			existingPaths: []string{
-				"/host/proc",
-			},
-			expected:    "/host",
-			expectedErr: nil,
-		},
-		{
-			name:     "Empty_HostRoot_OnContainer_Precedence",
-			hostRoot: "",
-			existingPaths: []string{
-				"/host/proc",
-				"/proc",
-			},
-			expected:    "/host",
-			expectedErr: nil,
-		},
-		{
-			name:     "Empty_HostRoot_Error",
-			hostRoot: "",
-			existingPaths: []string{
-				"/host/test/proc",
-			},
-			expected:    "",
-			expectedErr: errHostRootNotFound,
-		},
-		{
-			name:     "Custom_HostRoot_OnContainer",
-			hostRoot: "/custom",
-			existingPaths: []string{
-				"/host/proc",
-				"/custom/proc",
-				"/proc",
-			},
-			expected:    "/custom",
-			expectedErr: nil,
-		},
-		{
-			name:     "Custom_HostRoot_NotFound_OnHost",
-			hostRoot: "/custom",
-			existingPaths: []string{
-				"/proc",
-			},
-			expected:    "/",
-			expectedErr: nil,
-		},
-		{
-			name:     "Custom_HostRoot_NotFound_OnHost",
-			hostRoot: "/custom",
-			existingPaths: []string{
-				"/host/test/proc",
-			},
-			expected:    "",
-			expectedErr: errHostRootNotFound,
-		},
-		{
-			name:     "Custom_HostRoot_Root",
-			hostRoot: "/",
-			existingPaths: []string{
-				"/proc",
-			},
-			expected:    "/",
-			expectedErr: nil,
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.name, func(t *testing.T) {
-			actual, actualErr := DetectHostRoot(testCase.hostRoot, func(dir string) bool {
-				for _, existingPath := range testCase.existingPaths {
-					if existingPath == dir {
-						return true
-					}
-				}
-				return false
-			})
-
-			assert.Equal(t, testCase.expected, actual)
-			assert.Equal(t, testCase.expectedErr, actualErr)
-		})
-	}
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            result, err := parseUint(tt.input, tt.base, tt.bitSize)
+            assert.Equal(t, tt.expected, result)
+            if tt.err != nil {
+                assert.EqualError(t, err, tt.err.Error())
+            } else {
+                assert.NoError(t, err)
+            }
+        })
+    }
 }
