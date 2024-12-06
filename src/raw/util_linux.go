@@ -36,3 +36,7 @@ func DetectHostRoot(hostRoot string, pathExists func(string) bool) (string, erro
 
 	return "", errHostRootNotFound
 }
+
+func microsecondsToNanoseconds(v uint64) uint64 {
+	return v * 1000
+}

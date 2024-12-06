@@ -16,7 +16,7 @@ package aws
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -130,7 +130,7 @@ func sendMetadataRequest(client *http.Client, endpoint string) ([]byte, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("incorrect status code querying %s: %d", endpoint, resp.StatusCode)
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read response body from %s: %v", endpoint, err)
 	}

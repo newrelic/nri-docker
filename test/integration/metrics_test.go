@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 package integration
@@ -5,7 +6,6 @@ package integration
 import (
 	"context"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -548,12 +548,12 @@ func mockedProcPIDCGroupFile(hostRoot string) error {
 		return err
 	}
 
-	inputCgroups, err := ioutil.ReadFile(filepath.Join(relativePathToTestdataFileystem, "my-container", "cgroup"))
+	inputCgroups, err := os.ReadFile(filepath.Join(relativePathToTestdataFileystem, "my-container", "cgroup"))
 	if err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(filepath.Join(hostRoot, "proc", strconv.Itoa(InspectorPID), "cgroup"), inputCgroups, 0755)
+	return os.WriteFile(filepath.Join(hostRoot, "proc", strconv.Itoa(InspectorPID), "cgroup"), inputCgroups, 0755)
 }
 
 func mockedProcNetDevFile(hostRoot string) error {
@@ -562,10 +562,10 @@ func mockedProcNetDevFile(hostRoot string) error {
 		return err
 	}
 
-	inputNetDev, err := ioutil.ReadFile(filepath.Join(relativePathToTestdataFileystem, "my-container", "dev"))
+	inputNetDev, err := os.ReadFile(filepath.Join(relativePathToTestdataFileystem, "my-container", "dev"))
 	if err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(filepath.Join(hostRoot, "proc", strconv.Itoa(InspectorPID), "net", "dev"), inputNetDev, 0755)
+	return os.WriteFile(filepath.Join(hostRoot, "proc", strconv.Itoa(InspectorPID), "net", "dev"), inputNetDev, 0755)
 }

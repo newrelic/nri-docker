@@ -2,7 +2,7 @@ package biz
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -101,13 +101,13 @@ func startMetadataEndpointStub(t *testing.T, taskID string) (server *httptest.Se
 
 			switch r.RequestURI {
 			case fmt.Sprintf("/v3/%s/task", taskID):
-				response, err = ioutil.ReadFile("testdata/task_metadata_response.json")
+				response, err = os.ReadFile("testdata/task_metadata_response.json")
 			case fmt.Sprintf("/v3/%s/task/stats", taskID):
-				response, err = ioutil.ReadFile("testdata/task_container_stats_response.json")
+				response, err = os.ReadFile("testdata/task_container_stats_response.json")
 			case fmt.Sprintf("/v4/%s/task", taskID):
-				response, err = ioutil.ReadFile("testdata/v4_task_metadata_response.json")
+				response, err = os.ReadFile("testdata/v4_task_metadata_response.json")
 			case fmt.Sprintf("/v4/%s/task/stats", taskID):
-				response, err = ioutil.ReadFile("testdata/v4_task_container_stats_response.json")
+				response, err = os.ReadFile("testdata/v4_task_container_stats_response.json")
 			}
 			require.NoError(t, err)
 
