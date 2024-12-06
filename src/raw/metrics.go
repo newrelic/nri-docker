@@ -6,11 +6,6 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
-const (
-	blkioReadOp  = "Read"
-	blkioWriteOp = "Write"
-)
-
 // Metrics holds containers raw metric values as they are extracted from the system
 type Metrics struct {
 	Time        time.Time

@@ -33,7 +33,7 @@ func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
 		CPU:         f.cpuMetrics(container, containerStats),
 		Blkio:       f.blkioMetrics(containerStats.BlkioStats, containerStats.StorageStats),
 		Pids:        f.pidsMetrics(containerStats.PidsStats),
-		Platform: container.Platform,
+		Platform:    container.Platform,
 	}
 	return metrics, nil
 }
@@ -107,9 +107,9 @@ func (f *Fetcher) cpuMetrics(container types.ContainerJSON, containerStats types
 		// PercpuUsage is not set in cgroups v2 (it is set to nil) but it is not reported by the integration,
 		// it is used to report the 'OnlineCPUs' value when online CPUs cannot be fetched.
 		PercpuUsage: cpuStats.CPUUsage.PercpuUsage,
-		NumProcs: containerStats.NumProcs,
-		PreRead: containerStats.PreRead,
-		Read: containerStats.Read,
+		NumProcs:    containerStats.NumProcs,
+		PreRead:     containerStats.PreRead,
+		Read:        containerStats.Read,
 	}
 }
 
@@ -159,18 +159,18 @@ func getOrDebuglog(m map[string]uint64, key string, metricsPath string) uint64 {
 	return 0
 }
 
-func calculateCPUPercentWindows(v types.StatsJSON) float64 {
-	// Max number of 100ns intervals between the previous time read and now
-	possIntervals := uint64(v.Read.Sub(v.PreRead).Nanoseconds()) // Start with number of ns intervals
-	possIntervals /= 100                                         // Convert to number of 100ns intervals
-	possIntervals *= uint64(v.NumProcs)                          // Multiple by the number of processors
+// func calculateCPUPercentWindows(v types.StatsJSON) float64 {
+// 	// Max number of 100ns intervals between the previous time read and now
+// 	possIntervals := uint64(v.Read.Sub(v.PreRead).Nanoseconds()) // Start with number of ns intervals
+// 	possIntervals /= 100                                         // Convert to number of 100ns intervals
+// 	possIntervals *= uint64(v.NumProcs)                          // Multiple by the number of processors
 
-	// Intervals used
-	intervalsUsed := v.CPUStats.CPUUsage.TotalUsage - v.PreCPUStats.CPUUsage.TotalUsage
+// 	// Intervals used
+// 	intervalsUsed := v.CPUStats.CPUUsage.TotalUsage - v.PreCPUStats.CPUUsage.TotalUsage
 
-	// Percentage avoiding divide-by-zero
-	if possIntervals > 0 {
-		return float64(intervalsUsed) / float64(possIntervals) * 100.0
-	}
-	return 0.00
-}
+// 	// Percentage avoiding divide-by-zero
+// 	if possIntervals > 0 {
+// 		return float64(intervalsUsed) / float64(possIntervals) * 100.0
+// 	}
+// 	return 0.00
+// }
