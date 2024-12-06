@@ -2,7 +2,6 @@ package raw
 
 import (
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
 	"strconv"
@@ -19,7 +18,7 @@ func CanAccessDir(dir string) bool {
 // Gets uint64 parsed content of single value cgroup stat file
 // This func has been extracted from utils.go on the cgroup repo since is unexported
 func ParseStatFileContentUint64(filePath string) (uint64, error) {
-	contents, err := ioutil.ReadFile(filePath)
+	contents, err := os.ReadFile(filePath)
 	if err != nil {
 		return 0, err
 	}

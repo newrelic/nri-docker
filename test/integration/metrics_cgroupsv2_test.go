@@ -1,9 +1,9 @@
+//go:build linux
 // +build linux
 
 package integration
 
 import (
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -151,12 +151,12 @@ func mockedCgroupsV2ProcPIDCGroupFile(hostRoot string) error {
 		return err
 	}
 
-	inputCgroups, err := ioutil.ReadFile(filepath.Join(relativePathToTestdataFilesystemCgroupsV2, "my-container", "cgroup"))
+	inputCgroups, err := os.ReadFile(filepath.Join(relativePathToTestdataFilesystemCgroupsV2, "my-container", "cgroup"))
 	if err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(filepath.Join(hostRoot, "proc", strconv.Itoa(InspectorPIDCgroupsV2), "cgroup"), inputCgroups, 0755)
+	return os.WriteFile(filepath.Join(hostRoot, "proc", strconv.Itoa(InspectorPIDCgroupsV2), "cgroup"), inputCgroups, 0755)
 }
 
 func mockedCgroupsV2ProcNetDevFile(hostRoot string) error {
@@ -165,10 +165,10 @@ func mockedCgroupsV2ProcNetDevFile(hostRoot string) error {
 		return err
 	}
 
-	inputNetDev, err := ioutil.ReadFile(filepath.Join(relativePathToTestdataFilesystemCgroupsV2, "my-container", "dev"))
+	inputNetDev, err := os.ReadFile(filepath.Join(relativePathToTestdataFilesystemCgroupsV2, "my-container", "dev"))
 	if err != nil {
 		return err
 	}
 
-	return ioutil.WriteFile(filepath.Join(hostRoot, "proc", strconv.Itoa(InspectorPIDCgroupsV2), "net", "dev"), inputNetDev, 0755)
+	return os.WriteFile(filepath.Join(hostRoot, "proc", strconv.Itoa(InspectorPIDCgroupsV2), "net", "dev"), inputNetDev, 0755)
 }
