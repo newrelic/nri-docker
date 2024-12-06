@@ -1,3 +1,6 @@
+//go:build linux
+// +build linux
+
 // Package raw fetches raw system-level metrics as they are presented by the operating system
 package raw
 

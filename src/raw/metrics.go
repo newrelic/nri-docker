@@ -6,11 +6,6 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
-const (
-	blkioReadOp  = "Read"
-	blkioWriteOp = "Write"
-)
-
 // Metrics holds containers raw metric values as they are extracted from the system
 type Metrics struct {
 	Time        time.Time
@@ -20,6 +15,7 @@ type Metrics struct {
 	CPU         CPU
 	Pids        Pids
 	Blkio       Blkio
+	Platform    string
 }
 
 // Memory usage snapshot
@@ -32,6 +28,9 @@ type Memory struct {
 	KernelMemoryUsage uint64
 	SwapLimit         uint64
 	SoftLimit         uint64
+	Commit            uint64
+	CommitPeak        uint64
+	PrivateWorkingSet uint64
 }
 
 // CPU usage snapshot
@@ -45,6 +44,9 @@ type CPU struct {
 	SystemUsage       uint64
 	OnlineCPUs        uint
 	Shares            uint64
+	NumProcs          uint32
+	PreRead           time.Time
+	Read              time.Time
 }
 
 // Pids inside the container
@@ -57,6 +59,8 @@ type Pids struct {
 type Blkio struct {
 	IoServiceBytesRecursive []BlkioEntry
 	IoServicedRecursive     []BlkioEntry
+	BlkReadSizeBytes        uint64
+	BlkWriteSizeBytes       uint64
 }
 
 // BlkioEntry stores basic information of a simple blkio operation
