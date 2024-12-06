@@ -1,11 +1,14 @@
+//go:build windows
 // +build windows
 
 package main
+
 import (
 	"context"
 	"fmt"
 	"os"
 	"runtime"
+
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/v3/integration"
@@ -16,14 +19,17 @@ import (
 	"github.com/newrelic/nri-docker/src/raw/aws"
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
 )
+
 const (
 	integrationName = "com.newrelic.docker"
 )
+
 var (
 	integrationVersion = "0.0.0"
 	gitCommit          = ""
 	buildDate          = ""
 )
+
 func main() {
 	args := config.ArgumentList{}
 	i, err := integration.New(integrationName, integrationVersion, integration.Args(&args))
@@ -40,6 +46,7 @@ func main() {
 	}
 	exitOnErr(i.Publish())
 }
+
 func populateFromFargate(i *integration.Integration, args config.ArgumentList) {
 	metadataBaseURL, err := aws.GetMetadataBaseURL()
 	exitOnErr(err)
@@ -52,6 +59,7 @@ func populateFromFargate(i *integration.Integration, args config.ArgumentList) {
 	// Info is currently used to get the Storage Driver stats that is not present on Fargate.
 	exitOnErr(sampler.SampleAll(context.Background(), i, system.Info{}))
 }
+
 func populateFromDocker(i *integration.Integration, args config.ArgumentList) {
 	withVersionOpt := client.WithVersion(args.DockerClientVersion)
 	dockerClient, err := client.NewClientWithOpts(client.FromEnv, withVersionOpt)
@@ -65,15 +73,18 @@ func populateFromDocker(i *integration.Integration, args config.ArgumentList) {
 	exitOnErr(err)
 	exitOnErr(sampler.SampleAll(context.Background(), i, cgroupInfo))
 }
-func useDockerAPI(dockerAPIRequested bool, version string) bool {
+
+func useDockerAPI(_ bool, _ string) bool {
 	return true
 }
+
 func exitOnErr(err error) {
 	if err != nil {
 		log.Error(err.Error())
 		os.Exit(-1)
 	}
 }
+
 func printVersion() {
 	fmt.Printf(
 		"New Relic Docker integration Version: %s, Platform: %s, GoVersion: %s, GitCommit: %s, BuildDate: %s\n",

@@ -1,3 +1,4 @@
+//go:build linux
 // +build linux
 
 // Package raw fetches raw system-level metrics as they are presented by the operating system
@@ -14,6 +15,15 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 )
+
+const (
+	blkioReadOp  = "Read"
+	blkioWriteOp = "Write"
+)
+
+func microsecondsToNanoseconds(v uint64) uint64 {
+	return v * 1000
+}
 
 // CgroupsV2Fetcher fetches the metrics that can be found in cgroups (v2) file system
 type CgroupsV2Fetcher struct {
