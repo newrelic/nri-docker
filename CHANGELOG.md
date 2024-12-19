@@ -9,6 +9,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+### enhancement
+- Updated golang.org/x/net to v0.33.0
+
 ## v2.1.2 - 2024-12-16
 
 ### ⛓️ Dependencies
@@ -389,7 +392,7 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 ### Fixed
 * Fixed a bug where an error type assertion would not work correctly and "exited"
   containers could still be reported by nri-docker even after their TTL has passed.
-  
+
 ## 1.4.1 (2020-11-26)
 ### Fixed
 * Fixed a bug where an error type assertion would not work correctly and "exited"
@@ -398,7 +401,7 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 ## 1.4.0 (2020-11-19)
 ### Changed
 * nri-docker will no longer report containers that have been stopped for more than 24 hours.
-  This value can be configured using the `EXITED_CONTAINERS_TTL` environment variable using 
+  This value can be configured using the `EXITED_CONTAINERS_TTL` environment variable using
   any value that can be parsed into a `time.Duration`, i.e. `1s`, `1m`, `1h`.
   To replicate the old behavior of the integration, set this environment variable to `0` (zero).
 
