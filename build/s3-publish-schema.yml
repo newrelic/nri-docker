@@ -12,6 +12,14 @@
     - arm
     - arm64
 
+- src: "{app_name}-{arch}.{version}.zip"
+  uploads:
+    - type: file
+      dest: "{dest_prefix}binaries/windows/{arch}/{src}"
+  arch:
+    - amd64
+    - 386
+
 - src: "{app_name}-fips_linux_{version}_{arch}.tar.gz"
   uploads:
     - type: file

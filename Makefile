@@ -56,7 +56,7 @@ compile: compile-deps bin/$(BINARY_NAME)
 
 test:
 	@echo "=== $(INTEGRATION) === [ test ]: running unit tests..."
-	@go test -race $(SRC_DIR)/...
+	@CGO_ENABLED=1 go test -race $(SRC_DIR)/...
 
 integration-test-deps: compile-deps
 	@echo "=== $(INTEGRATION) === [ integration-test-deps ]: installing testing dependencies..."
