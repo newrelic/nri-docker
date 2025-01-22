@@ -4,7 +4,7 @@ go 1.23.4
 
 require (
 	github.com/containerd/cgroups v1.1.0
-	github.com/docker/docker v26.1.5+incompatible
+	github.com/docker/docker v27.5.1+incompatible
 	github.com/dustin/go-humanize v1.0.1
 	github.com/newrelic/infra-integrations-sdk/v3 v3.9.1
 	github.com/stretchr/testify v1.10.0
