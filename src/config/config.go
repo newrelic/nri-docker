@@ -6,7 +6,7 @@ type ArgumentList struct {
 	args.DefaultArgumentList
 	HostRoot              string `default:"" help:"If the integration is running from a container, the mounted folder pointing to the host root folder"`
 	Fargate               bool   `default:"false" help:"Enables fetching metrics from ECS Fargate. If enabled no metrics are collected from cgroups. Defaults to false"`
-	UseDockerAPI          bool   `default:"false" help:"Enables fetching metrics from Docker API. If enabled no metrics are collected from cgroups. This option is ignored if cgroupsV1 are detected"`
+	UseDockerAPI          bool   `default:"false" help:"Enables fetching metrics from Docker API. If enabled no metrics are collected from cgroups. This option is ignored if cgroupsV1 are detected or running on any OS other than linux"`
 	ExitedContainersTTL   string `default:"24h" help:"Enables to integration to stop reporting Exited containers that are older than the set TTL. Possible values are time-strings: 1s, 1m, 1h"`
 	DockerClientVersion   string `default:"1.24" help:"Optional. Specify the version of the docker client. Used for compatibility."`
 	DisableStorageMetrics bool   `default:"false" help:"Disables storage driver metrics collection."`

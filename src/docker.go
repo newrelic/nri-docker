@@ -1,24 +1,15 @@
+// Copyright 2025 New Relic Corporation. All rights reserved.
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (
-	"context"
-	"fmt"
 	"os"
-	"runtime"
 
-	"github.com/docker/docker/api/types/system"
-	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/v3/integration"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/nri-docker/src/config"
-	"github.com/newrelic/nri-docker/src/nri"
-	"github.com/newrelic/nri-docker/src/raw"
-	"github.com/newrelic/nri-docker/src/raw/aws"
-	"github.com/newrelic/nri-docker/src/raw/dockerapi"
-)
-
-const (
-	integrationName = "com.newrelic.docker"
+	"github.com/newrelic/nri-docker/src/util"
 )
 
 var (
@@ -29,87 +20,23 @@ var (
 
 func main() {
 	args := config.ArgumentList{}
-	i, err := integration.New(integrationName, integrationVersion, integration.Args(&args))
-	exitOnErr(err)
+	// we always use the docker API for OSes other than Linux
+	args.UseDockerAPI = util.UpdateDockerAPIArg(args.UseDockerAPI)
+	i, err := integration.New(util.IntegrationName, integrationVersion, integration.Args(&args))
+	util.ExitOnErr(err)
 
 	if args.ShowVersion {
-		printVersion()
+		util.PrintVersion(integrationVersion, gitCommit, buildDate)
 		os.Exit(0)
 	}
 
 	log.SetupLogging(args.Verbose)
 
 	if args.Fargate {
-		populateFromFargate(i, args)
+		util.PopulateFromFargate(i, args)
 	} else {
-		populateFromDocker(i, args)
+		util.PopulateFromDocker(i, args)
 	}
 
-	exitOnErr(i.Publish())
-}
-
-func populateFromFargate(i *integration.Integration, args config.ArgumentList) {
-	metadataBaseURL, err := aws.GetMetadataBaseURL()
-	exitOnErr(err)
-
-	fargateFetcher, err := aws.NewFargateFetcher(metadataBaseURL)
-	exitOnErr(err)
-
-	fargateDockerClient, err := aws.NewFargateInspector(metadataBaseURL)
-	exitOnErr(err)
-
-	sampler, err := nri.NewSampler(fargateFetcher, fargateDockerClient, args)
-	exitOnErr(err)
-	// Info is currently used to get the Storage Driver stats that is not present on Fargate.
-	exitOnErr(sampler.SampleAll(context.Background(), i, system.Info{}))
-}
-
-func populateFromDocker(i *integration.Integration, args config.ArgumentList) {
-	withVersionOpt := client.WithVersion(args.DockerClientVersion)
-	dockerClient, err := client.NewClientWithOpts(client.FromEnv, withVersionOpt)
-	exitOnErr(err)
-	defer dockerClient.Close()
-
-	cgroupInfo, err := dockerClient.Info(context.Background())
-	exitOnErr(err)
-
-	var fetcher raw.Fetcher
-	if useDockerAPI(args.UseDockerAPI, cgroupInfo.CgroupVersion) {
-		fetcher = dockerapi.NewFetcher(dockerClient)
-	} else { // use cgroups as source of data
-		fetcher, err = raw.NewCgroupFetcher(args.HostRoot, cgroupInfo)
-		exitOnErr(err)
-	}
-
-	sampler, err := nri.NewSampler(fetcher, dockerClient, args)
-	exitOnErr(err)
-	exitOnErr(sampler.SampleAll(context.Background(), i, cgroupInfo))
-}
-
-func useDockerAPI(dockerAPIRequested bool, version string) bool {
-	if dockerAPIRequested {
-		if version == raw.CgroupV2 {
-			return true
-		}
-		log.Debug("UseDockerAPI config is not available on CgroupV1")
-		return false
-	}
-	return false
-}
-
-func exitOnErr(err error) {
-	if err != nil {
-		log.Error(err.Error())
-		os.Exit(-1)
-	}
-}
-
-func printVersion() {
-	fmt.Printf(
-		"New Relic Docker integration Version: %s, Platform: %s, GoVersion: %s, GitCommit: %s, BuildDate: %s\n",
-		integrationVersion,
-		fmt.Sprintf("%s/%s", runtime.GOOS, runtime.GOARCH),
-		runtime.Version(),
-		gitCommit,
-		buildDate)
+	util.ExitOnErr(i.Publish())
 }
