@@ -21,7 +21,7 @@ var (
 func main() {
 	args := config.ArgumentList{}
 	// we always use the docker API for OSes other than Linux
-	args.UseDockerAPI = util.UpdateDockerAPIArg(args.UseDockerAPI)
+	args.UseDockerAPI = util.ForceTrueForOSOtherThanLinux(args.UseDockerAPI)
 	i, err := integration.New(util.IntegrationName, integrationVersion, integration.Args(&args))
 	util.ExitOnErr(err)
 

@@ -15,7 +15,8 @@ import (
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
 )
 
-func UpdateDockerAPIArg(dockerAPIArg bool) bool {
+// ForceTrueForOSOtherThanLinux returns the value of the dockerAPIArg without any modification
+func ForceTrueForOSOtherThanLinux(dockerAPIArg bool) bool {
 	return dockerAPIArg
 }
 

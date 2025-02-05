@@ -16,7 +16,8 @@ import (
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
 )
 
-func UpdateDockerAPIArg(dockerAPIArg bool) bool {
+// ForceTrueForOSOtherThanLinux returns true always for OSes other than Linux
+func ForceTrueForOSOtherThanLinux(dockerAPIArg bool) bool {
 	return true
 }
 
