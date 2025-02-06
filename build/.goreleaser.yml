@@ -11,11 +11,16 @@ builds:
       - CGO_ENABLED=0
     goos:
       - linux
+      - darwin
     goarch:
       - 386
       - amd64
       - arm
       - arm64
+    ignore:
+      - goos: darwin
+        goarch: 386
+
   - id: nri-nix-fips
     main: ./src
     binary: nri-docker
@@ -35,6 +40,22 @@ builds:
       - arm64
     tags:
       - fips
+  
+  - id: nri-win
+    main: ./src
+    binary: nri-docker
+    ldflags:
+      - -s -w -X main.integrationVersion={{.Version}} -X main.gitCommit={{.Commit}} -X main.buildDate={{.Date}}
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - windows
+    goarch:
+      - 386
+      - amd64
+    hooks:
+      pre: build/windows/set_exe_properties.sh {{ .Env.TAG }} "docker"
+
 archives:
   - id: nri-nix
     builds:
@@ -44,6 +65,7 @@ archives:
       - docker-config.yml
       - docker-definition.yml
     format: tar.gz
+
   - id: nri-nix-fips
     builds:
       - nri-nix-fips
@@ -52,6 +74,15 @@ archives:
       - docker-config.yml
       - docker-definition.yml
     format: tar.gz
+
+  - id: nri-win
+    builds:
+      - nri-win
+    name_template: "{{ .ProjectName }}-{{ .Arch }}.{{ .Version }}_dirty"
+    files:
+      - docker-config.yml
+      - docker-definition.yml
+    format: zip
 
 # we use custom publisher for fixing archives and signing them
 release:
