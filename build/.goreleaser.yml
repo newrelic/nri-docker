@@ -81,7 +81,7 @@ archives:
     name_template: "{{ .ProjectName }}-{{ .Arch }}.{{ .Version }}_dirty"
     files:
       - docker-config.yml
-      - docker-definition.yml
+      - docker-win-definition.yml
     format: zip
 
 # we use custom publisher for fixing archives and signing them
