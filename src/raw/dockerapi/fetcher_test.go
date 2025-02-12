@@ -9,6 +9,7 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/newrelic/nri-docker/src/constants"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
 	"github.com/stretchr/testify/assert"
@@ -101,7 +102,7 @@ func Test_Fetch(t *testing.T) {
 	client := mockDockerStatsClient{}
 	client.On("ContainerStats", mock.Anything).Return(mockStats)
 
-	fetcher := dockerapi.NewFetcher(&client)
+	fetcher := dockerapi.NewFetcher(&client, constants.LinuxPlatformName)
 
 	metrics, err := fetcher.Fetch(types.ContainerJSON{ContainerJSONBase: &types.ContainerJSONBase{
 		ID: "test",
@@ -195,7 +196,7 @@ func Test_NilHostConfig(t *testing.T) {
 	client := mockDockerStatsClient{}
 	client.On("ContainerStats", mock.Anything).Return(mockStats)
 
-	fetcher := dockerapi.NewFetcher(&client)
+	fetcher := dockerapi.NewFetcher(&client, constants.LinuxPlatformName)
 
 	metricsNoHostConfig, err := fetcher.Fetch(types.ContainerJSON{ContainerJSONBase: &types.ContainerJSONBase{ID: "test"}})
 	require.NoError(t, err)
