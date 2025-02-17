@@ -14,10 +14,11 @@ import (
 
 type Fetcher struct {
 	statsClient raw.DockerStatsClient
+	platform    string
 }
 
-func NewFetcher(statsClient raw.DockerStatsClient) *Fetcher {
-	return &Fetcher{statsClient: statsClient}
+func NewFetcher(statsClient raw.DockerStatsClient, platform string) *Fetcher {
+	return &Fetcher{statsClient: statsClient, platform: platform}
 }
 
 func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {

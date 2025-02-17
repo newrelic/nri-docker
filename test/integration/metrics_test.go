@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/newrelic/nri-docker/src/biz"
+	"github.com/newrelic/nri-docker/src/constants"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
 )
@@ -52,7 +53,7 @@ func TestCompareMetrics(t *testing.T) {
 		t.Skip("DockerAPIFetcher only supports cgroups v2 version")
 	}
 
-	fetcherAPI := dockerapi.NewFetcher(dockerClient)
+	fetcherAPI := dockerapi.NewFetcher(dockerClient, constants.LinuxPlatformName)
 	metricsAPI := biz.NewProcessor(
 		persist.NewInMemoryStore(),
 		fetcherAPI,
@@ -440,7 +441,7 @@ func TestBlkIOMetrics(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			client := mockDockerStatsClient{}
 			client.On("ContainerStats", mock.Anything).Return(tc.MockStats)
-			dockerAPIFetcher := dockerapi.NewFetcher(&client)
+			dockerAPIFetcher := dockerapi.NewFetcher(&client, constants.LinuxPlatformName)
 
 			storer := inMemoryStorerWithPreviousCPUState()
 			inspector := NewInspectorMock(InspectorContainerID, InspectorPID, 2, nil)

@@ -10,6 +10,7 @@ import (
 	"github.com/newrelic/infra-integrations-sdk/v3/integration"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/nri-docker/src/config"
+	"github.com/newrelic/nri-docker/src/constants"
 	"github.com/newrelic/nri-docker/src/nri"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
@@ -42,7 +43,7 @@ func PopulateFromDocker(i *integration.Integration, args config.ArgumentList) {
 
 	var fetcher raw.Fetcher
 	if UseDockerAPI(args.UseDockerAPI, cgroupInfo.CgroupVersion) {
-		fetcher = dockerapi.NewFetcher(dockerClient)
+		fetcher = dockerapi.NewFetcher(dockerClient, constants.LinuxPlatformName)
 	} else { // use cgroups as source of data
 		fetcher, err = raw.NewCgroupFetcher(args.HostRoot, cgroupInfo)
 		ExitOnErr(err)

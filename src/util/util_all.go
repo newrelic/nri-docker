@@ -7,6 +7,7 @@ package util
 
 import (
 	"context"
+	"runtime"
 
 	"github.com/docker/docker/api/types/system"
 	"github.com/docker/docker/client"
@@ -27,10 +28,10 @@ func PopulateFromDocker(i *integration.Integration, args config.ArgumentList) {
 	ExitOnErr(err)
 	defer dockerClient.Close()
 
-	fetcher := dockerapi.NewFetcher(dockerClient)
+	fetcher := dockerapi.NewFetcher(dockerClient, runtime.GOOS)
 
 	sampler, err := nri.NewSampler(fetcher, dockerClient, args)
 	ExitOnErr(err)
-	// always use dockerAPI for windows
+	// always use dockerAPI if not on Linux
 	ExitOnErr(sampler.SampleAll(context.Background(), i, system.Info{}))
 }
