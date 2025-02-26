@@ -9,6 +9,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
+	"github.com/newrelic/nri-docker/src/constants"
 	"github.com/newrelic/nri-docker/src/raw"
 )
 
@@ -59,6 +60,13 @@ func (f *Fetcher) memoryMetrics(containerStats types.StatsJSON, hostConfig *cont
 	mem.RSS = getOrDebuglog(containerStats.MemoryStats.Stats, "anon", "memory_stats.stats")
 	mem.KernelMemoryUsage = getOrDebuglog(containerStats.MemoryStats.Stats, "kernel_stack", "memory_stats.stats") +
 		getOrDebuglog(containerStats.MemoryStats.Stats, "slab", "memory_stats.stats")
+
+	// Windows specific metrics
+	if f.platform == constants.WindowsPlatformName {
+		mem.Commit = containerStats.MemoryStats.Commit
+		mem.CommitPeak = containerStats.MemoryStats.CommitPeak
+		mem.PrivateWorkingSet = containerStats.MemoryStats.PrivateWorkingSet
+	}
 
 	return mem
 }
