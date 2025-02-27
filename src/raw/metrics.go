@@ -32,6 +32,10 @@ type Memory struct {
 	KernelMemoryUsage uint64
 	SwapLimit         uint64
 	SoftLimit         uint64
+	// Windows specific metrics
+	Commit            uint64
+	CommitPeak        uint64
+	PrivateWorkingSet uint64
 }
 
 // CPU usage snapshot

@@ -2,6 +2,7 @@ package nri
 
 import (
 	"context"
+	"runtime"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/newrelic/nri-docker/src/biz"
+	"github.com/newrelic/nri-docker/src/constants"
 	"github.com/newrelic/nri-docker/src/raw"
 )
 
@@ -222,17 +224,23 @@ func TestSampleAll(t *testing.T) {
 	assert.NotZero(t, metrics["storageMetadataUsagePercent"])
 
 	// Memory
-	assert.NotZero(t, metrics["memoryUsageBytes"])
-	assert.NotZero(t, metrics["memoryCacheBytes"])
-	assert.NotZero(t, metrics["memoryResidentSizeBytes"])
-	assert.NotZero(t, metrics["memorySizeLimitBytes"])
 	assert.NotZero(t, metrics["memoryUsageLimitPercent"])
-	assert.NotZero(t, metrics["memoryKernelUsageBytes"])
-	assert.NotZero(t, metrics["memorySwapUsageBytes"])
-	assert.NotZero(t, metrics["memorySwapOnlyUsageBytes"])
-	assert.NotZero(t, metrics["memorySwapLimitBytes"])
-	assert.NotZero(t, metrics["memorySwapLimitUsagePercent"])
-	assert.NotZero(t, metrics["memorySoftLimitBytes"])
+	if runtime.GOOS == constants.WindowsPlatformName {
+		assert.NotZero(t, metrics["memoryCommitBytes"])
+		assert.NotZero(t, metrics["memoryCommitPeakBytes"])
+		assert.NotZero(t, metrics["memoryPrivateWorkingSet"])
+	} else {
+		assert.NotZero(t, metrics["memoryUsageBytes"])
+		assert.NotZero(t, metrics["memoryCacheBytes"])
+		assert.NotZero(t, metrics["memoryResidentSizeBytes"])
+		assert.NotZero(t, metrics["memorySizeLimitBytes"])
+		assert.NotZero(t, metrics["memoryKernelUsageBytes"])
+		assert.NotZero(t, metrics["memorySwapUsageBytes"])
+		assert.NotZero(t, metrics["memorySwapOnlyUsageBytes"])
+		assert.NotZero(t, metrics["memorySwapLimitBytes"])
+		assert.NotZero(t, metrics["memorySwapLimitUsagePercent"])
+		assert.NotZero(t, metrics["memorySoftLimitBytes"])
+	}
 
 	// Pids
 	assert.NotZero(t, metrics["threadCount"])
@@ -302,7 +310,13 @@ func TestSampleAllMissingMetrics(t *testing.T) {
 	assert.NotContains(t, metrics, "memorySwapLimitUsagePercent")
 
 	// check required metrics are collected
-	assert.NotZero(t, metrics["memoryUsageBytes"])
+	if runtime.GOOS == constants.WindowsPlatformName {
+		assert.NotZero(t, metrics["memoryCommitBytes"])
+		assert.NotZero(t, metrics["memoryCommitPeakBytes"])
+		assert.NotZero(t, metrics["memoryPrivateWorkingSet"])
+	} else {
+		assert.NotZero(t, metrics["memoryUsageBytes"])
+	}
 }
 
 const (
@@ -362,6 +376,9 @@ func allMetrics() raw.Metrics {
 			KernelMemoryUsage: nonZeroUint,
 			SwapLimit:         nonZeroUint,
 			SoftLimit:         nonZeroUint,
+			Commit:            nonZeroUint,
+			CommitPeak:        nonZeroUint,
+			PrivateWorkingSet: nonZeroUint,
 		},
 		Network: raw.Network{
 			RxBytes:   nonZero,

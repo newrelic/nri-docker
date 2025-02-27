@@ -4,6 +4,7 @@ package nri
 
 import "github.com/newrelic/infra-integrations-sdk/v3/data/metric"
 
+// nolint: unused
 var (
 	metricCommandLine                 = metricFunc("commandLine", metric.ATTRIBUTE)
 	metricContainerImage              = metricFunc("image", metric.ATTRIBUTE)
@@ -31,6 +32,9 @@ var (
 	metricMemorySwapOnlyUsageBytes    = metricFunc("memorySwapOnlyUsageBytes", metric.GAUGE)
 	metricMemorySwapLimitBytes        = metricFunc("memorySwapLimitBytes", metric.GAUGE)
 	metricMemorySwapLimitUsagePercent = metricFunc("memorySwapLimitUsagePercent", metric.GAUGE)
+	metricMemoryCommitBytes           = metricFunc("memoryCommitBytes", metric.GAUGE)
+	metricMemoryCommitPeakBytes       = metricFunc("memoryCommitPeakBytes", metric.GAUGE)
+	metricMemoryPrivateWorkingSet     = metricFunc("memoryPrivateWorkingSet", metric.GAUGE)
 	metricMemorySoftLimitBytes        = metricFunc("memorySoftLimitBytes", metric.GAUGE)
 	metricIOReadCountPerSecond        = metricFunc("ioReadCountPerSecond", metric.PRATE)
 	metricIOWriteCountPerSecond       = metricFunc("ioWriteCountPerSecond", metric.PRATE)
