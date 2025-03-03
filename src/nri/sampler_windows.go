@@ -11,3 +11,12 @@ func memory(mem *biz.Memory) []entry {
 	}
 	return metrics
 }
+
+func cpu(cpu *biz.CPU) []entry {
+	return []entry{
+		metricCPUPercent(cpu.CPUPercent),
+		metricCPUKernelPercent(cpu.KernelPercent),
+		metricCPUUserPercent(cpu.UserPercent),
+		metricCPUProcs(cpu.NumProcs),
+	}
+}

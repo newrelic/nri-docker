@@ -32,7 +32,7 @@ func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
 		ContainerID: container.ID,
 		Memory:      f.memoryMetrics(containerStats, container.HostConfig),
 		Network:     f.networkMetrics(containerStats),
-		CPU:         f.cpuMetrics(container, containerStats.CPUStats),
+		CPU:         f.cpuMetrics(container, containerStats),
 		Blkio:       f.blkioMetrics(containerStats.BlkioStats),
 		Pids:        f.pidsMetrics(containerStats.PidsStats),
 	}
@@ -89,8 +89,9 @@ func (f *Fetcher) networkMetrics(containerStats types.StatsJSON) raw.Network {
 	return aggregatedMetrics
 }
 
-func (f *Fetcher) cpuMetrics(container types.ContainerJSON, cpuStats types.CPUStats) raw.CPU {
+func (f *Fetcher) cpuMetrics(container types.ContainerJSON, containerStats types.StatsJSON) raw.CPU {
 	var cpuShares uint64
+	cpuStats := containerStats.CPUStats
 	if container.HostConfig == nil {
 		log.Debug("Could not fetch cpuShares since the container %q host configuration is not available", container.ID)
 	} else {
@@ -98,8 +99,8 @@ func (f *Fetcher) cpuMetrics(container types.ContainerJSON, cpuStats types.CPUSt
 	}
 	return raw.CPU{
 		TotalUsage:        cpuStats.CPUUsage.TotalUsage,
-		UsageInUsermode:   cpuStats.CPUUsage.UsageInUsermode,
-		UsageInKernelmode: cpuStats.CPUUsage.UsageInKernelmode,
+		UsageInUsermode:   &cpuStats.CPUUsage.UsageInUsermode,
+		UsageInKernelmode: &cpuStats.CPUUsage.UsageInKernelmode,
 		ThrottledPeriods:  cpuStats.ThrottlingData.ThrottledPeriods,
 		ThrottledTimeNS:   cpuStats.ThrottlingData.ThrottledTime,
 		SystemUsage:       cpuStats.SystemUsage,
@@ -108,6 +109,10 @@ func (f *Fetcher) cpuMetrics(container types.ContainerJSON, cpuStats types.CPUSt
 		// PercpuUsage is not set in cgroups v2 (it is set to nil) but it is not reported by the integration,
 		// it is used to report the 'OnlineCPUs' value when online CPUs cannot be fetched.
 		PercpuUsage: cpuStats.CPUUsage.PercpuUsage,
+		// NumProcs is Windows specific metric
+		NumProcs: containerStats.NumProcs,
+		PreRead:  containerStats.PreRead,
+		Read:     containerStats.Read,
 	}
 }
 

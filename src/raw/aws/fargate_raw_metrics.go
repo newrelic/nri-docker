@@ -29,8 +29,8 @@ func fargateRawMetrics(fargateStats FargateStats) map[string]*raw.Metrics {
 			Network: network,
 			CPU: raw.CPU{
 				TotalUsage:        stats.CPUStats.CPUUsage.TotalUsage,
-				UsageInUsermode:   stats.CPUStats.CPUUsage.UsageInUsermode,
-				UsageInKernelmode: stats.CPUStats.CPUUsage.UsageInKernelmode,
+				UsageInUsermode:   &stats.CPUStats.CPUUsage.UsageInUsermode,
+				UsageInKernelmode: &stats.CPUStats.CPUUsage.UsageInKernelmode,
 				PercpuUsage:       stats.CPUStats.CPUUsage.PercpuUsage,
 				ThrottledPeriods:  stats.CPUStats.ThrottlingData.ThrottledPeriods,
 				ThrottledTimeNS:   stats.CPUStats.ThrottlingData.ThrottledTime,

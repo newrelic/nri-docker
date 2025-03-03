@@ -188,8 +188,8 @@ func (cg *CgroupsV1Fetcher) cpu(metric *cgroupstats.Metrics) (CPU, error) {
 
 	cpu := CPU{
 		TotalUsage:        metric.CPU.Usage.Total,
-		UsageInUsermode:   metric.CPU.Usage.User,
-		UsageInKernelmode: metric.CPU.Usage.Kernel,
+		UsageInUsermode:   &metric.CPU.Usage.User,
+		UsageInKernelmode: &metric.CPU.Usage.Kernel,
 		PercpuUsage:       metric.CPU.Usage.PerCPU,
 	}
 	if metric.CPU.Throttling != nil {

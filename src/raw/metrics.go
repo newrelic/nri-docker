@@ -41,14 +41,17 @@ type Memory struct {
 // CPU usage snapshot
 type CPU struct {
 	TotalUsage        uint64
-	UsageInUsermode   uint64
-	UsageInKernelmode uint64
+	UsageInUsermode   *uint64
+	UsageInKernelmode *uint64
 	PercpuUsage       []uint64
 	ThrottledPeriods  uint64
 	ThrottledTimeNS   uint64
 	SystemUsage       uint64
 	OnlineCPUs        uint
 	Shares            uint64
+	NumProcs          uint32
+	PreRead           time.Time
+	Read              time.Time
 }
 
 // Pids inside the container

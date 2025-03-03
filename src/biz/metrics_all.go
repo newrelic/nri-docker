@@ -7,7 +7,9 @@ package biz
 
 import (
 	"math"
+	"time"
 
+	"github.com/docker/docker/api/types"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/nri-docker/src/raw"
 )
@@ -98,4 +100,78 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 	m.SwapLimitUsagePercent = &swapLimitUsagePercent
 
 	return m
+}
+
+func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CPU {
+	var previous struct {
+		Time int64
+		CPU  raw.CPU
+	}
+	// store current metrics to be the "previous" metrics in the next CPU sampling
+	defer func() {
+		previous.Time = metrics.Time.Unix()
+		previous.CPU = metrics.CPU
+		mc.store.Set(metrics.ContainerID, previous)
+	}()
+
+	cpu := CPU{}
+
+	// Set LimitCores to first honor CPU quota if any; otherwise set it to runtime.CPU().
+	if json.HostConfig != nil && json.HostConfig.NanoCPUs != 0 {
+		cpu.LimitCores = float64(json.HostConfig.NanoCPUs) / 1e9
+	} else {
+		// TODO: if newrelic-infra is in a limited cpus container, this may report the number of cpus of the
+		// 	newrelic-infra container if the container has no CPU quota
+		cpu.LimitCores = float64(mc.getRuntimeNumCPU())
+	}
+
+	// Reading previous CPU stats
+	if _, err := mc.store.Get(metrics.ContainerID, &previous); err != nil {
+		log.Debug("could not retrieve previous CPU stats for container %v: %v", metrics.ContainerID, err.Error())
+		return cpu
+	}
+
+	// calculate the change for the cpu usage of the container in between readings
+	durationNS := float64(metrics.Time.Sub(time.Unix(previous.Time, 0)).Nanoseconds())
+	if durationNS <= 0 {
+		return cpu
+	}
+
+	//nolint: mnd
+	maxVal := float64(metrics.CPU.OnlineCPUsWithFallback() * 100)
+
+	cpu.CPUPercent = cpuPercent(previous.CPU, metrics.CPU)
+
+	userDelta := float64(*metrics.CPU.UsageInUsermode - *previous.CPU.UsageInUsermode)
+	cpu.UserPercent = math.Min(maxVal, userDelta*100/durationNS)
+
+	kernelDelta := float64(*metrics.CPU.UsageInKernelmode - *previous.CPU.UsageInKernelmode)
+	cpu.KernelPercent = math.Min(maxVal, kernelDelta*100/durationNS)
+
+	cpu.UsedCores = float64(metrics.CPU.TotalUsage-previous.CPU.TotalUsage) / durationNS
+
+	cpu.ThrottlePeriods = metrics.CPU.ThrottledPeriods
+	cpu.ThrottledTimeMS = float64(metrics.CPU.ThrottledTimeNS) / 1e9 // nanoseconds to second
+
+	cpu.UsedCoresPercent = 100 * cpu.UsedCores / cpu.LimitCores
+
+	cpu.Shares = metrics.CPU.Shares
+
+	return cpu
+}
+
+func cpuPercent(previous, current raw.CPU) float64 {
+	var (
+		cpuPercent = 0.0
+		// calculate the change for the cpu usage of the container in between readings
+		cpuDelta = float64(current.TotalUsage - previous.TotalUsage)
+		// calculate the change for the entire system between readings
+		systemDelta = float64(current.SystemUsage - previous.SystemUsage)
+		onlineCPUs  = float64(current.OnlineCPUsWithFallback())
+	)
+
+	if systemDelta > 0.0 && cpuDelta > 0.0 {
+		cpuPercent = (cpuDelta / systemDelta) * onlineCPUs * 100.0
+	}
+	return cpuPercent
 }

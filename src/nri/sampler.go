@@ -287,20 +287,6 @@ func (cs *ContainerSampler) networkMetrics(net *biz.Network) []entry {
 	}
 }
 
-func cpu(cpu *biz.CPU) []entry {
-	return []entry{
-		metricCPUUsedCores(cpu.UsedCores),
-		metricCPUUsedCoresPercent(cpu.UsedCoresPercent),
-		metricCPULimitCores(cpu.LimitCores),
-		metricCPUPercent(cpu.CPUPercent),
-		metricCPUKernelPercent(cpu.KernelPercent),
-		metricCPUUserPercent(cpu.UserPercent),
-		metricCPUThrottlePeriods(cpu.ThrottlePeriods),
-		metricCPUThrottleTimeMS(cpu.ThrottledTimeMS),
-		metricCPUShares(cpu.Shares),
-	}
-}
-
 func misc(m *biz.Sample) []entry {
 	return []entry{
 		metricRestartCount(m.RestartCount),
