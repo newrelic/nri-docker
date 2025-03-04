@@ -53,3 +53,8 @@ func PopulateFromFargate(i *integration.Integration, args config.ArgumentList) {
 	// Info is currently used to get the Storage Driver stats that is not present on Fargate.
 	ExitOnErr(sampler.SampleAll(context.Background(), i, system.Info{}))
 }
+
+// ToPointer returns a pointer to the value passed as argument.
+func ToPointer[T any](value T) *T {
+	return &value
+}

@@ -37,3 +37,17 @@ func memory(mem *biz.Memory) []entry {
 	}
 	return metrics
 }
+
+func cpu(cpu *biz.CPU) []entry {
+	return []entry{
+		metricCPUUsedCores(cpu.UsedCores),
+		metricCPUUsedCoresPercent(cpu.UsedCoresPercent),
+		metricCPULimitCores(cpu.LimitCores),
+		metricCPUPercent(cpu.CPUPercent),
+		metricCPUKernelPercent(cpu.KernelPercent),
+		metricCPUUserPercent(cpu.UserPercent),
+		metricCPUThrottlePeriods(cpu.ThrottlePeriods),
+		metricCPUThrottleTimeMS(cpu.ThrottledTimeMS),
+		metricCPUShares(cpu.Shares),
+	}
+}
