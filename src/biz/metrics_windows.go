@@ -88,10 +88,10 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, _ *types.ContainerJSON) CPU {
 		return cpu
 	}
 	userDelta := float64(*metrics.CPU.UsageInUsermode - *previous.CPU.UsageInUsermode)
-	cpu.UserPercent = math.Min(maxVal, userDelta*100/float64(durationIntervals))
+	cpu.UserPercent = math.Min(maxVal, (userDelta/float64(durationIntervals))*100)
 
 	kernelDelta := float64(*metrics.CPU.UsageInKernelmode - *previous.CPU.UsageInKernelmode)
-	cpu.KernelPercent = math.Min(maxVal, kernelDelta*100/float64(durationIntervals))
+	cpu.KernelPercent = math.Min(maxVal, (kernelDelta/float64(durationIntervals))*100)
 
 	return cpu
 }
@@ -108,7 +108,7 @@ func cpuPercent(previous, current raw.CPU) float64 {
 	// Percentage avoiding divide-by-zero
 	if passIntervals > 0 {
 		log.Debug("passIntervals: %v, intervalsUsed: %v", passIntervals, intervalsUsed)
-		return float64(intervalsUsed) / float64(passIntervals) * 100.0
+		return (float64(intervalsUsed) / float64(passIntervals)) * 100
 	}
 	return 0.0
 }
