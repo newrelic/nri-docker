@@ -47,7 +47,7 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 	return m
 }
 
-// TODO: use container inspect output to get the cpu limit
+// TODO: https://new-relic.atlassian.net/browse/NR-375198
 func (mc *MetricsFetcher) cpu(metrics raw.Metrics, _ *types.ContainerJSON) CPU {
 	var previous struct {
 		Time int64
