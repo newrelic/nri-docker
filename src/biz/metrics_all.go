@@ -103,10 +103,7 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 }
 
 func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CPU {
-	var previous struct {
-		Time int64
-		CPU  raw.CPU
-	}
+	previous := StoredCPUSample{}
 	// store current metrics to be the "previous" metrics in the next CPU sampling
 	defer func() {
 		previous.Time = metrics.Time.Unix()

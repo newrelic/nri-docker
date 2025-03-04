@@ -49,10 +49,7 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 
 // TODO: https://new-relic.atlassian.net/browse/NR-375198
 func (mc *MetricsFetcher) cpu(metrics raw.Metrics, _ *types.ContainerJSON) CPU {
-	var previous struct {
-		Time int64
-		CPU  raw.CPU
-	}
+	previous := StoredCPUSample{}
 	// store current metrics to be the "previous" metrics in the next CPU sampling
 	defer func() {
 		previous.Time = metrics.Time.Unix()

@@ -18,6 +18,11 @@ import (
 var ErrExitedContainerExpired = errors.New("container exited TTL expired")
 var ErrExitedContainerUnexpired = errors.New("exited containers have no metrics to fetch")
 
+type StoredCPUSample struct {
+	Time int64
+	CPU  raw.CPU
+}
+
 // Sample exports the valuable metrics from a container
 type Sample struct {
 	Pids         Pids
