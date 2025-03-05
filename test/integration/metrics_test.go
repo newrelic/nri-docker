@@ -26,7 +26,7 @@ import (
 	"github.com/newrelic/nri-docker/src/constants"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
-	"github.com/newrelic/nri-docker/src/util"
+	"github.com/newrelic/nri-docker/src/utils"
 )
 
 func TestCompareMetrics(t *testing.T) {
@@ -508,8 +508,8 @@ func mockedFileSystem(t *testing.T, hostRoot string) error {
 func inMemoryStorerWithPreviousCPUState() persist.Storer {
 	return inMemoryStorerWithCustomPreviousCPUState(raw.CPU{
 		TotalUsage:        1,
-		UsageInUsermode:   util.ToPointer(uint64(1)),
-		UsageInKernelmode: util.ToPointer(uint64(1)),
+		UsageInUsermode:   utils.ToPointer(uint64(1)),
+		UsageInKernelmode: utils.ToPointer(uint64(1)),
 		PercpuUsage:       nil,
 		ThrottledPeriods:  1,
 		ThrottledTimeNS:   1,

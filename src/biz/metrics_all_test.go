@@ -14,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/persist"
 	"github.com/newrelic/nri-docker/src/raw"
+	"github.com/newrelic/nri-docker/src/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -112,7 +113,7 @@ func TestMetricsFetcher_memory(t *testing.T) {
 					UsageLimit:        314572800,
 					Cache:             339968,
 					RSS:               312569856,
-					SwapUsage:         uint64ToPointer(371634176),
+					SwapUsage:         utils.ToPointer(uint64(371634176)),
 					FuzzUsage:         314449920,
 					KernelMemoryUsage: 1626112,
 					SwapLimit:         419430400,
@@ -126,10 +127,10 @@ func TestMetricsFetcher_memory(t *testing.T) {
 				MemLimitBytes:         314572800,
 				UsagePercent:          99.36328125,
 				KernelUsageBytes:      1626112,
-				SwapUsageBytes:        uint64ToPointer(369754112),
-				SwapOnlyUsageBytes:    uint64ToPointer(57184256),
+				SwapUsageBytes:        utils.ToPointer(uint64(369754112)),
+				SwapOnlyUsageBytes:    utils.ToPointer(uint64(57184256)),
 				SwapLimitBytes:        419430400,
-				SwapLimitUsagePercent: float64ToPointer(88.15625),
+				SwapLimitUsagePercent: utils.ToPointer(float64(88.15625)),
 				SoftLimitBytes:        262144000,
 			},
 		},
@@ -141,7 +142,7 @@ func TestMetricsFetcher_memory(t *testing.T) {
 					UsageLimit:        9223372036854771712,
 					Cache:             7839744,
 					RSS:               104759296,
-					SwapUsage:         uint64ToPointer(115326976),
+					SwapUsage:         utils.ToPointer(uint64(115326976)),
 					FuzzUsage:         115326976,
 					KernelMemoryUsage: 1830912,
 					SwapLimit:         9223372036854771712,
@@ -155,10 +156,10 @@ func TestMetricsFetcher_memory(t *testing.T) {
 				MemLimitBytes:         0,
 				UsagePercent:          0.0,
 				KernelUsageBytes:      1830912,
-				SwapUsageBytes:        uint64ToPointer(104759296),
-				SwapOnlyUsageBytes:    uint64ToPointer(0),
+				SwapUsageBytes:        utils.ToPointer(uint64(104759296)),
+				SwapOnlyUsageBytes:    utils.ToPointer(uint64(0)),
 				SwapLimitBytes:        0,
-				SwapLimitUsagePercent: float64ToPointer(0.0),
+				SwapLimitUsagePercent: utils.ToPointer(float64(0.0)),
 				SoftLimitBytes:        0,
 			},
 		},
@@ -170,7 +171,7 @@ func TestMetricsFetcher_memory(t *testing.T) {
 					UsageLimit:        9223372036854771712,
 					Cache:             7839744,
 					RSS:               104759296,
-					SwapUsage:         uint64ToPointer(16),
+					SwapUsage:         utils.ToPointer(uint64(16)),
 					FuzzUsage:         115326976,
 					KernelMemoryUsage: 1830912,
 					SwapLimit:         9223372036854771712,

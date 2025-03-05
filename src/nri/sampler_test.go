@@ -261,11 +261,13 @@ func TestSampleAll(t *testing.T) {
 
 	// io
 	// Missing persecond metrics that needs store to be calculated
-	assert.NotZero(t, metrics["ioTotalReadCount"])
-	assert.NotZero(t, metrics["ioTotalWriteCount"])
-	assert.NotZero(t, metrics["ioTotalReadBytes"])
-	assert.NotZero(t, metrics["ioTotalWriteBytes"])
-	assert.NotZero(t, metrics["ioTotalBytes"])
+	if runtime.GOOS != constants.WindowsPlatformName {
+		assert.NotZero(t, metrics["ioTotalReadCount"])
+		assert.NotZero(t, metrics["ioTotalWriteCount"])
+		assert.NotZero(t, metrics["ioTotalReadBytes"])
+		assert.NotZero(t, metrics["ioTotalWriteBytes"])
+		assert.NotZero(t, metrics["ioTotalBytes"])
+	}
 }
 
 func TestSampleAllMissingMetrics(t *testing.T) {
@@ -297,13 +299,6 @@ func TestSampleAllMissingMetrics(t *testing.T) {
 
 	metrics := i.Entities[0].Metrics[0].Metrics
 
-	// not required metrics should not be present
-	// IO
-	assert.NotContains(t, metrics, "ioTotalReadCount")
-	assert.NotContains(t, metrics, "ioTotalWriteCount")
-	assert.NotContains(t, metrics, "ioTotalReadBytes")
-	assert.NotContains(t, metrics, "ioTotalWriteBytes")
-	assert.NotContains(t, metrics, "ioTotalBytes")
 	// Memory
 	assert.NotContains(t, metrics, "memorySwapUsageBytes")
 	assert.NotContains(t, metrics, "memorySwapOnlyUsageBytes")
@@ -316,6 +311,13 @@ func TestSampleAllMissingMetrics(t *testing.T) {
 		assert.NotZero(t, metrics["memoryPrivateWorkingSet"])
 	} else {
 		assert.NotZero(t, metrics["memoryUsageBytes"])
+		// not required metrics should not be present
+		// IO
+		assert.NotContains(t, metrics, "ioTotalReadCount")
+		assert.NotContains(t, metrics, "ioTotalWriteCount")
+		assert.NotContains(t, metrics, "ioTotalReadBytes")
+		assert.NotContains(t, metrics, "ioTotalWriteBytes")
+		assert.NotContains(t, metrics, "ioTotalBytes")
 	}
 }
 

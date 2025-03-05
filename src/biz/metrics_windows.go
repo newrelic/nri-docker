@@ -6,6 +6,7 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/nri-docker/src/raw"
+	"github.com/newrelic/nri-docker/src/utils"
 	gops_mem "github.com/shirou/gopsutil/mem"
 )
 
@@ -108,4 +109,13 @@ func cpuPercent(previous, current raw.CPU) float64 {
 		return (float64(intervalsUsed) / float64(passIntervals)) * 100
 	}
 	return 0.0
+}
+
+func (mc *MetricsFetcher) blkIO(blkio raw.Blkio) BlkIO {
+	bio := BlkIO{}
+	bio.TotalReadBytes = utils.ToPointer(float64(blkio.ReadSizeBytes))
+	bio.TotalWriteBytes = utils.ToPointer(float64(blkio.WriteSizeBytes))
+	bio.TotalReadCount = utils.ToPointer(float64(blkio.ReadCountNormalized))
+	bio.TotalWriteCount = utils.ToPointer(float64(blkio.WriteCountNormalized))
+	return bio
 }

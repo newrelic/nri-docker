@@ -1,7 +1,7 @@
 // Copyright 2025 New Relic Corporation. All rights reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-package util
+package driver
 
 import (
 	"context"
@@ -52,9 +52,4 @@ func PopulateFromFargate(i *integration.Integration, args config.ArgumentList) {
 	ExitOnErr(err)
 	// Info is currently used to get the Storage Driver stats that is not present on Fargate.
 	ExitOnErr(sampler.SampleAll(context.Background(), i, system.Info{}))
-}
-
-// ToPointer returns a pointer to the value passed as argument.
-func ToPointer[T any](value T) *T {
-	return &value
 }

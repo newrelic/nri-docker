@@ -64,6 +64,10 @@ type Pids struct {
 type Blkio struct {
 	IoServiceBytesRecursive []BlkioEntry
 	IoServicedRecursive     []BlkioEntry
+	ReadSizeBytes           uint64
+	WriteSizeBytes          uint64
+	ReadCountNormalized     uint64
+	WriteCountNormalized    uint64
 }
 
 // BlkioEntry stores basic information of a simple blkio operation

@@ -45,6 +45,8 @@ var (
 	metricIOTotalWriteCount           = metricFunc("ioTotalWriteCount", metric.GAUGE)
 	metricIOTotalReadBytes            = metricFunc("ioTotalReadBytes", metric.GAUGE)
 	metricIOTotalWriteBytes           = metricFunc("ioTotalWriteBytes", metric.GAUGE)
+	metricIOReadCountNormalized       = metricFunc("ioReadCountNormalized", metric.GAUGE)
+	metricIOWriteCountNormalized      = metricFunc("ioWriteCountNormalized", metric.GAUGE)
 	metricIOTotalBytes                = metricFunc("ioTotalBytes", metric.GAUGE)
 	metricThreadCount                 = metricFunc("threadCount", metric.GAUGE)
 	metricThreadCountLimit            = metricFunc("threadCountLimit", metric.GAUGE)

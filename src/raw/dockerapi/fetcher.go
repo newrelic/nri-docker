@@ -33,7 +33,7 @@ func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
 		Memory:      f.memoryMetrics(containerStats, container.HostConfig),
 		Network:     f.networkMetrics(containerStats),
 		CPU:         f.cpuMetrics(container, containerStats),
-		Blkio:       f.blkioMetrics(containerStats.BlkioStats),
+		Blkio:       f.blkioMetrics(containerStats),
 		Pids:        f.pidsMetrics(containerStats.PidsStats),
 	}
 	return metrics, nil
@@ -123,10 +123,15 @@ func (f *Fetcher) pidsMetrics(pidStats types.PidsStats) raw.Pids {
 	}
 }
 
-func (f *Fetcher) blkioMetrics(blkioStats types.BlkioStats) raw.Blkio {
+func (f *Fetcher) blkioMetrics(containerStats types.StatsJSON) raw.Blkio {
 	return raw.Blkio{
-		IoServiceBytesRecursive: toRawBlkioEntry(blkioStats.IoServiceBytesRecursive),
-		IoServicedRecursive:     toRawBlkioEntry(blkioStats.IoServicedRecursive),
+		IoServiceBytesRecursive: toRawBlkioEntry(containerStats.BlkioStats.IoServiceBytesRecursive),
+		IoServicedRecursive:     toRawBlkioEntry(containerStats.BlkioStats.IoServicedRecursive),
+		// Windows specific metrics
+		ReadSizeBytes:        containerStats.StorageStats.ReadSizeBytes,
+		WriteSizeBytes:       containerStats.StorageStats.WriteSizeBytes,
+		ReadCountNormalized:  containerStats.StorageStats.ReadCountNormalized,
+		WriteCountNormalized: containerStats.StorageStats.WriteCountNormalized,
 	}
 }
 

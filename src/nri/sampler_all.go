@@ -51,3 +51,33 @@ func cpu(cpu *biz.CPU) []entry {
 		metricCPUShares(cpu.Shares),
 	}
 }
+
+func blkio(bio *biz.BlkIO) []entry {
+	var entries []entry
+
+	if bio.TotalReadCount != nil {
+		entries = append(entries, metricIOTotalReadCount(*bio.TotalReadCount), metricIOReadCountPerSecond(*bio.TotalReadCount))
+	}
+	if bio.TotalWriteCount != nil {
+		entries = append(entries, metricIOTotalWriteCount(*bio.TotalWriteCount), metricIOWriteCountPerSecond(*bio.TotalWriteCount))
+	}
+	if bio.TotalReadBytes != nil {
+		entries = append(entries, metricIOTotalReadBytes(*bio.TotalReadBytes), metricIOReadBytesPerSecond(*bio.TotalReadBytes))
+	}
+	if bio.TotalWriteBytes != nil {
+		entries = append(entries, metricIOTotalWriteBytes(*bio.TotalWriteBytes), metricIOWriteBytesPerSecond(*bio.TotalWriteBytes))
+	}
+
+	if bio.TotalReadBytes != nil || bio.TotalWriteBytes != nil {
+		totalBytes := 0.0
+		if bio.TotalReadBytes != nil {
+			totalBytes += *bio.TotalReadBytes
+		}
+		if bio.TotalWriteBytes != nil {
+			totalBytes += *bio.TotalWriteBytes
+		}
+		entries = append(entries, metricIOTotalBytes(totalBytes))
+	}
+
+	return entries
+}

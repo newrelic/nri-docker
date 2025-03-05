@@ -20,3 +20,29 @@ func cpu(cpu *biz.CPU) []entry {
 		metricCPUProcs(cpu.NumProcs),
 	}
 }
+
+func blkio(bio *biz.BlkIO) []entry {
+	var entries []entry
+	totalBytes := 0.0
+
+	if bio.TotalReadCount != nil {
+		entries = append(entries, metricIOReadCountNormalized(*bio.TotalReadCount))
+	}
+	if bio.TotalWriteCount != nil {
+		entries = append(entries, metricIOWriteCountNormalized(*bio.TotalWriteCount))
+	}
+	if bio.TotalReadBytes != nil {
+		entries = append(entries, metricIOTotalReadBytes(*bio.TotalReadBytes))
+		totalBytes += *bio.TotalReadBytes
+	}
+	if bio.TotalWriteBytes != nil {
+		entries = append(entries, metricIOTotalWriteBytes(*bio.TotalWriteBytes))
+		totalBytes += *bio.TotalWriteBytes
+	}
+
+	if bio.TotalReadBytes != nil || bio.TotalWriteBytes != nil {
+		entries = append(entries, metricIOTotalBytes(totalBytes))
+	}
+
+	return entries
+}

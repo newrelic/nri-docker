@@ -6,6 +6,7 @@ import (
 
 	"github.com/newrelic/infra-integrations-sdk/v3/persist"
 	"github.com/newrelic/nri-docker/src/raw"
+	"github.com/newrelic/nri-docker/src/utils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -45,8 +46,8 @@ func TestCPU(t *testing.T) {
 				ContainerID: "container123",
 				CPU: raw.CPU{
 					TotalUsage:        20000000,
-					UsageInUsermode:   uint64ToPointer(20000000),
-					UsageInKernelmode: uint64ToPointer(0),
+					UsageInUsermode:   utils.ToPointer(uint64(20000000)),
+					UsageInKernelmode: utils.ToPointer(uint64(0)),
 					Read:              readTime,
 					PreRead:           preReadTime,
 					NumProcs:          2,
@@ -56,8 +57,8 @@ func TestCPU(t *testing.T) {
 				Time: readTime.Add(-time.Second).Unix(),
 				CPU: raw.CPU{
 					TotalUsage:        10000000,
-					UsageInUsermode:   uint64ToPointer(10000000),
-					UsageInKernelmode: uint64ToPointer(0),
+					UsageInUsermode:   utils.ToPointer(uint64(10000000)),
+					UsageInKernelmode: utils.ToPointer(uint64(0)),
 					Read:              readTime.Add(-time.Second),
 					PreRead:           preReadTime.Add(-time.Second),
 					NumProcs:          2,
@@ -77,8 +78,8 @@ func TestCPU(t *testing.T) {
 				ContainerID: "container123",
 				CPU: raw.CPU{
 					TotalUsage:        20000000,
-					UsageInUsermode:   uint64ToPointer(0),
-					UsageInKernelmode: uint64ToPointer(20000000),
+					UsageInUsermode:   utils.ToPointer(uint64(0)),
+					UsageInKernelmode: utils.ToPointer(uint64(20000000)),
 					Read:              readTime,
 					PreRead:           preReadTime,
 					NumProcs:          2,
@@ -88,8 +89,8 @@ func TestCPU(t *testing.T) {
 				Time: readTime.Add(-time.Second).Unix(),
 				CPU: raw.CPU{
 					TotalUsage:        10000000,
-					UsageInUsermode:   uint64ToPointer(0),
-					UsageInKernelmode: uint64ToPointer(10000000),
+					UsageInUsermode:   utils.ToPointer(uint64(0)),
+					UsageInKernelmode: utils.ToPointer(uint64(10000000)),
 					Read:              readTime.Add(-time.Second),
 					PreRead:           preReadTime.Add(-time.Second),
 					NumProcs:          2,
@@ -109,8 +110,8 @@ func TestCPU(t *testing.T) {
 				ContainerID: "container123",
 				CPU: raw.CPU{
 					TotalUsage:        20000000,
-					UsageInUsermode:   uint64ToPointer(10000000),
-					UsageInKernelmode: uint64ToPointer(10000000),
+					UsageInUsermode:   utils.ToPointer(uint64(10000000)),
+					UsageInKernelmode: utils.ToPointer(uint64(10000000)),
 					Read:              readTime,
 					PreRead:           preReadTime,
 					NumProcs:          2,
@@ -120,8 +121,8 @@ func TestCPU(t *testing.T) {
 				Time: readTime.Add(-time.Second).Unix(),
 				CPU: raw.CPU{
 					TotalUsage:        10000000,
-					UsageInUsermode:   uint64ToPointer(5000000),
-					UsageInKernelmode: uint64ToPointer(5000000),
+					UsageInUsermode:   utils.ToPointer(uint64(5000000)),
+					UsageInKernelmode: utils.ToPointer(uint64(5000000)),
 					Read:              readTime.Add(-time.Second),
 					PreRead:           preReadTime.Add(-time.Second),
 					NumProcs:          2,
