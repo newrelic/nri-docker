@@ -4,6 +4,7 @@ package nri
 
 import "github.com/newrelic/infra-integrations-sdk/v3/data/metric"
 
+// nolint: unused
 var (
 	metricCommandLine                 = metricFunc("commandLine", metric.ATTRIBUTE)
 	metricContainerImage              = metricFunc("image", metric.ATTRIBUTE)
@@ -21,6 +22,7 @@ var (
 	metricCPUThrottleTimeMS           = metricFunc("cpuThrottleTimeMs", metric.GAUGE)
 	metricCPUThrottlePeriods          = metricFunc("cpuThrottlePeriods", metric.GAUGE)
 	metricCPUShares                   = metricFunc("cpuShares", metric.GAUGE)
+	metricCPUProcs                    = metricFunc("cpuProcs", metric.GAUGE)
 	metricMemoryUsageBytes            = metricFunc("memoryUsageBytes", metric.GAUGE)
 	metricMemoryCacheBytes            = metricFunc("memoryCacheBytes", metric.GAUGE)
 	metricMemoryResidentSizeBytes     = metricFunc("memoryResidentSizeBytes", metric.GAUGE)
@@ -31,6 +33,9 @@ var (
 	metricMemorySwapOnlyUsageBytes    = metricFunc("memorySwapOnlyUsageBytes", metric.GAUGE)
 	metricMemorySwapLimitBytes        = metricFunc("memorySwapLimitBytes", metric.GAUGE)
 	metricMemorySwapLimitUsagePercent = metricFunc("memorySwapLimitUsagePercent", metric.GAUGE)
+	metricMemoryCommitBytes           = metricFunc("memoryCommitBytes", metric.GAUGE)
+	metricMemoryCommitPeakBytes       = metricFunc("memoryCommitPeakBytes", metric.GAUGE)
+	metricMemoryPrivateWorkingSet     = metricFunc("memoryPrivateWorkingSet", metric.GAUGE)
 	metricMemorySoftLimitBytes        = metricFunc("memorySoftLimitBytes", metric.GAUGE)
 	metricIOReadCountPerSecond        = metricFunc("ioReadCountPerSecond", metric.PRATE)
 	metricIOWriteCountPerSecond       = metricFunc("ioWriteCountPerSecond", metric.PRATE)
@@ -40,6 +45,8 @@ var (
 	metricIOTotalWriteCount           = metricFunc("ioTotalWriteCount", metric.GAUGE)
 	metricIOTotalReadBytes            = metricFunc("ioTotalReadBytes", metric.GAUGE)
 	metricIOTotalWriteBytes           = metricFunc("ioTotalWriteBytes", metric.GAUGE)
+	metricIOReadCountNormalized       = metricFunc("ioReadCountNormalized", metric.GAUGE)
+	metricIOWriteCountNormalized      = metricFunc("ioWriteCountNormalized", metric.GAUGE)
 	metricIOTotalBytes                = metricFunc("ioTotalBytes", metric.GAUGE)
 	metricThreadCount                 = metricFunc("threadCount", metric.GAUGE)
 	metricThreadCountLimit            = metricFunc("threadCountLimit", metric.GAUGE)

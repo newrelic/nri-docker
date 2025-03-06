@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/newrelic/nri-docker/src/constants"
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,7 +20,7 @@ func TestDockerAPIFetcher(t *testing.T) {
 		t.Skip("DockerAPIFetcher only supports cgroups v2 version")
 	}
 
-	fetcher := dockerapi.NewFetcher(dockerClient)
+	fetcher := dockerapi.NewFetcher(dockerClient, constants.LinuxPlatformName)
 
 	// run a container for testing purposes
 	containerID, dockerRM := stress(t, "stress-ng", "-c", "2", "-l", "50", "-t", "5m", "--iomix", "10")

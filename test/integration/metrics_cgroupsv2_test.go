@@ -1,3 +1,5 @@
+//go:build linux
+
 package integration
 
 import (
@@ -11,6 +13,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/nri-docker/src/biz"
 	"github.com/newrelic/nri-docker/src/raw"
+	"github.com/newrelic/nri-docker/src/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -78,8 +81,8 @@ func TestCgroupsv2AllMetricsPresent(t *testing.T) {
 
 	previousCPUState := raw.CPU{
 		TotalUsage:        916236261000,
-		UsageInUsermode:   726716405000,
-		UsageInKernelmode: 187444559000,
+		UsageInUsermode:   utils.ToPointer(uint64(726716405000)),
+		UsageInKernelmode: utils.ToPointer(uint64(187444559000)),
 		PercpuUsage:       nil,
 		ThrottledPeriods:  1,
 		ThrottledTimeNS:   1,

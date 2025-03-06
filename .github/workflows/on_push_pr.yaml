@@ -10,8 +10,6 @@ on:
 jobs:
   push-pr:
     uses: newrelic/coreint-automation/.github/workflows/reusable_push_pr.yaml@v3
-    with:
-      run_test_windows: false
 
   test-integration-nix-cgroups-v1:
     name: Run integration tests on *Nix cgroups-v1

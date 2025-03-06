@@ -1,3 +1,5 @@
+//go:build linux
+
 package integration
 
 import (
@@ -21,8 +23,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/newrelic/nri-docker/src/biz"
+	"github.com/newrelic/nri-docker/src/constants"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
+	"github.com/newrelic/nri-docker/src/utils"
 )
 
 func TestCompareMetrics(t *testing.T) {
@@ -50,7 +54,7 @@ func TestCompareMetrics(t *testing.T) {
 		t.Skip("DockerAPIFetcher only supports cgroups v2 version")
 	}
 
-	fetcherAPI := dockerapi.NewFetcher(dockerClient)
+	fetcherAPI := dockerapi.NewFetcher(dockerClient, constants.LinuxPlatformName)
 	metricsAPI := biz.NewProcessor(
 		persist.NewInMemoryStore(),
 		fetcherAPI,
@@ -438,7 +442,7 @@ func TestBlkIOMetrics(t *testing.T) {
 		t.Run(tc.Name, func(t *testing.T) {
 			client := mockDockerStatsClient{}
 			client.On("ContainerStats", mock.Anything).Return(tc.MockStats)
-			dockerAPIFetcher := dockerapi.NewFetcher(&client)
+			dockerAPIFetcher := dockerapi.NewFetcher(&client, constants.LinuxPlatformName)
 
 			storer := inMemoryStorerWithPreviousCPUState()
 			inspector := NewInspectorMock(InspectorContainerID, InspectorPID, 2, nil)
@@ -504,8 +508,8 @@ func mockedFileSystem(t *testing.T, hostRoot string) error {
 func inMemoryStorerWithPreviousCPUState() persist.Storer {
 	return inMemoryStorerWithCustomPreviousCPUState(raw.CPU{
 		TotalUsage:        1,
-		UsageInUsermode:   1,
-		UsageInKernelmode: 1,
+		UsageInUsermode:   utils.ToPointer(uint64(1)),
+		UsageInKernelmode: utils.ToPointer(uint64(1)),
 		PercpuUsage:       nil,
 		ThrottledPeriods:  1,
 		ThrottledTimeNS:   1,

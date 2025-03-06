@@ -9,8 +9,10 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/newrelic/nri-docker/src/constants"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
+	"github.com/newrelic/nri-docker/src/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -101,7 +103,7 @@ func Test_Fetch(t *testing.T) {
 	client := mockDockerStatsClient{}
 	client.On("ContainerStats", mock.Anything).Return(mockStats)
 
-	fetcher := dockerapi.NewFetcher(&client)
+	fetcher := dockerapi.NewFetcher(&client, constants.LinuxPlatformName)
 
 	metrics, err := fetcher.Fetch(types.ContainerJSON{ContainerJSONBase: &types.ContainerJSONBase{
 		ID: "test",
@@ -156,8 +158,8 @@ func Test_Fetch(t *testing.T) {
 	t.Run("CPU metrics", func(t *testing.T) {
 		expectedCPUMetrics := raw.CPU{
 			TotalUsage:        11491000,
-			UsageInKernelmode: 5745000,
-			UsageInUsermode:   5745000,
+			UsageInKernelmode: utils.ToPointer(uint64(5745000)),
+			UsageInUsermode:   utils.ToPointer(uint64(5745000)),
 			PercpuUsage:       nil,
 			Shares:            2048,
 			ThrottledPeriods:  1,
@@ -195,7 +197,7 @@ func Test_NilHostConfig(t *testing.T) {
 	client := mockDockerStatsClient{}
 	client.On("ContainerStats", mock.Anything).Return(mockStats)
 
-	fetcher := dockerapi.NewFetcher(&client)
+	fetcher := dockerapi.NewFetcher(&client, constants.LinuxPlatformName)
 
 	metricsNoHostConfig, err := fetcher.Fetch(types.ContainerJSON{ContainerJSONBase: &types.ContainerJSONBase{ID: "test"}})
 	require.NoError(t, err)

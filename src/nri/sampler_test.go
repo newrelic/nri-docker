@@ -2,6 +2,7 @@ package nri
 
 import (
 	"context"
+	"runtime"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/stretchr/testify/mock"
 
 	"github.com/newrelic/nri-docker/src/biz"
+	"github.com/newrelic/nri-docker/src/constants"
 	"github.com/newrelic/nri-docker/src/raw"
 )
 
@@ -222,17 +224,23 @@ func TestSampleAll(t *testing.T) {
 	assert.NotZero(t, metrics["storageMetadataUsagePercent"])
 
 	// Memory
-	assert.NotZero(t, metrics["memoryUsageBytes"])
-	assert.NotZero(t, metrics["memoryCacheBytes"])
-	assert.NotZero(t, metrics["memoryResidentSizeBytes"])
-	assert.NotZero(t, metrics["memorySizeLimitBytes"])
 	assert.NotZero(t, metrics["memoryUsageLimitPercent"])
-	assert.NotZero(t, metrics["memoryKernelUsageBytes"])
-	assert.NotZero(t, metrics["memorySwapUsageBytes"])
-	assert.NotZero(t, metrics["memorySwapOnlyUsageBytes"])
-	assert.NotZero(t, metrics["memorySwapLimitBytes"])
-	assert.NotZero(t, metrics["memorySwapLimitUsagePercent"])
-	assert.NotZero(t, metrics["memorySoftLimitBytes"])
+	if runtime.GOOS == constants.WindowsPlatformName {
+		assert.NotZero(t, metrics["memoryCommitBytes"])
+		assert.NotZero(t, metrics["memoryCommitPeakBytes"])
+		assert.NotZero(t, metrics["memoryPrivateWorkingSet"])
+	} else {
+		assert.NotZero(t, metrics["memoryUsageBytes"])
+		assert.NotZero(t, metrics["memoryCacheBytes"])
+		assert.NotZero(t, metrics["memoryResidentSizeBytes"])
+		assert.NotZero(t, metrics["memorySizeLimitBytes"])
+		assert.NotZero(t, metrics["memoryKernelUsageBytes"])
+		assert.NotZero(t, metrics["memorySwapUsageBytes"])
+		assert.NotZero(t, metrics["memorySwapOnlyUsageBytes"])
+		assert.NotZero(t, metrics["memorySwapLimitBytes"])
+		assert.NotZero(t, metrics["memorySwapLimitUsagePercent"])
+		assert.NotZero(t, metrics["memorySoftLimitBytes"])
+	}
 
 	// Pids
 	assert.NotZero(t, metrics["threadCount"])
@@ -253,11 +261,13 @@ func TestSampleAll(t *testing.T) {
 
 	// io
 	// Missing persecond metrics that needs store to be calculated
-	assert.NotZero(t, metrics["ioTotalReadCount"])
-	assert.NotZero(t, metrics["ioTotalWriteCount"])
-	assert.NotZero(t, metrics["ioTotalReadBytes"])
-	assert.NotZero(t, metrics["ioTotalWriteBytes"])
-	assert.NotZero(t, metrics["ioTotalBytes"])
+	if runtime.GOOS != constants.WindowsPlatformName {
+		assert.NotZero(t, metrics["ioTotalReadCount"])
+		assert.NotZero(t, metrics["ioTotalWriteCount"])
+		assert.NotZero(t, metrics["ioTotalReadBytes"])
+		assert.NotZero(t, metrics["ioTotalWriteBytes"])
+		assert.NotZero(t, metrics["ioTotalBytes"])
+	}
 }
 
 func TestSampleAllMissingMetrics(t *testing.T) {
@@ -289,20 +299,26 @@ func TestSampleAllMissingMetrics(t *testing.T) {
 
 	metrics := i.Entities[0].Metrics[0].Metrics
 
-	// not required metrics should not be present
-	// IO
-	assert.NotContains(t, metrics, "ioTotalReadCount")
-	assert.NotContains(t, metrics, "ioTotalWriteCount")
-	assert.NotContains(t, metrics, "ioTotalReadBytes")
-	assert.NotContains(t, metrics, "ioTotalWriteBytes")
-	assert.NotContains(t, metrics, "ioTotalBytes")
 	// Memory
 	assert.NotContains(t, metrics, "memorySwapUsageBytes")
 	assert.NotContains(t, metrics, "memorySwapOnlyUsageBytes")
 	assert.NotContains(t, metrics, "memorySwapLimitUsagePercent")
 
 	// check required metrics are collected
-	assert.NotZero(t, metrics["memoryUsageBytes"])
+	if runtime.GOOS == constants.WindowsPlatformName {
+		assert.NotZero(t, metrics["memoryCommitBytes"])
+		assert.NotZero(t, metrics["memoryCommitPeakBytes"])
+		assert.NotZero(t, metrics["memoryPrivateWorkingSet"])
+	} else {
+		assert.NotZero(t, metrics["memoryUsageBytes"])
+		// not required metrics should not be present
+		// IO
+		assert.NotContains(t, metrics, "ioTotalReadCount")
+		assert.NotContains(t, metrics, "ioTotalWriteCount")
+		assert.NotContains(t, metrics, "ioTotalReadBytes")
+		assert.NotContains(t, metrics, "ioTotalWriteBytes")
+		assert.NotContains(t, metrics, "ioTotalBytes")
+	}
 }
 
 const (
@@ -362,6 +378,9 @@ func allMetrics() raw.Metrics {
 			KernelMemoryUsage: nonZeroUint,
 			SwapLimit:         nonZeroUint,
 			SoftLimit:         nonZeroUint,
+			Commit:            nonZeroUint,
+			CommitPeak:        nonZeroUint,
+			PrivateWorkingSet: nonZeroUint,
 		},
 		Network: raw.Network{
 			RxBytes:   nonZero,
