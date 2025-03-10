@@ -32,19 +32,26 @@ type Memory struct {
 	KernelMemoryUsage uint64
 	SwapLimit         uint64
 	SoftLimit         uint64
+	// Windows specific metrics
+	Commit            uint64
+	CommitPeak        uint64
+	PrivateWorkingSet uint64
 }
 
 // CPU usage snapshot
 type CPU struct {
 	TotalUsage        uint64
-	UsageInUsermode   uint64
-	UsageInKernelmode uint64
+	UsageInUsermode   *uint64
+	UsageInKernelmode *uint64
 	PercpuUsage       []uint64
 	ThrottledPeriods  uint64
 	ThrottledTimeNS   uint64
 	SystemUsage       uint64
 	OnlineCPUs        uint
 	Shares            uint64
+	NumProcs          uint32
+	PreRead           time.Time
+	Read              time.Time
 }
 
 // Pids inside the container
@@ -57,6 +64,10 @@ type Pids struct {
 type Blkio struct {
 	IoServiceBytesRecursive []BlkioEntry
 	IoServicedRecursive     []BlkioEntry
+	ReadSizeBytes           uint64
+	WriteSizeBytes          uint64
+	ReadCountNormalized     uint64
+	WriteCountNormalized    uint64
 }
 
 // BlkioEntry stores basic information of a simple blkio operation

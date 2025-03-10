@@ -9,15 +9,17 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
+	"github.com/newrelic/nri-docker/src/constants"
 	"github.com/newrelic/nri-docker/src/raw"
 )
 
 type Fetcher struct {
 	statsClient raw.DockerStatsClient
+	platform    string
 }
 
-func NewFetcher(statsClient raw.DockerStatsClient) *Fetcher {
-	return &Fetcher{statsClient: statsClient}
+func NewFetcher(statsClient raw.DockerStatsClient, platform string) *Fetcher {
+	return &Fetcher{statsClient: statsClient, platform: platform}
 }
 
 func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
@@ -30,8 +32,8 @@ func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
 		ContainerID: container.ID,
 		Memory:      f.memoryMetrics(containerStats, container.HostConfig),
 		Network:     f.networkMetrics(containerStats),
-		CPU:         f.cpuMetrics(container, containerStats.CPUStats),
-		Blkio:       f.blkioMetrics(containerStats.BlkioStats),
+		CPU:         f.cpuMetrics(container, containerStats),
+		Blkio:       f.blkioMetrics(containerStats),
 		Pids:        f.pidsMetrics(containerStats.PidsStats),
 	}
 	return metrics, nil
@@ -59,6 +61,13 @@ func (f *Fetcher) memoryMetrics(containerStats types.StatsJSON, hostConfig *cont
 	mem.KernelMemoryUsage = getOrDebuglog(containerStats.MemoryStats.Stats, "kernel_stack", "memory_stats.stats") +
 		getOrDebuglog(containerStats.MemoryStats.Stats, "slab", "memory_stats.stats")
 
+	// Windows specific metrics
+	if f.platform == constants.WindowsPlatformName {
+		mem.Commit = containerStats.MemoryStats.Commit
+		mem.CommitPeak = containerStats.MemoryStats.CommitPeak
+		mem.PrivateWorkingSet = containerStats.MemoryStats.PrivateWorkingSet
+	}
+
 	return mem
 }
 
@@ -80,8 +89,9 @@ func (f *Fetcher) networkMetrics(containerStats types.StatsJSON) raw.Network {
 	return aggregatedMetrics
 }
 
-func (f *Fetcher) cpuMetrics(container types.ContainerJSON, cpuStats types.CPUStats) raw.CPU {
+func (f *Fetcher) cpuMetrics(container types.ContainerJSON, containerStats types.StatsJSON) raw.CPU {
 	var cpuShares uint64
+	cpuStats := containerStats.CPUStats
 	if container.HostConfig == nil {
 		log.Debug("Could not fetch cpuShares since the container %q host configuration is not available", container.ID)
 	} else {
@@ -89,8 +99,8 @@ func (f *Fetcher) cpuMetrics(container types.ContainerJSON, cpuStats types.CPUSt
 	}
 	return raw.CPU{
 		TotalUsage:        cpuStats.CPUUsage.TotalUsage,
-		UsageInUsermode:   cpuStats.CPUUsage.UsageInUsermode,
-		UsageInKernelmode: cpuStats.CPUUsage.UsageInKernelmode,
+		UsageInUsermode:   &cpuStats.CPUUsage.UsageInUsermode,
+		UsageInKernelmode: &cpuStats.CPUUsage.UsageInKernelmode,
 		ThrottledPeriods:  cpuStats.ThrottlingData.ThrottledPeriods,
 		ThrottledTimeNS:   cpuStats.ThrottlingData.ThrottledTime,
 		SystemUsage:       cpuStats.SystemUsage,
@@ -99,6 +109,10 @@ func (f *Fetcher) cpuMetrics(container types.ContainerJSON, cpuStats types.CPUSt
 		// PercpuUsage is not set in cgroups v2 (it is set to nil) but it is not reported by the integration,
 		// it is used to report the 'OnlineCPUs' value when online CPUs cannot be fetched.
 		PercpuUsage: cpuStats.CPUUsage.PercpuUsage,
+		// NumProcs is Windows specific metric
+		NumProcs: containerStats.NumProcs,
+		PreRead:  containerStats.PreRead,
+		Read:     containerStats.Read,
 	}
 }
 
@@ -109,10 +123,15 @@ func (f *Fetcher) pidsMetrics(pidStats types.PidsStats) raw.Pids {
 	}
 }
 
-func (f *Fetcher) blkioMetrics(blkioStats types.BlkioStats) raw.Blkio {
+func (f *Fetcher) blkioMetrics(containerStats types.StatsJSON) raw.Blkio {
 	return raw.Blkio{
-		IoServiceBytesRecursive: toRawBlkioEntry(blkioStats.IoServiceBytesRecursive),
-		IoServicedRecursive:     toRawBlkioEntry(blkioStats.IoServicedRecursive),
+		IoServiceBytesRecursive: toRawBlkioEntry(containerStats.BlkioStats.IoServiceBytesRecursive),
+		IoServicedRecursive:     toRawBlkioEntry(containerStats.BlkioStats.IoServicedRecursive),
+		// Windows specific metrics
+		ReadSizeBytes:        containerStats.StorageStats.ReadSizeBytes,
+		WriteSizeBytes:       containerStats.StorageStats.WriteSizeBytes,
+		ReadCountNormalized:  containerStats.StorageStats.ReadCountNormalized,
+		WriteCountNormalized: containerStats.StorageStats.WriteCountNormalized,
 	}
 }
 

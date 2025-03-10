@@ -1,3 +1,5 @@
+//go:build linux
+
 // Package raw fetches raw system-level metrics as they are presented by the operating system
 package raw
 
@@ -102,10 +104,13 @@ func (cg *CgroupsV2Fetcher) cpu(metric *cgroupstatsV2.Metrics) (CPU, error) {
 		return CPU{}, errors.New("no CPU metrics information")
 	}
 
+	userUsage := microsecondsToNanoseconds(metric.CPU.UserUsec)
+	kernelUsage := microsecondsToNanoseconds(metric.CPU.SystemUsec)
+
 	cpu := CPU{
 		TotalUsage:        microsecondsToNanoseconds(metric.CPU.UsageUsec),
-		UsageInUsermode:   microsecondsToNanoseconds(metric.CPU.UserUsec),
-		UsageInKernelmode: microsecondsToNanoseconds(metric.CPU.SystemUsec),
+		UsageInUsermode:   &userUsage,
+		UsageInKernelmode: &kernelUsage,
 	}
 
 	if metric.CPU.NrThrottled != 0 {

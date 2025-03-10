@@ -9,6 +9,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+### enhancements
+- Add support for windows containers
+
 ## v2.2.0 - 2024-12-19
 
 ### 🚀 Enhancements
