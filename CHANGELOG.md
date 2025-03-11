@@ -9,8 +9,13 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
-### enhancements
+## v2.3.0 - 2025-03-11
+
+### 🚀 Enhancements
 - Add support for windows containers
+
+### ⛓️ Dependencies
+- Updated golang patch version to v1.23.6
 
 ## v2.2.0 - 2024-12-19
 
