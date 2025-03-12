@@ -9,6 +9,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+### bugfix
+- fix config file for windows to remove unnecessary condition
+
 ## v2.3.0 - 2025-03-11
 
 ### 🚀 Enhancements
