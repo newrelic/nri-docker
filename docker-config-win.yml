@@ -1,0 +1,13 @@
+integrations:
+  - name: nri-docker
+    when:
+      feature: docker_enabled
+    interval: 15s
+  # This configuration is no longer included in nri-ecs images.
+  # it is kept for legacy reasons, but the new one is located in https://github.com/newrelic/nri-ecs
+  - name: nri-docker
+    when:
+      feature: docker_enabled
+      env_exists:
+        FARGATE: "true"
+    interval: 15s
