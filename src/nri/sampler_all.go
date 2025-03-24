@@ -81,3 +81,10 @@ func blkio(bio *biz.BlkIO) []entry {
 
 	return entries
 }
+
+func pids(pids *biz.Pids) []entry {
+	return []entry{
+		metricThreadCount(pids.Current),
+		metricThreadCountLimit(pids.Limit),
+	}
+}
