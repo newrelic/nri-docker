@@ -229,13 +229,6 @@ func labels(container types.Container) []entry {
 	return metrics
 }
 
-func pids(pids *biz.Pids) []entry {
-	return []entry{
-		metricThreadCount(pids.Current),
-		metricThreadCountLimit(pids.Limit),
-	}
-}
-
 func (cs *ContainerSampler) networkMetrics(net *biz.Network) []entry {
 	return []entry{
 		metricRxBytes(net.RxBytes),

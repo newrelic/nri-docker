@@ -46,3 +46,9 @@ func blkio(bio *biz.BlkIO) []entry {
 
 	return entries
 }
+
+// PID is not available in the Windows version of the Docker API
+// https://docs.docker.com/reference/api/engine/version/v1.48/#tag/Container/operation/ContainerStats
+func pids(_ *biz.Pids) []entry {
+	return []entry{}
+}

@@ -243,8 +243,10 @@ func TestSampleAll(t *testing.T) {
 	}
 
 	// Pids
-	assert.NotZero(t, metrics["threadCount"])
-	assert.NotZero(t, metrics["threadCountLimit"])
+	if runtime.GOOS != constants.WindowsPlatformName {
+		assert.NotZero(t, metrics["threadCount"])
+		assert.NotZero(t, metrics["threadCountLimit"])
+	}
 
 	// Network
 	// Missing persecond metrics that needs store to be calculated
