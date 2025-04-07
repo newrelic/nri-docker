@@ -14,7 +14,7 @@ import (
 	"github.com/newrelic/nri-docker/src/raw"
 )
 
-func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
+func (mc *MetricsFetcher) memory(mem raw.Memory, _ *types.ContainerJSON) Memory {
 	memLimits := mem.UsageLimit
 	// ridiculously large memory limits are set to 0 (no limit)
 	if memLimits > math.MaxInt64/2 {

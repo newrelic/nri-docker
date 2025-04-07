@@ -285,3 +285,32 @@ func TestGetNumOfLimitCores(t *testing.T) {
 		})
 	}
 }
+
+func TestGetTotalMemory(t *testing.T) {
+	tests := []struct {
+		name          string
+		containerJSON *types.ContainerJSON
+		want          uint64
+	}{
+		{
+			name: "Test with Memory set",
+			containerJSON: &types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					HostConfig: &container.HostConfig{
+						Resources: container.Resources{
+							Memory: 2147483648, // 2 GiB
+						},
+					},
+				},
+			},
+			want: 2147483648,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getTotalMemory(tt.containerJSON)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
