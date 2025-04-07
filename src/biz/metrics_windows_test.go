@@ -37,6 +37,7 @@ func TestCPU(t *testing.T) {
 			want: CPU{
 				CPUPercent:    0,
 				NumProcs:      2,
+				LimitCores:    2,
 				UserPercent:   0,
 				KernelPercent: 0,
 			},
@@ -69,6 +70,7 @@ func TestCPU(t *testing.T) {
 			want: CPU{
 				CPUPercent:    50,
 				NumProcs:      2,
+				LimitCores:    2,
 				UserPercent:   100,
 				KernelPercent: 0,
 			},
@@ -101,6 +103,7 @@ func TestCPU(t *testing.T) {
 			want: CPU{
 				CPUPercent:    50,
 				NumProcs:      2,
+				LimitCores:    2,
 				UserPercent:   0,
 				KernelPercent: 100,
 			},
@@ -133,6 +136,7 @@ func TestCPU(t *testing.T) {
 			want: CPU{
 				CPUPercent:    50,
 				NumProcs:      2,
+				LimitCores:    2,
 				UserPercent:   50,
 				KernelPercent: 50,
 			},
@@ -161,6 +165,7 @@ func TestCPU(t *testing.T) {
 			want: CPU{
 				CPUPercent:    50,
 				NumProcs:      2,
+				LimitCores:    2,
 				UserPercent:   0,
 				KernelPercent: 0,
 			},
