@@ -87,10 +87,8 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, containerJSON *types.Containe
 // if the container config is not available
 func getTotalMemory(containerJSON *types.ContainerJSON) uint64 {
 	var totalMemory uint64
-	if containerJSON != nil {
-		if containerJSON.HostConfig != nil && containerJSON.HostConfig.Memory > 0 {
-			totalMemory = uint64(containerJSON.HostConfig.Memory)
-		}
+	if containerJSON.HostConfig != nil && containerJSON.HostConfig.Memory > 0 {
+		totalMemory = uint64(containerJSON.HostConfig.Memory)
 	} else {
 		vmem, err := gops_mem.VirtualMemory()
 
