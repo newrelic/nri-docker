@@ -4,6 +4,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/persist"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/newrelic/nri-docker/src/utils"
@@ -209,6 +211,77 @@ func TestCpuPercent(t *testing.T) {
 		t.Run(c.Name, func(t *testing.T) {
 			v := cpuPercent(c.Previous, c.Current)
 			assert.Equal(t, c.Expected, v)
+		})
+	}
+}
+
+func TestGetNumOfLimitCores(t *testing.T) {
+	tests := []struct {
+		name          string
+		containerJSON *types.ContainerJSON
+		numProcs      uint32
+		want          float64
+	}{
+		{
+			name: "Test with CPUCount set",
+			containerJSON: &types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					HostConfig: &container.HostConfig{
+						Resources: container.Resources{
+							CPUCount: 4,
+						},
+					},
+				},
+			},
+			numProcs: 8,
+			want:     4,
+		},
+		{
+			name: "Test with NanoCPUs set",
+			containerJSON: &types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					HostConfig: &container.HostConfig{
+						Resources: container.Resources{
+							NanoCPUs: 2000000000,
+						},
+					},
+				},
+			},
+			numProcs: 8,
+			want:     2,
+		},
+		{
+			name: "Test with no limits set",
+			containerJSON: &types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					HostConfig: &container.HostConfig{},
+				},
+			},
+			numProcs: 8,
+			want:     8,
+		},
+		{
+			name: "Test with nil HostConfig",
+			containerJSON: &types.ContainerJSON{
+				ContainerJSONBase: &types.ContainerJSONBase{
+					HostConfig: nil,
+				},
+			},
+			numProcs: 8,
+			want:     8,
+		},
+		{
+			name:          "Test with nil ContainerJSON",
+			containerJSON: nil,
+			numProcs:      8,
+			want:          8,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := getNumOfLimitCores(tt.containerJSON, tt.numProcs)
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

@@ -48,8 +48,7 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 	return m
 }
 
-// TODO: https://new-relic.atlassian.net/browse/NR-375198
-func (mc *MetricsFetcher) cpu(metrics raw.Metrics, _ *types.ContainerJSON) CPU {
+func (mc *MetricsFetcher) cpu(metrics raw.Metrics, containerJSON *types.ContainerJSON) CPU {
 	previous := StoredCPUSample{}
 	// store current metrics to be the "previous" metrics in the next CPU sampling
 	defer func() {
@@ -60,6 +59,7 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, _ *types.ContainerJSON) CPU {
 
 	cpu := CPU{}
 	cpu.NumProcs = metrics.CPU.NumProcs
+	cpu.LimitCores = getNumOfLimitCores(containerJSON, metrics.CPU.NumProcs)
 
 	// Reading previous CPU stats
 	if _, err := mc.store.Get(metrics.ContainerID, &previous); err != nil {
@@ -92,6 +92,21 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, _ *types.ContainerJSON) CPU {
 	cpu.KernelPercent = math.Min(maxVal, (kernelDelta/float64(durationIntervals))*100)
 
 	return cpu
+}
+
+func getNumOfLimitCores(containerJSON *types.ContainerJSON, numProcs uint32) float64 {
+	if containerJSON == nil {
+		return float64(numProcs)
+	}
+
+	// Get the number of cores from the container config, fallback to the number of processors
+	// if the container config is not available
+	if containerJSON.HostConfig != nil && containerJSON.HostConfig.CPUCount != 0 {
+		return float64(containerJSON.HostConfig.CPUCount)
+	} else if containerJSON.HostConfig != nil && containerJSON.HostConfig.NanoCPUs != 0 {
+		return float64(containerJSON.HostConfig.NanoCPUs) / 1e9
+	}
+	return float64(numProcs)
 }
 
 func cpuPercent(previous, current raw.CPU) float64 {
