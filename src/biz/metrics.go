@@ -156,7 +156,7 @@ func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 	metrics.BlkIO = mc.blkIO(rawMetrics.Blkio)
 	metrics.CPU = mc.cpu(rawMetrics, &json)
 	metrics.Pids = Pids(rawMetrics.Pids)
-	metrics.Memory = mc.memory(rawMetrics.Memory)
+	metrics.Memory = mc.memory(rawMetrics.Memory, &json)
 	metrics.RestartCount = json.RestartCount
 
 	return metrics, nil

@@ -14,6 +14,7 @@ func memory(mem *biz.Memory) []entry {
 
 func cpu(cpu *biz.CPU) []entry {
 	return []entry{
+		metricCPULimitCores(cpu.LimitCores),
 		metricCPUPercent(cpu.CPUPercent),
 		metricCPUKernelPercent(cpu.KernelPercent),
 		metricCPUUserPercent(cpu.UserPercent),

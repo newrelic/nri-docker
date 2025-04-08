@@ -10,25 +10,14 @@ import (
 	gops_mem "github.com/shirou/gopsutil/mem"
 )
 
-func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
+func (mc *MetricsFetcher) memory(mem raw.Memory, containerJSON *types.ContainerJSON) Memory {
 	m := Memory{
 		CommitBytes:       mem.Commit,
 		CommitPeakBytes:   mem.CommitPeak,
 		PrivateWorkingSet: mem.PrivateWorkingSet,
 	}
 
-	var totalMemory uint64
-
-	vmem, err := gops_mem.VirtualMemory()
-
-	if err != nil {
-		log.Warn("error getting total memory on system: %v", err)
-		log.Warn("don't have total system memory, setting memory usage percent to 0")
-		m.UsagePercent = 0
-		return m
-	}
-
-	totalMemory = vmem.Total
+	totalMemory := getTotalMemory(containerJSON)
 	log.Debug("total memory on system: %v", totalMemory)
 
 	if totalMemory == 0 {
@@ -48,8 +37,7 @@ func (mc *MetricsFetcher) memory(mem raw.Memory) Memory {
 	return m
 }
 
-// TODO: https://new-relic.atlassian.net/browse/NR-375198
-func (mc *MetricsFetcher) cpu(metrics raw.Metrics, _ *types.ContainerJSON) CPU {
+func (mc *MetricsFetcher) cpu(metrics raw.Metrics, containerJSON *types.ContainerJSON) CPU {
 	previous := StoredCPUSample{}
 	// store current metrics to be the "previous" metrics in the next CPU sampling
 	defer func() {
@@ -60,6 +48,7 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, _ *types.ContainerJSON) CPU {
 
 	cpu := CPU{}
 	cpu.NumProcs = metrics.CPU.NumProcs
+	cpu.LimitCores = getNumOfLimitCores(containerJSON, metrics.CPU.NumProcs)
 
 	// Reading previous CPU stats
 	if _, err := mc.store.Get(metrics.ContainerID, &previous); err != nil {
@@ -92,6 +81,40 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, _ *types.ContainerJSON) CPU {
 	cpu.KernelPercent = math.Min(maxVal, (kernelDelta/float64(durationIntervals))*100)
 
 	return cpu
+}
+
+// Get the total memory from the container config, fallback to the system memory
+// if the container config is not available
+func getTotalMemory(containerJSON *types.ContainerJSON) uint64 {
+	var totalMemory uint64
+	if containerJSON.HostConfig != nil && containerJSON.HostConfig.Memory > 0 {
+		totalMemory = uint64(containerJSON.HostConfig.Memory)
+	} else {
+		vmem, err := gops_mem.VirtualMemory()
+
+		if err != nil {
+			log.Warn("error getting total memory on system, setting total memory as 0: %v", err)
+			return 0
+		}
+
+		totalMemory = vmem.Total
+	}
+
+	return totalMemory
+}
+
+// Get the number of cores from the container config, fallback to the number of processors
+// if the container config is not available
+func getNumOfLimitCores(containerJSON *types.ContainerJSON, numProcs uint32) float64 {
+	if containerJSON == nil {
+		return float64(numProcs)
+	}
+	if containerJSON.HostConfig != nil && containerJSON.HostConfig.CPUCount != 0 {
+		return float64(containerJSON.HostConfig.CPUCount)
+	} else if containerJSON.HostConfig != nil && containerJSON.HostConfig.NanoCPUs != 0 {
+		return float64(containerJSON.HostConfig.NanoCPUs) / 1e9
+	}
+	return float64(numProcs)
 }
 
 func cpuPercent(previous, current raw.CPU) float64 {
