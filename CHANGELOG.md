@@ -9,7 +9,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
-### enhancements
+## v2.4.0 - 2025-04-08
+
+### 🚀 Enhancements
 - Add cpuLimitCores metric for windows
 
 ## v2.3.1 - 2025-03-25
