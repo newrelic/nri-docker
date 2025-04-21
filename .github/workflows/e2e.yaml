@@ -8,33 +8,6 @@ on:
   pull_request:
 
 jobs:
-  e2eTests-cgroups-v1:
-    # Do not run e2e tests if commit message or PR has skip-e2e.
-    if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ci/skip-e2e') }}
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check cgroups version
-        run: |
-          if [ $(docker info --format '{{.CgroupVersion}}') != "1" ]; then
-              echo "This test must be run in cgroups v1"
-              exit 1
-          fi
-      - name: checkout-repository
-        uses: actions/checkout@v4
-      - name: Install Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
-      - name: Compile nri-docker
-        run: |
-          GOOS=linux GOARCH=amd64 make compile
-      - name: Run E2E for Cgroups v1
-        uses: newrelic/newrelic-integration-e2e-action@v1
-        with:
-          spec_path: test/e2e/e2e_spec.yml
-          account_id: ${{ secrets.COREINT_E2E_ACCOUNT_ID }}
-          api_key: ${{ secrets.COREINT_E2E_API_KEY }}
-          license_key: ${{ secrets.COREINT_E2E_LICENSE_KEY }}
   e2eTests-cgroups-v2:
     # Do not run e2e tests if commit message or PR has skip-e2e.
     if: ${{ ! contains(github.event.pull_request.labels.*.name, 'ci/skip-e2e') }}

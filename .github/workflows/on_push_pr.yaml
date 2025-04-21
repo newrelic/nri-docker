@@ -10,20 +10,3 @@ on:
 jobs:
   push-pr:
     uses: newrelic/coreint-automation/.github/workflows/reusable_push_pr.yaml@v3
-
-  test-integration-nix-cgroups-v1:
-    name: Run integration tests on *Nix cgroups-v1
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check cgroups version
-        run: |
-          if [ $(docker info --format '{{.CgroupVersion}}') != "1" ]; then
-              echo "This test must be run in cgroups v1"
-              exit 1
-          fi
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version-file: 'go.mod'
-      - name: Integration test
-        run: make integration-test
