@@ -16,7 +16,7 @@ package aws
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
@@ -62,7 +62,7 @@ type ContainerResponse struct {
 	Labels        map[string]string `json:"Labels,omitempty"`
 	DesiredStatus string            `json:"DesiredStatus"`
 	KnownStatus   string            `json:"KnownStatus"`
-	ExitCode      *int              `json:"ExitCode,omitempty"`
+	ExitCode      *int64            `json:"ExitCode,omitempty"`
 	Limits        LimitsResponse    `json:"Limits"`
 	CreatedAt     *time.Time        `json:"CreatedAt,omitempty"`
 	StartedAt     *time.Time        `json:"StartedAt,omitempty"`
@@ -130,7 +130,7 @@ func sendMetadataRequest(client *http.Client, endpoint string) ([]byte, error) {
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("incorrect status code querying %s: %d", endpoint, resp.StatusCode)
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("unable to read response body from %s: %v", endpoint, err)
 	}
