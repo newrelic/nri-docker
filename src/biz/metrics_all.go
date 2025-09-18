@@ -9,12 +9,12 @@ import (
 	"math"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/nri-docker/src/raw"
 )
 
-func (mc *MetricsFetcher) memory(mem raw.Memory, _ *types.ContainerJSON) Memory {
+func (mc *MetricsFetcher) memory(mem raw.Memory, _ *container.InspectResponse) Memory {
 	memLimits := mem.UsageLimit
 	// ridiculously large memory limits are set to 0 (no limit)
 	if memLimits > math.MaxInt64/2 {
@@ -102,7 +102,7 @@ func (mc *MetricsFetcher) memory(mem raw.Memory, _ *types.ContainerJSON) Memory 
 	return m
 }
 
-func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *types.ContainerJSON) CPU {
+func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *container.InspectResponse) CPU {
 	previous := StoredCPUSample{}
 	// store current metrics to be the "previous" metrics in the next CPU sampling
 	defer func() {

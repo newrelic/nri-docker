@@ -7,7 +7,6 @@ import (
 	"io"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/nri-docker/src/constants"
 	"github.com/newrelic/nri-docker/src/raw"
@@ -22,64 +21,62 @@ type mockDockerStatsClient struct {
 	mock.Mock
 }
 
-func (m *mockDockerStatsClient) ContainerStats(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
+func (m *mockDockerStatsClient) ContainerStats(ctx context.Context, containerID string, stream bool) (container.StatsResponseReader, error) {
 	args := m.Called()
 
-	statsJSON, _ := json.Marshal(args.Get(0).(types.StatsJSON))
+	statsJSON, _ := json.Marshal(args.Get(0).(container.StatsResponse))
 
-	return types.ContainerStats{
+	return container.StatsResponseReader{
 		Body: io.NopCloser(bytes.NewReader(statsJSON)),
 	}, nil
 }
 
-var mockStats = types.StatsJSON{
-	Stats: types.Stats{
-		CPUStats: types.CPUStats{
-			CPUUsage: types.CPUUsage{
-				TotalUsage:        11491000,
-				UsageInKernelmode: 5745000,
-				UsageInUsermode:   5745000,
-			},
-			ThrottlingData: types.ThrottlingData{
-				Periods:          2,
-				ThrottledPeriods: 1,
-				ThrottledTime:    20000,
-			},
-			SystemUsage: 31532890000000,
-			OnlineCPUs:  2,
+var mockStats = container.StatsResponse{
+	CPUStats: container.CPUStats{
+		CPUUsage: container.CPUUsage{
+			TotalUsage:        11491000,
+			UsageInKernelmode: 5745000,
+			UsageInUsermode:   5745000,
 		},
-		BlkioStats: types.BlkioStats{
-			IoServiceBytesRecursive: []types.BlkioStatEntry{
-				{Op: "Read", Value: 5885952, Major: 202, Minor: 26468},
-				{Op: "Write", Value: 45056, Major: 202, Minor: 26468},
-				{Op: "Sync", Value: 5931008, Major: 202, Minor: 26468},
-				{Op: "Async", Value: 0, Major: 202, Minor: 26468},
-				{Op: "Total", Value: 5931008, Major: 202, Minor: 26468},
-			},
-			IoServicedRecursive: []types.BlkioStatEntry{
-				{Op: "Read", Value: 341, Major: 202, Minor: 26468},
-				{Op: "Write", Value: 11, Major: 202, Minor: 26468},
-				{Op: "Sync", Value: 352, Major: 202, Minor: 26468},
-				{Op: "Async", Value: 0, Major: 202, Minor: 26468},
-				{Op: "Total", Value: 352, Major: 202, Minor: 26468},
-			},
+		ThrottlingData: container.ThrottlingData{
+			Periods:          2,
+			ThrottledPeriods: 1,
+			ThrottledTime:    20000,
 		},
-		MemoryStats: types.MemoryStats{
-			Usage: 1024 * 1024 * 250, // 250 MB current memory usage
-			Stats: map[string]uint64{
-				"file":         1024 * 1024 * 25, // 25 MB cache usage
-				"anon":         1024 * 1024 * 75, // 75 MB RSS usage
-				"kernel_stack": 1024 * 1024 * 5,  // 5 MB kernel stack usage
-				"slab":         1024 * 1024 * 5,  // 5 MB slab usage
-			},
-			Limit: 1024 * 1024 * 500, // 500 MB total memory limit
+		SystemUsage: 31532890000000,
+		OnlineCPUs:  2,
+	},
+	BlkioStats: container.BlkioStats{
+		IoServiceBytesRecursive: []container.BlkioStatEntry{
+			{Op: "Read", Value: 5885952, Major: 202, Minor: 26468},
+			{Op: "Write", Value: 45056, Major: 202, Minor: 26468},
+			{Op: "Sync", Value: 5931008, Major: 202, Minor: 26468},
+			{Op: "Async", Value: 0, Major: 202, Minor: 26468},
+			{Op: "Total", Value: 5931008, Major: 202, Minor: 26468},
 		},
-		PidsStats: types.PidsStats{
-			Current: mockMetricValue,
-			Limit:   mockMetricValue,
+		IoServicedRecursive: []container.BlkioStatEntry{
+			{Op: "Read", Value: 341, Major: 202, Minor: 26468},
+			{Op: "Write", Value: 11, Major: 202, Minor: 26468},
+			{Op: "Sync", Value: 352, Major: 202, Minor: 26468},
+			{Op: "Async", Value: 0, Major: 202, Minor: 26468},
+			{Op: "Total", Value: 352, Major: 202, Minor: 26468},
 		},
 	},
-	Networks: map[string]types.NetworkStats{
+	MemoryStats: container.MemoryStats{
+		Usage: 1024 * 1024 * 250, // 250 MB current memory usage
+		Stats: map[string]uint64{
+			"file":         1024 * 1024 * 25, // 25 MB cache usage
+			"anon":         1024 * 1024 * 75, // 75 MB RSS usage
+			"kernel_stack": 1024 * 1024 * 5,  // 5 MB kernel stack usage
+			"slab":         1024 * 1024 * 5,  // 5 MB slab usage
+		},
+		Limit: 1024 * 1024 * 500, // 500 MB total memory limit
+	},
+	PidsStats: container.PidsStats{
+		Current: mockMetricValue,
+		Limit:   mockMetricValue,
+	},
+	Networks: map[string]container.NetworkStats{
 		"eth0": mockNetworkStats,
 		"eth1": mockNetworkStats,
 		"eth2": mockNetworkStats,
@@ -88,7 +85,7 @@ var mockStats = types.StatsJSON{
 
 const mockMetricValue = 1
 
-var mockNetworkStats = types.NetworkStats{
+var mockNetworkStats = container.NetworkStats{
 	RxBytes:   mockMetricValue,
 	RxErrors:  mockMetricValue,
 	RxPackets: mockMetricValue,
@@ -105,7 +102,7 @@ func Test_Fetch(t *testing.T) {
 
 	fetcher := dockerapi.NewFetcher(&client, constants.LinuxPlatformName)
 
-	metrics, err := fetcher.Fetch(types.ContainerJSON{ContainerJSONBase: &types.ContainerJSONBase{
+	metrics, err := fetcher.Fetch(container.InspectResponse{ContainerJSONBase: &container.ContainerJSONBase{
 		ID: "test",
 		HostConfig: &container.HostConfig{
 			Resources: container.Resources{
@@ -199,7 +196,7 @@ func Test_NilHostConfig(t *testing.T) {
 
 	fetcher := dockerapi.NewFetcher(&client, constants.LinuxPlatformName)
 
-	metricsNoHostConfig, err := fetcher.Fetch(types.ContainerJSON{ContainerJSONBase: &types.ContainerJSONBase{ID: "test"}})
+	metricsNoHostConfig, err := fetcher.Fetch(container.InspectResponse{ContainerJSONBase: &container.ContainerJSONBase{ID: "test"}})
 	require.NoError(t, err)
 
 	assert.EqualValues(t, 0, metricsNoHostConfig.CPU.Shares, "When hostConfig is not available, cpu shares cannot be set")

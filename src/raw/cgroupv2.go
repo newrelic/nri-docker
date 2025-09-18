@@ -11,7 +11,7 @@ import (
 
 	cgroupsV2 "github.com/containerd/cgroups/v2"
 	cgroupstatsV2 "github.com/containerd/cgroups/v2/stats"
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 )
 
@@ -43,7 +43,7 @@ func NewCgroupsV2Fetcher(
 
 // Fetch get the metrics that can be found in cgroups v2 file system
 // Unlike v1, cgroup v2 has only single hierarchy.
-func (cg *CgroupsV2Fetcher) Fetch(containerInfo types.ContainerJSON) (Metrics, error) {
+func (cg *CgroupsV2Fetcher) Fetch(containerInfo container.InspectResponse) (Metrics, error) {
 	stats := Metrics{}
 
 	pid := containerInfo.State.Pid
@@ -124,7 +124,7 @@ func (cg *CgroupsV2Fetcher) cpu(metric *cgroupstatsV2.Metrics) (CPU, error) {
 	return cpu, err
 }
 
-func (cg *CgroupsV2Fetcher) memory(metric *cgroupstatsV2.Metrics, containerInfo types.ContainerJSON) (Memory, error) {
+func (cg *CgroupsV2Fetcher) memory(metric *cgroupstatsV2.Metrics, containerInfo container.InspectResponse) (Memory, error) {
 	mem := Memory{}
 	if metric.Memory == nil {
 		return mem, errors.New("no Memory metrics information")

@@ -4,7 +4,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/persist"
 	"github.com/newrelic/nri-docker/src/raw"
@@ -223,14 +222,14 @@ func TestCpuPercent(t *testing.T) {
 func TestGetNumOfLimitCores(t *testing.T) {
 	tests := []struct {
 		name          string
-		containerJSON *types.ContainerJSON
+		containerJSON *container.InspectResponse
 		numProcs      uint32
 		want          float64
 	}{
 		{
 			name: "Test with CPUCount set",
-			containerJSON: &types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{
+			containerJSON: &container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{
 					HostConfig: &container.HostConfig{
 						Resources: container.Resources{
 							CPUCount: 4,
@@ -243,8 +242,8 @@ func TestGetNumOfLimitCores(t *testing.T) {
 		},
 		{
 			name: "Test with NanoCPUs set",
-			containerJSON: &types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{
+			containerJSON: &container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{
 					HostConfig: &container.HostConfig{
 						Resources: container.Resources{
 							NanoCPUs: 2000000000,
@@ -257,8 +256,8 @@ func TestGetNumOfLimitCores(t *testing.T) {
 		},
 		{
 			name: "Test with no limits set",
-			containerJSON: &types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{
+			containerJSON: &container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{
 					HostConfig: &container.HostConfig{},
 				},
 			},
@@ -267,8 +266,8 @@ func TestGetNumOfLimitCores(t *testing.T) {
 		},
 		{
 			name: "Test with nil HostConfig",
-			containerJSON: &types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{
+			containerJSON: &container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{
 					HostConfig: nil,
 				},
 			},
@@ -294,13 +293,13 @@ func TestGetNumOfLimitCores(t *testing.T) {
 func TestGetTotalMemory(t *testing.T) {
 	tests := []struct {
 		name          string
-		containerJSON *types.ContainerJSON
+		containerJSON *container.InspectResponse
 		want          uint64
 	}{
 		{
 			name: "Test with Memory set",
-			containerJSON: &types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{
+			containerJSON: &container.InspectResponse{
+				ContainerJSONBase: &container.ContainerJSONBase{
 					HostConfig: &container.HostConfig{
 						Resources: container.Resources{
 							Memory: 2147483648, // 2 GiB

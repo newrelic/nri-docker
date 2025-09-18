@@ -9,8 +9,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
+	containerTypes "github.com/docker/docker/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/infra-integrations-sdk/v3/persist"
 )
@@ -39,14 +38,14 @@ func NewFargateInspector(baseURL *url.URL) (*FargateInspector, error) {
 
 // ContainerList lists containers that the current Fargate container can see (only the container in the same
 // task). It completely ignores any listing option for the moment.
-func (i *FargateInspector) ContainerList(_ context.Context, _ container.ListOptions) ([]types.Container, error) {
+func (i *FargateInspector) ContainerList(_ context.Context, _ containerTypes.ListOptions) ([]containerTypes.Summary, error) {
 	var taskResponse TaskResponse
 	err := i.taskResponseFromCacheOrNew(&taskResponse)
 	if err != nil {
 		return nil, err
 	}
 
-	containers := make([]types.Container, len(taskResponse.Containers))
+	containers := make([]containerTypes.Summary, len(taskResponse.Containers))
 	for index, container := range taskResponse.Containers {
 		converted := containerResponseToDocker(container)
 		containers[index] = converted
@@ -95,26 +94,26 @@ func (i *FargateInspector) fetchTaskResponse(taskResponse *TaskResponse) error {
 }
 
 // ContainerInspect returns metadata about a container given its container ID.
-func (i *FargateInspector) ContainerInspect(_ context.Context, containerID string) (types.ContainerJSON, error) {
+func (i *FargateInspector) ContainerInspect(_ context.Context, containerID string) (containerTypes.InspectResponse, error) {
 	var taskResponse TaskResponse
 	err := i.taskResponseFromCacheOrNew(&taskResponse)
 	if err != nil {
-		return types.ContainerJSON{}, err
+		return containerTypes.InspectResponse{}, err
 	}
 
 	for _, container := range taskResponse.Containers {
 		if container.ID == containerID {
-			containerJSON := types.ContainerJSON{
-				ContainerJSONBase: &types.ContainerJSONBase{ID: containerID},
+			containerJSON := containerTypes.InspectResponse{
+				ContainerJSONBase: &containerTypes.ContainerJSONBase{ID: containerID},
 			}
 			return containerJSON, nil
 		}
 	}
-	return types.ContainerJSON{}, errors.New("container not found")
+	return containerTypes.InspectResponse{}, errors.New("container not found")
 }
 
-func containerResponseToDocker(container ContainerResponse) types.Container {
-	c := types.Container{
+func containerResponseToDocker(container ContainerResponse) containerTypes.Summary {
+	c := containerTypes.Summary{
 		ID:      container.ID,
 		Names:   []string{container.Name},
 		Image:   container.Image,
