@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"time"
 
-	docker "github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/infra-integrations-sdk/v3/persist"
 
@@ -21,7 +21,7 @@ var fargateHTTPClient = &http.Client{Timeout: fargateClientTimeout}
 
 type timedDockerStats struct {
 	//StatsJSON inherits all the fields from docker.Stats adding Network info
-	docker.StatsJSON
+	container.StatsResponse
 	time time.Time
 }
 
@@ -49,7 +49,7 @@ func NewFargateFetcher(baseURL *url.URL) (*FargateFetcher, error) {
 }
 
 // Fetch fetches raw metrics from a given Fargate container.
-func (e *FargateFetcher) Fetch(container docker.ContainerJSON) (raw.Metrics, error) {
+func (e *FargateFetcher) Fetch(container container.InspectResponse) (raw.Metrics, error) {
 	stats, err := e.fargateStatsFromCacheOrNew()
 	if err != nil {
 		return raw.Metrics{}, err

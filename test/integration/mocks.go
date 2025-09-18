@@ -9,7 +9,6 @@ import (
 	"io"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/system"
 	"github.com/newrelic/nri-docker/src/raw"
@@ -42,7 +41,7 @@ func NewCgroupsV2FetcherMock(hostRoot string, time time.Time, systemUsage uint64
 }
 
 // Fetch calls the wrapped fetcher and overrides the Time
-func (cgf *CgroupsFetcherV2Mock) Fetch(c types.ContainerJSON) (raw.Metrics, error) {
+func (cgf *CgroupsFetcherV2Mock) Fetch(c container.InspectResponse) (raw.Metrics, error) {
 	metrics, err := cgf.cgroupsFetcher.Fetch(c)
 	if err != nil {
 		return raw.Metrics{}, err
@@ -78,7 +77,7 @@ func NewCgroupsFetcherMock(hostRoot string, time time.Time, systemUsage uint64) 
 }
 
 // Fetch calls the wrapped fetcher and overrides the Time
-func (cgf *CgroupsFetcherMock) Fetch(c types.ContainerJSON) (raw.Metrics, error) {
+func (cgf *CgroupsFetcherMock) Fetch(c container.InspectResponse) (raw.Metrics, error) {
 	metrics, err := cgf.cgroupsFetcher.Fetch(c)
 	if err != nil {
 		return raw.Metrics{}, err
@@ -118,11 +117,11 @@ func NewInspectorMock(containerID string, pid, restartCount int, hostConfig *con
 	}
 }
 
-func (i InspectorMock) ContainerInspect(_ context.Context, _ string) (types.ContainerJSON, error) {
-	return types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
+func (i InspectorMock) ContainerInspect(_ context.Context, _ string) (container.InspectResponse, error) {
+	return container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{
 			ID: i.containerID,
-			State: &types.ContainerState{
+			State: &container.State{
 				Pid: i.pid,
 			},
 			RestartCount: i.restartCount,
@@ -139,12 +138,12 @@ type mockDockerStatsClient struct {
 	mock.Mock
 }
 
-func (m *mockDockerStatsClient) ContainerStats(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error) {
+func (m *mockDockerStatsClient) ContainerStats(ctx context.Context, containerID string, stream bool) (container.StatsResponseReader, error) {
 	args := m.Called()
 
-	statsJSON, _ := json.Marshal(args.Get(0).(types.StatsJSON))
+	statsJSON, _ := json.Marshal(args.Get(0).(container.StatsResponse))
 
-	return types.ContainerStats{
+	return container.StatsResponseReader{
 		Body: io.NopCloser(bytes.NewReader(statsJSON)),
 	}, nil
 }

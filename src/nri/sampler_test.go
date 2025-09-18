@@ -31,9 +31,9 @@ func (m *mocker) ContainerList(ctx context.Context, options container.ListOption
 	return args.Get(0).([]types.Container), args.Error(1)
 }
 
-func (m *mocker) ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error) {
+func (m *mocker) ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error) {
 	args := m.Called(ctx, containerID)
-	return args.Get(0).(types.ContainerJSON), args.Error(1)
+	return args.Get(0).(container.InspectResponse), args.Error(1)
 }
 
 type mockStorer struct {
@@ -68,7 +68,7 @@ type mockFetcher struct {
 	mock.Mock
 }
 
-func (m *mockFetcher) Fetch(json types.ContainerJSON) (raw.Metrics, error) {
+func (m *mockFetcher) Fetch(json container.InspectResponse) (raw.Metrics, error) {
 	args := m.Called(json)
 	return args.Get(0).(raw.Metrics), nil
 }
@@ -110,7 +110,7 @@ func TestECSLabelRename(t *testing.T) {
 			Labels:  givenLabels,
 		},
 	}, nil)
-	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{}, nil)
+	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(container.InspectResponse{}, nil)
 
 	mStore := storerMock()
 
@@ -138,10 +138,10 @@ func TestECSLabelRename(t *testing.T) {
 
 func TestExitedContainerTTLExpired(t *testing.T) {
 	mocker := &mocker{}
-	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{testingContainer}, nil)
-	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			State: &types.ContainerState{
+	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]container.Summary{testingContainer}, nil)
+	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{
+			State: &container.State{
 				Status:     "exited",
 				FinishedAt: time.Now().Add(-2 * time.Hour).Format(time.RFC3339Nano),
 			},
@@ -167,10 +167,10 @@ func TestExitedContainerTTLExpired(t *testing.T) {
 //nolint:funlen // this is a test
 func TestSampleAll(t *testing.T) {
 	mocker := &mocker{}
-	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{testingContainer}, nil)
-	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{
-			State: &types.ContainerState{
+	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]container.Summary{testingContainer}, nil)
+	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{
+			State: &container.State{
 				Status: "running",
 			},
 			RestartCount: 1,
@@ -274,9 +274,9 @@ func TestSampleAll(t *testing.T) {
 
 func TestSampleAllMissingMetrics(t *testing.T) {
 	mocker := &mocker{}
-	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]types.Container{testingContainer}, nil)
-	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(types.ContainerJSON{
-		ContainerJSONBase: &types.ContainerJSONBase{State: &types.ContainerState{Status: "running"}}},
+	mocker.On("ContainerList", mock.Anything, mock.Anything).Return([]container.Summary{testingContainer}, nil)
+	mocker.On("ContainerInspect", mock.Anything, mock.Anything).Return(container.InspectResponse{
+		ContainerJSONBase: &container.ContainerJSONBase{State: &container.State{Status: "running"}}},
 		nil,
 	)
 

@@ -10,7 +10,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/persist"
 	"github.com/newrelic/nri-docker/src/raw"
@@ -21,7 +20,7 @@ import (
 func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 	type args struct {
 		cpu  raw.Metrics
-		json *types.ContainerJSON
+		json *container.InspectResponse
 	}
 
 	tests := []struct {
@@ -39,8 +38,8 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 						OnlineCPUs: 4,
 					},
 				},
-				json: &types.ContainerJSON{
-					ContainerJSONBase: &types.ContainerJSONBase{
+				json: &container.InspectResponse{
+					ContainerJSONBase: &container.ContainerJSONBase{
 						HostConfig: &container.HostConfig{
 							Resources: container.Resources{
 								NanoCPUs: 500000000,
@@ -60,8 +59,8 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 				cpu: raw.Metrics{
 					CPU: raw.CPU{},
 				},
-				json: &types.ContainerJSON{
-					ContainerJSONBase: &types.ContainerJSONBase{
+				json: &container.InspectResponse{
+					ContainerJSONBase: &container.ContainerJSONBase{
 						HostConfig: &container.HostConfig{},
 					},
 				},
@@ -226,7 +225,7 @@ func TestMetricsFetcher_memory(t *testing.T) {
 				inspector:          tt.fields.inspector,
 				exitedContainerTTL: tt.fields.exitedContainerTTL,
 			}
-			if got := mc.memory(tt.args.mem, &types.ContainerJSON{}); !reflect.DeepEqual(got, tt.want) {
+			if got := mc.memory(tt.args.mem, &container.InspectResponse{}); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("MetricsFetcher.memory() = %v, want %v", got, tt.want)
 			}
 		})

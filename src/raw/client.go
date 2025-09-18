@@ -9,7 +9,7 @@ import (
 
 // DockerInspector includes `Informer` and a method to inspect a specific container.
 type DockerInspector interface {
-	ContainerInspect(ctx context.Context, containerID string) (types.ContainerJSON, error)
+	ContainerInspect(ctx context.Context, containerID string) (container.InspectResponse, error)
 }
 
 // DockerClient defines the required methods to query docker.
@@ -20,5 +20,5 @@ type DockerClient interface {
 
 // DockerStatsClient defines how to access docker container stats through the docker API.
 type DockerStatsClient interface {
-	ContainerStats(ctx context.Context, containerID string, stream bool) (types.ContainerStats, error)
+	ContainerStats(ctx context.Context, containerID string, stream bool) (container.StatsResponseReader, error)
 }
