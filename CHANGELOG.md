@@ -9,6 +9,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+### enhancement
+- Upgrade docker api lib from v26 to v28
+
 ## v2.5.3 - 2025-09-16
 
 ### ⛓️ Dependencies
