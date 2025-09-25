@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/nri-docker/src/constants"
@@ -22,7 +21,7 @@ func NewFetcher(statsClient raw.DockerStatsClient, platform string) *Fetcher {
 	return &Fetcher{statsClient: statsClient, platform: platform}
 }
 
-func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
+func (f *Fetcher) Fetch(container container.InspectResponse) (raw.Metrics, error) {
 	containerStats, err := f.containerStats(context.Background(), container.ID)
 	if err != nil {
 		return raw.Metrics{}, fmt.Errorf("could not fetch stats for container %s: %w", container.ID, err)
@@ -39,7 +38,7 @@ func (f *Fetcher) Fetch(container types.ContainerJSON) (raw.Metrics, error) {
 	return metrics, nil
 }
 
-func (f *Fetcher) memoryMetrics(containerStats types.StatsJSON, hostConfig *container.HostConfig) raw.Memory {
+func (f *Fetcher) memoryMetrics(containerStats container.StatsResponse, hostConfig *container.HostConfig) raw.Memory {
 	mem := raw.Memory{}
 
 	// mem.UsageLimit and mem.FuzzUsage are fetched in the same way that for the cgroup file fetchers.
@@ -73,7 +72,7 @@ func (f *Fetcher) memoryMetrics(containerStats types.StatsJSON, hostConfig *cont
 
 // networkMetrics aggregates and returns network metrics across all of a container's interfaces.
 // All network metrics are monotonic counters that are represented with PRATE type of metric.
-func (f *Fetcher) networkMetrics(containerStats types.StatsJSON) raw.Network {
+func (f *Fetcher) networkMetrics(containerStats container.StatsResponse) raw.Network {
 	aggregatedMetrics := raw.Network{}
 	for _, netStats := range containerStats.Networks {
 		aggregatedMetrics.RxBytes += int64(netStats.RxBytes)
@@ -89,7 +88,7 @@ func (f *Fetcher) networkMetrics(containerStats types.StatsJSON) raw.Network {
 	return aggregatedMetrics
 }
 
-func (f *Fetcher) cpuMetrics(container types.ContainerJSON, containerStats types.StatsJSON) raw.CPU {
+func (f *Fetcher) cpuMetrics(container container.InspectResponse, containerStats container.StatsResponse) raw.CPU {
 	var cpuShares uint64
 	cpuStats := containerStats.CPUStats
 	if container.HostConfig == nil {
@@ -116,14 +115,14 @@ func (f *Fetcher) cpuMetrics(container types.ContainerJSON, containerStats types
 	}
 }
 
-func (f *Fetcher) pidsMetrics(pidStats types.PidsStats) raw.Pids {
+func (f *Fetcher) pidsMetrics(pidStats container.PidsStats) raw.Pids {
 	return raw.Pids{
 		Current: pidStats.Current,
 		Limit:   pidStats.Limit,
 	}
 }
 
-func (f *Fetcher) blkioMetrics(containerStats types.StatsJSON) raw.Blkio {
+func (f *Fetcher) blkioMetrics(containerStats container.StatsResponse) raw.Blkio {
 	return raw.Blkio{
 		IoServiceBytesRecursive: toRawBlkioEntry(containerStats.BlkioStats.IoServiceBytesRecursive),
 		IoServicedRecursive:     toRawBlkioEntry(containerStats.BlkioStats.IoServicedRecursive),
@@ -135,21 +134,21 @@ func (f *Fetcher) blkioMetrics(containerStats types.StatsJSON) raw.Blkio {
 	}
 }
 
-func (f *Fetcher) containerStats(ctx context.Context, containerID string) (types.StatsJSON, error) {
+func (f *Fetcher) containerStats(ctx context.Context, containerID string) (container.StatsResponse, error) {
 	m, err := f.statsClient.ContainerStats(ctx, containerID, false)
 	if err != nil {
-		return types.StatsJSON{}, err
+		return container.StatsResponse{}, err
 	}
-	var statsJSON types.StatsJSON
+	var statsJSON container.StatsResponse
 	err = json.NewDecoder(m.Body).Decode(&statsJSON)
 	m.Body.Close()
 	if err != nil {
-		return types.StatsJSON{}, err
+		return container.StatsResponse{}, err
 	}
 	return statsJSON, nil
 }
 
-func toRawBlkioEntry(entries []types.BlkioStatEntry) []raw.BlkioEntry {
+func toRawBlkioEntry(entries []container.BlkioStatEntry) []raw.BlkioEntry {
 	result := []raw.BlkioEntry{}
 	for _, entry := range entries {
 		result = append(result, raw.BlkioEntry{Op: entry.Op, Value: entry.Value})

@@ -3,7 +3,7 @@ package raw
 import (
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 )
 
 const (
@@ -90,7 +90,7 @@ type Network struct {
 
 // Fetcher is the minimal abstraction of any raw metrics fetcher implementation
 type Fetcher interface {
-	Fetch(types.ContainerJSON) (Metrics, error)
+	Fetch(container.InspectResponse) (Metrics, error)
 }
 
 // OnlineCPUsWithFallback gets onlineCPUs value falling back to percpuUsage length in case OnlineCPUs is not defined

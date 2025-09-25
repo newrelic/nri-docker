@@ -15,7 +15,7 @@ import (
 
 	"github.com/containerd/cgroups"
 	cgroupstats "github.com/containerd/cgroups/stats/v1"
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 )
 
@@ -43,7 +43,7 @@ func NewCgroupsV1Fetcher(
 
 // Fetch get the metrics that can be found in cgroups file system:
 // TODO: populate also network from libcgroups
-func (cg *CgroupsV1Fetcher) Fetch(c types.ContainerJSON) (Metrics, error) {
+func (cg *CgroupsV1Fetcher) Fetch(c container.InspectResponse) (Metrics, error) {
 	stats := Metrics{}
 
 	pid := c.State.Pid

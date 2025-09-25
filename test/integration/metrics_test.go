@@ -14,7 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/infra-integrations-sdk/v3/persist"
@@ -377,22 +377,20 @@ func TestAllMetricsPresent(t *testing.T) {
 func TestBlkIOMetrics(t *testing.T) {
 	cases := []struct {
 		Name          string
-		MockStats     types.StatsJSON
+		MockStats     container.StatsResponse
 		ExpectedBlkIO biz.BlkIO
 	}{
 		{
 			Name: "With IoServiceBytesRecursive and IoServicedRecursive",
-			MockStats: types.StatsJSON{
-				Stats: types.Stats{
-					BlkioStats: types.BlkioStats{
-						IoServiceBytesRecursive: []types.BlkioStatEntry{
-							{Op: "Read", Value: 5885952},
-							{Op: "Write", Value: 45056},
-						},
-						IoServicedRecursive: []types.BlkioStatEntry{
-							{Op: "Read", Value: 39},
-							{Op: "Write", Value: 11},
-						},
+			MockStats: container.StatsResponse{
+				BlkioStats: container.BlkioStats{
+					IoServiceBytesRecursive: []container.BlkioStatEntry{
+						{Op: "Read", Value: 5885952},
+						{Op: "Write", Value: 45056},
+					},
+					IoServicedRecursive: []container.BlkioStatEntry{
+						{Op: "Read", Value: 39},
+						{Op: "Write", Value: 11},
 					},
 				},
 			},
@@ -405,10 +403,8 @@ func TestBlkIOMetrics(t *testing.T) {
 		},
 		{
 			Name: "Without IoServiceBytesRecursive and IoServicedRecursive",
-			MockStats: types.StatsJSON{
-				Stats: types.Stats{
-					BlkioStats: types.BlkioStats{},
-				},
+			MockStats: container.StatsResponse{
+				BlkioStats: container.BlkioStats{},
 			},
 			ExpectedBlkIO: biz.BlkIO{
 				TotalReadCount:  nil,
@@ -419,13 +415,11 @@ func TestBlkIOMetrics(t *testing.T) {
 		},
 		{
 			Name: "With Only IoServiceBytesRecursive",
-			MockStats: types.StatsJSON{
-				Stats: types.Stats{
-					BlkioStats: types.BlkioStats{
-						IoServiceBytesRecursive: []types.BlkioStatEntry{
-							{Op: "Read", Value: 5885952},
-							{Op: "Write", Value: 45056},
-						},
+			MockStats: container.StatsResponse{
+				BlkioStats: container.BlkioStats{
+					IoServiceBytesRecursive: []container.BlkioStatEntry{
+						{Op: "Read", Value: 5885952},
+						{Op: "Write", Value: 45056},
 					},
 				},
 			},

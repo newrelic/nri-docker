@@ -3,14 +3,14 @@ package biz
 import (
 	"math"
 
-	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/newrelic/nri-docker/src/utils"
 	gops_mem "github.com/shirou/gopsutil/mem"
 )
 
-func (mc *MetricsFetcher) memory(mem raw.Memory, containerJSON *types.ContainerJSON) Memory {
+func (mc *MetricsFetcher) memory(mem raw.Memory, containerJSON *container.InspectResponse) Memory {
 	m := Memory{
 		CommitBytes:       mem.Commit,
 		CommitPeakBytes:   mem.CommitPeak,
@@ -37,7 +37,7 @@ func (mc *MetricsFetcher) memory(mem raw.Memory, containerJSON *types.ContainerJ
 	return m
 }
 
-func (mc *MetricsFetcher) cpu(metrics raw.Metrics, containerJSON *types.ContainerJSON) CPU {
+func (mc *MetricsFetcher) cpu(metrics raw.Metrics, containerJSON *container.InspectResponse) CPU {
 	previous := StoredCPUSample{}
 	// store current metrics to be the "previous" metrics in the next CPU sampling
 	defer func() {
@@ -85,7 +85,7 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, containerJSON *types.Containe
 
 // Get the total memory from the container config, fallback to the system memory
 // if the container config is not available
-func getTotalMemory(containerJSON *types.ContainerJSON) uint64 {
+func getTotalMemory(containerJSON *container.InspectResponse) uint64 {
 	var totalMemory uint64
 	if containerJSON.HostConfig != nil && containerJSON.HostConfig.Memory > 0 {
 		totalMemory = uint64(containerJSON.HostConfig.Memory)
@@ -105,7 +105,7 @@ func getTotalMemory(containerJSON *types.ContainerJSON) uint64 {
 
 // Get the number of cores from the container config, fallback to the number of processors
 // if the container config is not available
-func getNumOfLimitCores(containerJSON *types.ContainerJSON, numProcs uint32) float64 {
+func getNumOfLimitCores(containerJSON *container.InspectResponse, numProcs uint32) float64 {
 	if containerJSON == nil {
 		return float64(numProcs)
 	}
