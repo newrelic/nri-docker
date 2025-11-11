@@ -9,6 +9,11 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+## v2.6.4 - 2025-11-11
+
+### ⛓️ Dependencies
+- Updated github.com/docker/docker to v28.5.2+incompatible
+
 ## v2.6.3 - 2025-11-04
 
 ### ⛓️ Dependencies
