@@ -8,7 +8,7 @@ type ArgumentList struct {
 	Fargate               bool   `default:"false" help:"Enables fetching metrics from ECS Fargate. If enabled no metrics are collected from cgroups. Defaults to false"`
 	UseDockerAPI          bool   `default:"false" help:"Enables fetching metrics from Docker API. If enabled no metrics are collected from cgroups. For Linux: This option is ignored if cgroupsV1 are detected. For OSes other than Linux: This option is always ignored and defaults to true"`
 	ExitedContainersTTL   string `default:"24h" help:"Enables to integration to stop reporting Exited containers that are older than the set TTL. Possible values are time-strings: 1s, 1m, 1h"`
-	DockerClientVersion   string `default:"1.24" help:"Optional. Specify the version of the docker client. Used for compatibility."`
+	DockerClientVersion   string `default:"1.44" help:"Optional. Specify the version of the docker client. Used for compatibility."`
 	DisableStorageMetrics bool   `default:"false" help:"Disables storage driver metrics collection."`
 	ShowVersion           bool   `default:"false" help:"Print build information and exit"`
 	// CgroupPath and CgroupDriver arguments are not used but are kept here for backwards compatibility reasons.
