@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/nri-docker/src/constants"
 	"github.com/newrelic/nri-docker/src/raw"
@@ -135,13 +135,13 @@ func (f *Fetcher) blkioMetrics(containerStats container.StatsResponse) raw.Blkio
 }
 
 func (f *Fetcher) containerStats(ctx context.Context, containerID string) (container.StatsResponse, error) {
-	m, err := f.statsClient.ContainerStats(ctx, containerID, false)
+	resp, err := f.statsClient.ContainerStats(ctx, containerID, false)
 	if err != nil {
 		return container.StatsResponse{}, err
 	}
 	var statsJSON container.StatsResponse
-	err = json.NewDecoder(m.Body).Decode(&statsJSON)
-	m.Body.Close()
+	err = json.NewDecoder(resp.Body).Decode(&statsJSON)
+	resp.Body.Close()
 	if err != nil {
 		return container.StatsResponse{}, err
 	}

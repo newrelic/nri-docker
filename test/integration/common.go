@@ -10,9 +10,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	"github.com/newrelic/infra-integrations-sdk/v3/args"
 	"github.com/newrelic/nri-docker/src/config"
+	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -36,7 +37,7 @@ const (
 var once sync.Once
 var dockerClientVersion string
 
-func newDocker(t *testing.T) *client.Client {
+func newDocker(t *testing.T) *raw.DockerClientWrapper {
 	t.Helper()
 	// Get DockerClientVersion from default args avoiding parsing flags twice when executing multiple test.
 	once.Do(func() {
@@ -47,7 +48,7 @@ func newDocker(t *testing.T) *client.Client {
 
 	docker, err := client.NewClientWithOpts(client.FromEnv, client.WithVersion(dockerClientVersion))
 	require.NoError(t, err)
-	return docker
+	return raw.NewDockerClientWrapper(docker)
 }
 
 func stress(t *testing.T, args ...string) (containerID string, closeFunc func()) {

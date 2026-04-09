@@ -3,7 +3,7 @@ package biz
 import (
 	"math"
 
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/newrelic/nri-docker/src/utils"

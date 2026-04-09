@@ -3,7 +3,7 @@ package biz
 import (
 	"fmt"
 
-	"github.com/docker/docker/api/types/system"
+	"github.com/moby/moby/api/types/system"
 	humanize "github.com/dustin/go-humanize"
 )
 

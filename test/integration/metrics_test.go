@@ -14,8 +14,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/infra-integrations-sdk/v3/persist"
 	"github.com/stretchr/testify/assert"
@@ -48,9 +47,9 @@ func TestCompareMetrics(t *testing.T) {
 	require.NoError(t, err)
 
 	// WHEN its metrics are sampled and processed from API Server
-	info, err := dockerClient.Info(context.Background())
+	dockerInfo, err := dockerClient.Info(context.Background())
 	require.NoError(t, err)
-	if info.CgroupVersion != "2" {
+	if dockerInfo.CgroupVersion != "2" {
 		t.Skip("DockerAPIFetcher only supports cgroups v2 version")
 	}
 
@@ -453,7 +452,7 @@ func TestBlkIOMetrics(t *testing.T) {
 // fetcher is a helper function that returns a Fetcher.
 //
 // If any error happens, the function will make to fail the given test.
-func fetcher(t *testing.T, docker *client.Client) raw.Fetcher {
+func fetcher(t *testing.T, docker *raw.DockerClientWrapper) raw.Fetcher {
 	t.Helper()
 
 	var cgroupFetcher raw.Fetcher

@@ -9,11 +9,12 @@ import (
 	"context"
 	"runtime"
 
-	"github.com/docker/docker/api/types/system"
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/api/types/system"
+	"github.com/moby/moby/client"
 	"github.com/newrelic/infra-integrations-sdk/v3/integration"
 	"github.com/newrelic/nri-docker/src/config"
 	"github.com/newrelic/nri-docker/src/nri"
+	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
 )
 
@@ -26,11 +27,13 @@ func PopulateFromDocker(i *integration.Integration, args config.ArgumentList) {
 	withVersionOpt := client.WithVersion(args.DockerClientVersion)
 	dockerClient, err := client.NewClientWithOpts(client.FromEnv, withVersionOpt)
 	ExitOnErr(err)
-	defer dockerClient.Close()
 
-	fetcher := dockerapi.NewFetcher(dockerClient, runtime.GOOS)
+	docker := raw.NewDockerClientWrapper(dockerClient)
+	defer docker.Close()
 
-	sampler, err := nri.NewSampler(fetcher, dockerClient, args)
+	fetcher := dockerapi.NewFetcher(docker, runtime.GOOS)
+
+	sampler, err := nri.NewSampler(fetcher, docker, args)
 	ExitOnErr(err)
 	// always use dockerAPI if not on Linux
 	ExitOnErr(sampler.SampleAll(context.Background(), i, system.Info{}))

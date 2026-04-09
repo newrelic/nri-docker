@@ -124,7 +124,7 @@ func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 	if err != nil {
 		return metrics, err
 	}
-	if json.ContainerJSONBase == nil {
+	if json.ID == "" {
 		return metrics, errors.New("empty container inspect result")
 	}
 
@@ -133,7 +133,7 @@ func (mc *MetricsFetcher) Process(containerID string) (Sample, error) {
 		log.Debug("invalid container %s JSON: missing State", containerID)
 	}
 
-	if json.State != nil && strings.ToLower(json.State.Status) == "exited" {
+	if json.State != nil && strings.ToLower(string(json.State.Status)) == "exited" {
 		expired, err := mc.isExpired(json.State.FinishedAt) //nolint: govet //shadowed err
 		if err != nil {
 			return metrics, fmt.Errorf("verifying container expiration: %w", err)

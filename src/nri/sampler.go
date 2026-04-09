@@ -6,9 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/system"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/system"
 	"github.com/newrelic/infra-integrations-sdk/v3/data/attribute"
 	"github.com/newrelic/infra-integrations-sdk/v3/data/metric"
 	"github.com/newrelic/infra-integrations-sdk/v3/integration"
@@ -73,7 +72,7 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 	}()
 
 	// todo: configure to retrieve only the running containers
-	containers, err := cs.docker.ContainerList(ctx, container.ListOptions{All: true})
+	containers, err := cs.docker.ContainerList(ctx, true)
 	if err != nil {
 		return err
 	}
@@ -130,7 +129,7 @@ func (cs *ContainerSampler) SampleAll(ctx context.Context, i *integration.Integr
 		// Possibly wrapping the Docker client with another type is a good solution.
 		// i.e. Docker uses `state = running` and ECS uses `status = RUNNING`.
 		// If State is empty, we check by status up.
-		if strings.ToLower(container.State) != "running" &&
+		if strings.ToLower(string(container.State)) != "running" &&
 			strings.ToLower(container.Status) != "running" &&
 			!strings.HasPrefix(strings.ToLower(container.Status), "up") {
 			log.Debug("Skipped not running container: %s.", container.ID)
@@ -156,7 +155,7 @@ func populate(ms *metric.Set, metrics []entry) {
 	}
 }
 
-func attributes(container types.Container) []entry {
+func attributes(container container.Summary) []entry {
 	var cname string
 	if len(container.Names) > 0 {
 		cname = container.Names[0]
@@ -169,7 +168,7 @@ func attributes(container types.Container) []entry {
 		metricContainerName(cname),
 		metricContainerImage(container.ImageID),
 		metricContainerImageName(container.Image),
-		metricState(container.State),
+		metricState(string(container.State)),
 		metricStatus(container.Status),
 	}
 
@@ -208,7 +207,7 @@ var labelRename = map[string]string{
 	"com.newrelic.nri-docker.aws-region":  "awsRegion",
 }
 
-func labels(container types.Container) []entry {
+func labels(container container.Summary) []entry {
 	metrics := make([]entry, 0, len(container.Labels))
 	for key, val := range container.Labels {
 		if newName, ok := labelRename[key]; ok {

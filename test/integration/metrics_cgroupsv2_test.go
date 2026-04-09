@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
 	"github.com/newrelic/nri-docker/src/biz"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/newrelic/nri-docker/src/utils"
