@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/persist"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/newrelic/nri-docker/src/utils"
@@ -229,11 +229,9 @@ func TestGetNumOfLimitCores(t *testing.T) {
 		{
 			name: "Test with CPUCount set",
 			containerJSON: &container.InspectResponse{
-				ContainerJSONBase: &container.ContainerJSONBase{
-					HostConfig: &container.HostConfig{
-						Resources: container.Resources{
-							CPUCount: 4,
-						},
+				HostConfig: &container.HostConfig{
+					Resources: container.Resources{
+						CPUCount: 4,
 					},
 				},
 			},
@@ -243,11 +241,9 @@ func TestGetNumOfLimitCores(t *testing.T) {
 		{
 			name: "Test with NanoCPUs set",
 			containerJSON: &container.InspectResponse{
-				ContainerJSONBase: &container.ContainerJSONBase{
-					HostConfig: &container.HostConfig{
-						Resources: container.Resources{
-							NanoCPUs: 2000000000,
-						},
+				HostConfig: &container.HostConfig{
+					Resources: container.Resources{
+						NanoCPUs: 2000000000,
 					},
 				},
 			},
@@ -257,9 +253,7 @@ func TestGetNumOfLimitCores(t *testing.T) {
 		{
 			name: "Test with no limits set",
 			containerJSON: &container.InspectResponse{
-				ContainerJSONBase: &container.ContainerJSONBase{
-					HostConfig: &container.HostConfig{},
-				},
+				HostConfig: &container.HostConfig{},
 			},
 			numProcs: 8,
 			want:     8,
@@ -267,9 +261,7 @@ func TestGetNumOfLimitCores(t *testing.T) {
 		{
 			name: "Test with nil HostConfig",
 			containerJSON: &container.InspectResponse{
-				ContainerJSONBase: &container.ContainerJSONBase{
-					HostConfig: nil,
-				},
+				HostConfig: nil,
 			},
 			numProcs: 8,
 			want:     8,
@@ -299,11 +291,9 @@ func TestGetTotalMemory(t *testing.T) {
 		{
 			name: "Test with Memory set",
 			containerJSON: &container.InspectResponse{
-				ContainerJSONBase: &container.ContainerJSONBase{
-					HostConfig: &container.HostConfig{
-						Resources: container.Resources{
-							Memory: 2147483648, // 2 GiB
-						},
+				HostConfig: &container.HostConfig{
+					Resources: container.Resources{
+						Memory: 2147483648, // 2 GiB
 					},
 				},
 			},

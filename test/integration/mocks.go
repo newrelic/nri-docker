@@ -9,8 +9,8 @@ import (
 	"io"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
-	"github.com/docker/docker/api/types/system"
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/system"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/stretchr/testify/mock"
 )
@@ -119,14 +119,12 @@ func NewInspectorMock(containerID string, pid, restartCount int, hostConfig *con
 
 func (i InspectorMock) ContainerInspect(_ context.Context, _ string) (container.InspectResponse, error) {
 	return container.InspectResponse{
-		ContainerJSONBase: &container.ContainerJSONBase{
-			ID: i.containerID,
-			State: &container.State{
-				Pid: i.pid,
-			},
-			RestartCount: i.restartCount,
-			HostConfig:   i.hostConfig,
+		ID: i.containerID,
+		State: &container.State{
+			Pid: i.pid,
 		},
+		RestartCount: i.restartCount,
+		HostConfig:   i.hostConfig,
 	}, nil
 }
 
@@ -138,12 +136,12 @@ type mockDockerStatsClient struct {
 	mock.Mock
 }
 
-func (m *mockDockerStatsClient) ContainerStats(ctx context.Context, containerID string, stream bool) (container.StatsResponseReader, error) {
+func (m *mockDockerStatsClient) ContainerStats(ctx context.Context, containerID string, stream bool) (raw.ContainerStatsResponse, error) {
 	args := m.Called()
 
 	statsJSON, _ := json.Marshal(args.Get(0).(container.StatsResponse))
 
-	return container.StatsResponseReader{
+	return raw.ContainerStatsResponse{
 		Body: io.NopCloser(bytes.NewReader(statsJSON)),
 	}, nil
 }

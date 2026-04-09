@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/persist"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/newrelic/nri-docker/src/utils"
@@ -39,11 +39,9 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 					},
 				},
 				json: &container.InspectResponse{
-					ContainerJSONBase: &container.ContainerJSONBase{
-						HostConfig: &container.HostConfig{
-							Resources: container.Resources{
-								NanoCPUs: 500000000,
-							},
+					HostConfig: &container.HostConfig{
+						Resources: container.Resources{
+							NanoCPUs: 500000000,
 						},
 					},
 				},
@@ -60,9 +58,7 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 					CPU: raw.CPU{},
 				},
 				json: &container.InspectResponse{
-					ContainerJSONBase: &container.ContainerJSONBase{
-						HostConfig: &container.HostConfig{},
-					},
+					HostConfig: &container.HostConfig{},
 				},
 			},
 			runtimeCPUMockFunc: func() int {

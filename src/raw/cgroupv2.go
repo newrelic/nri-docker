@@ -11,7 +11,7 @@ import (
 
 	cgroupsV2 "github.com/containerd/cgroups/v2"
 	cgroupstatsV2 "github.com/containerd/cgroups/v2/stats"
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 )
 

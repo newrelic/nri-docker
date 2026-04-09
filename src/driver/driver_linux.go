@@ -6,7 +6,7 @@ package driver
 import (
 	"context"
 
-	"github.com/docker/docker/client"
+	"github.com/moby/moby/client"
 	"github.com/newrelic/infra-integrations-sdk/v3/integration"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/nri-docker/src/config"
@@ -36,20 +36,22 @@ func PopulateFromDocker(i *integration.Integration, args config.ArgumentList) {
 	withVersionOpt := client.WithVersion(args.DockerClientVersion)
 	dockerClient, err := client.NewClientWithOpts(client.FromEnv, withVersionOpt)
 	ExitOnErr(err)
-	defer dockerClient.Close()
 
-	cgroupInfo, err := dockerClient.Info(context.Background())
+	docker := raw.NewDockerClientWrapper(dockerClient)
+	defer docker.Close()
+
+	cgroupInfo, err := docker.Info(context.Background())
 	ExitOnErr(err)
 
 	var fetcher raw.Fetcher
 	if UseDockerAPI(args.UseDockerAPI, cgroupInfo.CgroupVersion) {
-		fetcher = dockerapi.NewFetcher(dockerClient, constants.LinuxPlatformName)
+		fetcher = dockerapi.NewFetcher(docker, constants.LinuxPlatformName)
 	} else { // use cgroups as source of data
 		fetcher, err = raw.NewCgroupFetcher(args.HostRoot, cgroupInfo)
 		ExitOnErr(err)
 	}
 
-	sampler, err := nri.NewSampler(fetcher, dockerClient, args)
+	sampler, err := nri.NewSampler(fetcher, docker, args)
 	ExitOnErr(err)
 	ExitOnErr(sampler.SampleAll(context.Background(), i, cgroupInfo))
 }

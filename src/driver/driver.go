@@ -9,7 +9,7 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/docker/docker/api/types/system"
+	"github.com/moby/moby/api/types/system"
 	"github.com/newrelic/infra-integrations-sdk/v3/integration"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 	"github.com/newrelic/nri-docker/src/config"

@@ -7,7 +7,7 @@ import (
 	"io"
 	"testing"
 
-	"github.com/docker/docker/api/types/container"
+	"github.com/moby/moby/api/types/container"
 	"github.com/newrelic/nri-docker/src/constants"
 	"github.com/newrelic/nri-docker/src/raw"
 	"github.com/newrelic/nri-docker/src/raw/dockerapi"
@@ -21,12 +21,12 @@ type mockDockerStatsClient struct {
 	mock.Mock
 }
 
-func (m *mockDockerStatsClient) ContainerStats(ctx context.Context, containerID string, stream bool) (container.StatsResponseReader, error) {
+func (m *mockDockerStatsClient) ContainerStats(ctx context.Context, containerID string, stream bool) (raw.ContainerStatsResponse, error) {
 	args := m.Called()
 
 	statsJSON, _ := json.Marshal(args.Get(0).(container.StatsResponse))
 
-	return container.StatsResponseReader{
+	return raw.ContainerStatsResponse{
 		Body: io.NopCloser(bytes.NewReader(statsJSON)),
 	}, nil
 }
@@ -102,7 +102,7 @@ func Test_Fetch(t *testing.T) {
 
 	fetcher := dockerapi.NewFetcher(&client, constants.LinuxPlatformName)
 
-	metrics, err := fetcher.Fetch(container.InspectResponse{ContainerJSONBase: &container.ContainerJSONBase{
+	metrics, err := fetcher.Fetch(container.InspectResponse{
 		ID: "test",
 		HostConfig: &container.HostConfig{
 			Resources: container.Resources{
@@ -114,7 +114,7 @@ func Test_Fetch(t *testing.T) {
 				CPUShares: 2048,
 			},
 		},
-	}})
+	})
 	require.NoError(t, err)
 
 	t.Run("Network metrics", func(t *testing.T) {
@@ -196,7 +196,7 @@ func Test_NilHostConfig(t *testing.T) {
 
 	fetcher := dockerapi.NewFetcher(&client, constants.LinuxPlatformName)
 
-	metricsNoHostConfig, err := fetcher.Fetch(container.InspectResponse{ContainerJSONBase: &container.ContainerJSONBase{ID: "test"}})
+	metricsNoHostConfig, err := fetcher.Fetch(container.InspectResponse{ID: "test"})
 	require.NoError(t, err)
 
 	assert.EqualValues(t, 0, metricsNoHostConfig.CPU.Shares, "When hostConfig is not available, cpu shares cannot be set")

@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/docker/docker/api/types/system"
+	"github.com/moby/moby/api/types/system"
 )
 
 func Test_ParseDeviceMapperStats(t *testing.T) {
