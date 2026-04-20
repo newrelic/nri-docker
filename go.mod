@@ -5,7 +5,7 @@ go 1.25.9
 require (
 	github.com/containerd/cgroups v1.1.0
 	github.com/dustin/go-humanize v1.0.1
-	github.com/moby/moby/api v1.54.1
+	github.com/moby/moby/api v1.54.2
 	github.com/moby/moby/client v0.4.0
 	github.com/newrelic/infra-integrations-sdk/v3 v3.9.1
 	github.com/stretchr/testify v1.11.1
