@@ -9,6 +9,11 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+## v2.8.4 - 2026-09-08
+
+### ⛓️ Dependencies
+- Updated github.com/moby/moby/api to v1.56.0
+
 ## v2.8.1 - 2026-07-08
 
 ### ⛓️ Dependencies
