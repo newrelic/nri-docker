@@ -74,10 +74,18 @@ func (cg *CgroupsV2Fetcher) Fetch(containerInfo container.InspectResponse) (Metr
 		log.Error("couldn't read cpu stats: %v", err)
 	}
 
-	if containerInfo.HostConfig != nil {
-		stats.CPU.Shares = uint64(containerInfo.HostConfig.CPUShares)
+	// Read cpu.weight directly from the cgroup v2 filesystem and convert to the
+	// equivalent legacy v1 cpu.shares value. This mirrors how the cgroup v1 fetcher
+	// reads cpu.shares directly from the kernel file, avoiding reliance on the Docker
+	// API (HostConfig.CPUShares) which can return a stale or incorrectly round-tripped
+	// value when the host uses cgroup v2 (e.g. Amazon Linux 2023 + ECS).
+	if cpuWeight, err := cgroupInfo.getSingleFileUintStat("cpu.weight"); err != nil {
+		log.Debug("could not read cpu.weight for container %q, falling back to HostConfig: %v", containerID, err)
+		if containerInfo.HostConfig != nil {
+			stats.CPU.Shares = uint64(containerInfo.HostConfig.CPUShares)
+		}
 	} else {
-		log.Debug("CPUShares metric could not be fetched for container %q because host configuration is not available")
+		stats.CPU.Shares = cgroupV2WeightToShares(cpuWeight)
 	}
 
 	cpusetPath := filepath.Join(cgroupInfo.getFullPath(), "cpuset.cpus.effective")
@@ -158,6 +166,17 @@ func (cg *CgroupsV2Fetcher) pids(metrics *cgroupstatsV2.Metrics) (Pids, error) {
 		Current: metrics.Pids.Current,
 		Limit:   metrics.Pids.Limit,
 	}, nil
+}
+
+// cgroupV2WeightToShares converts a cgroup v2 cpu.weight value (range 1–10000) to
+// the equivalent legacy cgroup v1 cpu.shares value (range 2–262144).
+// This is the inverse of Docker/Moby's conversion formula used when translating
+// cpu.shares → cpu.weight on container creation.
+func cgroupV2WeightToShares(weight uint64) uint64 {
+	if weight == 0 {
+		return 0
+	}
+	return (weight-1)*262142/9999 + 2
 }
 
 func (cg *CgroupsV2Fetcher) io(metrics *cgroupstatsV2.Metrics) (Blkio, error) {
