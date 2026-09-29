@@ -9,6 +9,12 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+## v2.8.5 - 2026-09-29
+
+### ⛓️ Dependencies
+- Updated github.com/dustin/go-humanize to v1.1.0 - [Changelog 🔗](https://github.com/dustin/go-humanize/releases/tag/v1.1.0)
+- Updated golang version to v1.27.1
+
 ## v2.8.4 - 2026-09-08
 
 ### ⛓️ Dependencies
