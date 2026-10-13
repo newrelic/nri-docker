@@ -21,7 +21,15 @@ const (
 	InspectorPIDCgroupsV2                     = 667
 	relativePathToTestdataFilesystemCgroupsV2 = "testdata/cgroupsV2_host/"
 	memoryReservationValue                    = 104857600
-	cpuSharesValue                            = 2048
+	// cpuSharesValue is passed as HostConfig.CPUShares. On cgroup v2 the fetcher
+	// reads cpu.weight from the cgroup file instead, so this value does NOT appear
+	// in the resulting sample.Shares — it is kept only to exercise the fallback path.
+	cpuSharesValue = 2048
+	// cpuWeightTestValue is the value written to cpu.weight in the test data
+	// (testdata/cgroupsV2_host/.../cpu.weight = 79). Converted to v1 shares:
+	// (79-1)*262142/9999 + 2 = 2046.
+	cpuWeightTestValue          = 79
+	cpuWeightTestValueAsShares  = 2046
 )
 
 func TestCgroupsv2AllMetricsPresent(t *testing.T) {
@@ -55,7 +63,8 @@ func TestCgroupsv2AllMetricsPresent(t *testing.T) {
 			UsedCoresPercent: 177.00902,
 			ThrottlePeriods:  0,
 			ThrottledTimeMS:  0,
-			Shares:           2048,
+			// Shares is converted from cpu.weight=79 in the test data, NOT from HostConfig.CPUShares.
+			Shares: cpuWeightTestValueAsShares,
 		},
 		Memory: biz.Memory{
 			UsageBytes:            141561856,
@@ -171,4 +180,113 @@ func mockedCgroupsV2ProcNetDevFile(hostRoot string) error {
 	}
 
 	return os.WriteFile(filepath.Join(hostRoot, "proc", strconv.Itoa(InspectorPIDCgroupsV2), "net", "dev"), inputNetDev, 0755)
+}
+
+// TestCgroupsV2SharesReadFromCPUWeightFile verifies that the fetcher reads cpuShares
+// from the cgroup v2 cpu.weight file rather than from Docker's HostConfig.CPUShares.
+// This is the regression test for NR-555188: on Amazon Linux 2023 (cgroup v2) the
+// Docker API was returning a stale/incorrectly round-tripped CPUShares value, while
+// the kernel's cpu.weight file always holds the authoritative allocation.
+func TestCgroupsV2SharesReadFromCPUWeightFile(t *testing.T) {
+	hostRoot := t.TempDir()
+
+	err := mockedCgroupsV2FileSystem(t, hostRoot)
+	require.NoError(t, err)
+
+	// Set HostConfig.CPUShares to a value that is deliberately different from what
+	// cpu.weight=79 would convert to (2046), so the test can confirm the source.
+	hostConfig := &container.HostConfig{}
+	hostConfig.MemoryReservation = memoryReservationValue
+	hostConfig.CPUShares = 9999 // wrong value — must NOT appear in the result
+	inspector := NewInspectorMock(InspectorContainerID, InspectorPIDCgroupsV2, 2, hostConfig)
+
+	cgroupFetcher, err := NewCgroupsV2FetcherMock(hostRoot, mockedTimeForAllMetricsTest, 75*1e9)
+	require.NoError(t, err)
+
+	inspectResp, err := inspector.ContainerInspect(nil, InspectorContainerID)
+	require.NoError(t, err)
+
+	metrics, err := cgroupFetcher.Fetch(inspectResp)
+	require.NoError(t, err)
+
+	assert.Equal(t, uint64(cpuWeightTestValueAsShares), metrics.CPU.Shares,
+		"Shares should be converted from cpu.weight=%d in the cgroup file", cpuWeightTestValue)
+	assert.NotEqual(t, uint64(hostConfig.CPUShares), metrics.CPU.Shares,
+		"Shares must NOT come from HostConfig.CPUShares")
+}
+
+// TestCgroupsV2SharesFallbackToHostConfigWhenCPUWeightMissing verifies that when
+// cpu.weight cannot be read, the fetcher falls back to HostConfig.CPUShares so that
+// no metric is silently lost in environments where the file may be absent.
+func TestCgroupsV2SharesFallbackToHostConfigWhenCPUWeightMissing(t *testing.T) {
+	hostRoot := t.TempDir()
+
+	// Build a cgroup v2 filesystem from the test data but omit the cpu.weight file.
+	err := mockedCgroupsV2FileSystemWithoutCPUWeight(t, hostRoot)
+	require.NoError(t, err)
+
+	const fallbackShares = int64(2048)
+	hostConfig := &container.HostConfig{}
+	hostConfig.MemoryReservation = memoryReservationValue
+	hostConfig.CPUShares = fallbackShares
+	inspector := NewInspectorMock(InspectorContainerID, InspectorPIDCgroupsV2, 2, hostConfig)
+
+	cgroupFetcher, err := NewCgroupsV2FetcherMock(hostRoot, mockedTimeForAllMetricsTest, 75*1e9)
+	require.NoError(t, err)
+
+	inspectResp, err := inspector.ContainerInspect(nil, InspectorContainerID)
+	require.NoError(t, err)
+
+	metrics, err := cgroupFetcher.Fetch(inspectResp)
+	require.NoError(t, err)
+
+	assert.Equal(t, uint64(fallbackShares), metrics.CPU.Shares,
+		"Shares should fall back to HostConfig.CPUShares when cpu.weight is unreadable")
+}
+
+// mockedCgroupsV2FileSystemWithoutCPUWeight sets up the same mocked filesystem as
+// mockedCgroupsV2FileSystem but copies the cgroup directory to a writable temp dir
+// so that the cpu.weight file can be removed.
+func mockedCgroupsV2FileSystemWithoutCPUWeight(t *testing.T, hostRoot string) error {
+	t.Helper()
+
+	// Copy test data into a new writable temp dir (we cannot modify the source symlink target).
+	cgroupSrc, err := filepath.Abs(filepath.Join(relativePathToTestdataFilesystemCgroupsV2, "cgroup"))
+	require.NoError(t, err)
+
+	cgroupsDst := filepath.Join(hostRoot, "cgroup")
+	require.NoError(t, copyDir(cgroupSrc, cgroupsDst))
+
+	// Remove cpu.weight to trigger the fallback path.
+	cpuWeightPath := filepath.Join(cgroupsDst, "system.slice", "containerd.service", "cpu.weight")
+	if err := os.Remove(cpuWeightPath); err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	require.NoError(t, os.Mkdir(filepath.Join(hostRoot, "proc"), 0755))
+	require.NoError(t, mockedCgroupsV2ProcMountsFile(cgroupsDst, hostRoot))
+	require.NoError(t, mockedCgroupsV2ProcPIDCGroupFile(hostRoot))
+	return mockedCgroupsV2ProcNetDevFile(hostRoot)
+}
+
+// copyDir recursively copies src into dst.
+func copyDir(src, dst string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, err := filepath.Rel(src, path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dst, rel)
+		if info.IsDir() {
+			return os.MkdirAll(target, info.Mode())
+		}
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(target, data, info.Mode())
+	})
 }
