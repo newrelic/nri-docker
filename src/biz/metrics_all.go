@@ -134,6 +134,14 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *container.InspectRespon
 		return cpu
 	}
 
+	// The cumulative counters are reset when a container restarts, so there is no valid delta for this interval.
+	// The current sample is still stored as the baseline for the next one.
+	if metrics.CPU.TotalUsage < previous.CPU.TotalUsage {
+		log.Debug("CPU usage counter went backwards for container %v (%d < %d), skipping CPU deltas",
+			metrics.ContainerID, metrics.CPU.TotalUsage, previous.CPU.TotalUsage)
+		return cpu
+	}
+
 	//nolint: mnd
 	maxVal := float64(metrics.CPU.OnlineCPUsWithFallback() * 100)
 
@@ -158,6 +166,11 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *container.InspectRespon
 }
 
 func cpuPercent(previous, current raw.CPU) float64 {
+	// Counters moving backwards (e.g. after a container restart) would underflow the unsigned subtraction.
+	if current.TotalUsage < previous.TotalUsage || current.SystemUsage < previous.SystemUsage {
+		return 0.0
+	}
+
 	var (
 		cpuPercent = 0.0
 		// calculate the change for the cpu usage of the container in between readings

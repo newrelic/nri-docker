@@ -63,6 +63,13 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, containerJSON *container.Insp
 		return cpu
 	}
 
+	// The cumulative counters are reset when a container restarts, so there is no valid delta for this interval.
+	if metrics.CPU.TotalUsage < previous.CPU.TotalUsage {
+		log.Debug("CPU usage counter went backwards for container %v (%d < %d), skipping CPU deltas",
+			metrics.ContainerID, metrics.CPU.TotalUsage, previous.CPU.TotalUsage)
+		return cpu
+	}
+
 	maxVal := float64(metrics.CPU.NumProcs * 100)
 
 	cpu.CPUPercent = cpuPercent(previous.CPU, metrics.CPU)
@@ -122,6 +129,11 @@ func cpuPercent(previous, current raw.CPU) float64 {
 	passIntervals := uint64(current.Read.Sub(current.PreRead).Nanoseconds()) // Start with number of ns intervals
 	passIntervals /= 100                                                     // Convert to number of 100ns intervals
 	passIntervals *= uint64(current.NumProcs)                                // Multiple by the number of processors
+
+	// Counter moved backwards (e.g. after a container restart), avoid unsigned underflow
+	if current.TotalUsage < previous.TotalUsage {
+		return 0.0
+	}
 
 	// Intervals used
 	intervalsUsed := current.TotalUsage - previous.TotalUsage
