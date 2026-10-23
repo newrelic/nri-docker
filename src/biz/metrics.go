@@ -27,9 +27,7 @@ type unsigned interface {
 	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
 }
 
-// counterDelta returns how much a cumulative counter grew since the previous sample.
-// If it went backwards (first sample or container restart), unsigned subtraction would wrap to a huge number,
-// so it returns 0 and logs a warning. An unchanged counter is a valid 0 and is not logged.
+// counterDelta returns current - previous, or 0 (with a warning) if the counter went backwards.
 func counterDelta[T unsigned](name string, current, previous T) T {
 	if current < previous {
 		log.Warn("%s went backwards (%v -> %v): negative delta, resetting to 0. "+
