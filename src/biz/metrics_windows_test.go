@@ -169,6 +169,36 @@ func TestCPU(t *testing.T) {
 				KernelPercent: 0,
 			},
 		},
+		{
+			name: "Test CPU counter reset (container restart)",
+			metrics: raw.Metrics{
+				Time:        readTime,
+				ContainerID: "container123",
+				CPU: raw.CPU{
+					TotalUsage:        1000,
+					UsageInUsermode:   utils.ToPointer(uint64(1000)),
+					UsageInKernelmode: utils.ToPointer(uint64(0)),
+					Read:              readTime,
+					PreRead:           preReadTime,
+					NumProcs:          2,
+				},
+			},
+			storedMetrics: StoredCPUSample{
+				Time: readTime.Add(-time.Second).Unix(),
+				CPU: raw.CPU{
+					TotalUsage:        10000000,
+					UsageInUsermode:   utils.ToPointer(uint64(10000000)),
+					UsageInKernelmode: utils.ToPointer(uint64(0)),
+					Read:              readTime.Add(-time.Second),
+					PreRead:           preReadTime.Add(-time.Second),
+					NumProcs:          2,
+				},
+			},
+			want: CPU{
+				NumProcs:   2,
+				LimitCores: 2,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -208,6 +238,12 @@ func TestCpuPercent(t *testing.T) {
 			Previous: raw.CPU{TotalUsage: previousTotalUsage, Read: preReadTime, PreRead: preReadTime.Add(-time.Second), NumProcs: numProcs},
 			Current:  raw.CPU{TotalUsage: currentTotalUsage, Read: readTime, PreRead: preReadTime, NumProcs: numProcs},
 			Expected: 50,
+		},
+		{
+			Name:     "Total usage counter reset (container restart)",
+			Previous: raw.CPU{TotalUsage: currentTotalUsage, Read: preReadTime, PreRead: preReadTime.Add(-time.Second), NumProcs: numProcs},
+			Current:  raw.CPU{TotalUsage: 5, Read: readTime, PreRead: preReadTime, NumProcs: numProcs},
+			Expected: 0,
 		},
 	}
 

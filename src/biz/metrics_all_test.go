@@ -82,6 +82,49 @@ func TestMetricsFetcher_CPU_LimitCores(t *testing.T) {
 	}
 }
 
+func TestMetricsFetcher_CPU_CounterReset(t *testing.T) {
+	now := time.Now().Truncate(time.Second) // the store keeps the previous time in whole seconds
+	mc := &MetricsFetcher{
+		store:            persist.NewInMemoryStore(),
+		getRuntimeNumCPU: func() int { return 2 },
+	}
+	json := &container.InspectResponse{HostConfig: &container.HostConfig{}}
+	sample := func(at time.Time, total, system uint64) raw.Metrics {
+		return raw.Metrics{
+			ContainerID: "test-container",
+			Time:        at,
+			CPU: raw.CPU{
+				TotalUsage:        total,
+				SystemUsage:       system,
+				OnlineCPUs:        2,
+				UsageInUsermode:   utils.ToPointer(total),
+				UsageInKernelmode: utils.ToPointer(uint64(0)),
+			},
+		}
+	}
+
+	// first sample, then a regular one
+	mc.cpu(sample(now, 1_000_000_000_000, 100), json)
+	got := mc.cpu(sample(now.Add(time.Second), 1_500_000_000_000, 200), json)
+	assert.Greater(t, got.UsedCores, 0.0)
+
+	// container restarted: counters are lower than the stored ones
+	logs := captureLogs(t)
+	got = mc.cpu(sample(now.Add(2*time.Second), 1_000, 300), json)
+	assert.Contains(t, logs.String(), "total CPU usage went backwards")
+	assert.Equal(t, 0.0, got.UsedCores)
+	assert.Equal(t, 0.0, got.UsedCoresPercent)
+	assert.Equal(t, 0.0, got.CPUPercent)
+	assert.Equal(t, 0.0, got.UserPercent)
+	assert.Equal(t, 0.0, got.KernelPercent)
+	assert.Equal(t, 2.0, got.LimitCores)
+
+	// the next sample uses the post-restart sample as baseline and is sane again
+	got = mc.cpu(sample(now.Add(3*time.Second), 1_000_000_000+1_000, 400), json)
+	assert.InDelta(t, 1.0, got.UsedCores, 0.001)
+	assert.InDelta(t, 50.0, got.UsedCoresPercent, 0.1)
+}
+
 // swap tests are not applicable for windows
 // nolint: funlen
 func TestMetricsFetcher_memory(t *testing.T) {
@@ -266,6 +309,18 @@ func TestCpuPercent(t *testing.T) {
 			Previous: raw.CPU{TotalUsage: previousTotalUsage, SystemUsage: previousSystemUsage},
 			Current:  raw.CPU{TotalUsage: currentTotalUsage, SystemUsage: currentSystemUsage, PercpuUsage: []uint64{10, 10, 0, 0, 0}},
 			Expected: 20,
+		},
+		{
+			Name:     "Total usage counter reset (container restart)",
+			Previous: raw.CPU{TotalUsage: 1000, SystemUsage: previousSystemUsage},
+			Current:  raw.CPU{TotalUsage: 5, SystemUsage: currentSystemUsage, OnlineCPUs: onlineCPUs},
+			Expected: 0,
+		},
+		{
+			Name:     "System usage counter went backwards",
+			Previous: raw.CPU{TotalUsage: previousTotalUsage, SystemUsage: 1000},
+			Current:  raw.CPU{TotalUsage: currentTotalUsage, SystemUsage: 5, OnlineCPUs: onlineCPUs},
+			Expected: 0,
 		},
 	}
 
