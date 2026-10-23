@@ -23,6 +23,22 @@ type StoredCPUSample struct {
 	CPU  raw.CPU
 }
 
+type unsigned interface {
+	~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64
+}
+
+// counterDelta returns how much a cumulative counter grew since the previous sample.
+// If it went backwards (first sample or container restart), unsigned subtraction would wrap to a huge number,
+// so it returns 0 and logs a warning. An unchanged counter is a valid 0 and is not logged.
+func counterDelta[T unsigned](name string, current, previous T) T {
+	if current < previous {
+		log.Warn("%s went backwards (%v -> %v): negative delta, resetting to 0. "+
+			"This is expected for the first sample or after a container restart", name, previous, current)
+		return 0
+	}
+	return current - previous
+}
+
 // Sample exports the valuable metrics from a container
 type Sample struct {
 	Pids         Pids

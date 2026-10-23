@@ -109,7 +109,9 @@ func TestMetricsFetcher_CPU_CounterReset(t *testing.T) {
 	assert.Greater(t, got.UsedCores, 0.0)
 
 	// container restarted: counters are lower than the stored ones
+	logs := captureLogs(t)
 	got = mc.cpu(sample(now.Add(2*time.Second), 1_000, 300), json)
+	assert.Contains(t, logs.String(), "total CPU usage went backwards")
 	assert.Equal(t, 0.0, got.UsedCores)
 	assert.Equal(t, 0.0, got.UsedCoresPercent)
 	assert.Equal(t, 0.0, got.CPUPercent)
