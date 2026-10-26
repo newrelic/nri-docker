@@ -56,6 +56,13 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, containerJSON *container.Insp
 		return cpu
 	}
 
+	// All counters start over after a restart, so there is no valid delta for this interval.
+	if metrics.CPU.TotalUsage < previous.CPU.TotalUsage {
+		log.Warn("total CPU usage went backwards (%v -> %v) for container %v: skipping CPU deltas for this interval. "+
+			"This is expected after a container restart", previous.CPU.TotalUsage, metrics.CPU.TotalUsage, metrics.ContainerID)
+		return cpu
+	}
+
 	// calculate the change for the cpu usage of the container in between readings
 	durationIntervals := uint64(metrics.CPU.Read.Sub(metrics.CPU.PreRead).Nanoseconds()) / 100
 	if durationIntervals <= 0 {
@@ -74,10 +81,10 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, containerJSON *container.Insp
 		cpu.KernelPercent = 0
 		return cpu
 	}
-	userDelta := float64(*metrics.CPU.UsageInUsermode - *previous.CPU.UsageInUsermode)
+	userDelta := float64(counterDelta("user CPU usage", *metrics.CPU.UsageInUsermode, *previous.CPU.UsageInUsermode))
 	cpu.UserPercent = math.Min(maxVal, (userDelta/float64(durationIntervals))*100)
 
-	kernelDelta := float64(*metrics.CPU.UsageInKernelmode - *previous.CPU.UsageInKernelmode)
+	kernelDelta := float64(counterDelta("kernel CPU usage", *metrics.CPU.UsageInKernelmode, *previous.CPU.UsageInKernelmode))
 	cpu.KernelPercent = math.Min(maxVal, (kernelDelta/float64(durationIntervals))*100)
 
 	return cpu
@@ -124,7 +131,7 @@ func cpuPercent(previous, current raw.CPU) float64 {
 	passIntervals *= uint64(current.NumProcs)                                // Multiple by the number of processors
 
 	// Intervals used
-	intervalsUsed := current.TotalUsage - previous.TotalUsage
+	intervalsUsed := counterDelta("total CPU usage", current.TotalUsage, previous.TotalUsage)
 
 	// Percentage avoiding divide-by-zero
 	if passIntervals > 0 {
