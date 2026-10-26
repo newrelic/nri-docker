@@ -9,7 +9,7 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
-### Bugfixes
+### bugfix
 - Avoid CPU metric spikes (`cpuUsedCores`, `cpuUsedCoresPercent`, `cpuPercent`) on the first poll after a container restarts. When the total CPU counter moves backwards, no CPU delta is reported for that interval.
 
 ## v2.8.8 - 2026-10-23
