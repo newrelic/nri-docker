@@ -125,6 +125,45 @@ func TestMetricsFetcher_CPU_CounterReset(t *testing.T) {
 	assert.InDelta(t, 50.0, got.UsedCoresPercent, 0.1)
 }
 
+// After a restart not every counter lands below its old value
+// The sample must still be all-zero rather than mixing baselines from different process lifetimes.
+func TestMetricsFetcher_CPU_CounterResetKernelRises(t *testing.T) {
+	now := time.Now().Truncate(time.Second) // the store keeps the previous time in whole seconds
+	mc := &MetricsFetcher{
+		store:            persist.NewInMemoryStore(),
+		getRuntimeNumCPU: func() int { return 2 },
+	}
+	json := &container.InspectResponse{HostConfig: &container.HostConfig{}}
+	sample := func(at time.Time, user, kernel, system uint64) raw.Metrics {
+		return raw.Metrics{
+			ContainerID: "test-container",
+			Time:        at,
+			CPU: raw.CPU{
+				TotalUsage:        user + kernel,
+				SystemUsage:       system,
+				OnlineCPUs:        2,
+				UsageInUsermode:   utils.ToPointer(user),
+				UsageInKernelmode: utils.ToPointer(kernel),
+			},
+		}
+	}
+
+	mc.cpu(sample(now, 3_000_000_000, 1_000_000_000, 100), json)
+
+	got := mc.cpu(sample(now.Add(time.Second), 1_500_000_000, 1_200_000_000, 200), json)
+	assert.Equal(t, 0.0, got.UsedCores)
+	assert.Equal(t, 0.0, got.UsedCoresPercent)
+	assert.Equal(t, 0.0, got.CPUPercent)
+	assert.Equal(t, 0.0, got.UserPercent)
+	assert.Equal(t, 0.0, got.KernelPercent)
+	assert.Equal(t, 2.0, got.LimitCores)
+
+	got = mc.cpu(sample(now.Add(2*time.Second), 2_500_000_000, 1_700_000_000, 300), json)
+	assert.InDelta(t, 1.5, got.UsedCores, 0.001)
+	assert.InDelta(t, 100.0, got.UserPercent, 0.001)
+	assert.InDelta(t, 50.0, got.KernelPercent, 0.001)
+}
+
 // swap tests are not applicable for windows
 // nolint: funlen
 func TestMetricsFetcher_memory(t *testing.T) {

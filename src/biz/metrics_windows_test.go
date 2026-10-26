@@ -199,6 +199,36 @@ func TestCPU(t *testing.T) {
 				LimitCores: 2,
 			},
 		},
+		{
+			name: "Test CPU counter reset with kernel usage rising",
+			metrics: raw.Metrics{
+				Time:        readTime,
+				ContainerID: "container123",
+				CPU: raw.CPU{
+					TotalUsage:        27000000,
+					UsageInUsermode:   utils.ToPointer(uint64(15000000)),
+					UsageInKernelmode: utils.ToPointer(uint64(12000000)),
+					Read:              readTime,
+					PreRead:           preReadTime,
+					NumProcs:          2,
+				},
+			},
+			storedMetrics: StoredCPUSample{
+				Time: readTime.Add(-time.Second).Unix(),
+				CPU: raw.CPU{
+					TotalUsage:        40000000,
+					UsageInUsermode:   utils.ToPointer(uint64(30000000)),
+					UsageInKernelmode: utils.ToPointer(uint64(10000000)),
+					Read:              readTime.Add(-time.Second),
+					PreRead:           preReadTime.Add(-time.Second),
+					NumProcs:          2,
+				},
+			},
+			want: CPU{
+				NumProcs:   2,
+				LimitCores: 2,
+			},
+		},
 	}
 
 	for _, tt := range tests {

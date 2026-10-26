@@ -128,6 +128,13 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *container.InspectRespon
 		return cpu
 	}
 
+	// All counters start over after a restart, so there is no valid delta for this interval.
+	if metrics.CPU.TotalUsage < previous.CPU.TotalUsage {
+		log.Warn("total CPU usage went backwards (%v -> %v) for container %v: skipping CPU deltas for this interval. "+
+			"This is expected after a container restart", previous.CPU.TotalUsage, metrics.CPU.TotalUsage, metrics.ContainerID)
+		return cpu
+	}
+
 	// calculate the change for the cpu usage of the container in between readings
 	durationNS := float64(metrics.Time.Sub(time.Unix(previous.Time, 0)).Nanoseconds())
 	if durationNS <= 0 {
