@@ -9,7 +9,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
-### enhancement
+## v2.9.0 - 2026-10-29
+
+### 🚀 Enhancements
 - Updated `github.com/cilium/ebpf` to v0.22.0 and migrated to `containerd/cgroups` v3
 - Updated `golang.org/x/net` and `go.opentelemetry.io/otel`
 
