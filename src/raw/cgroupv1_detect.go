@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/containerd/cgroups"
+	"github.com/containerd/cgroups/v3/cgroup1"
 )
 
 type CgroupV1Detector interface {
@@ -14,11 +14,11 @@ type CgroupV1Detector interface {
 }
 
 type CgroupsV1PathGetter interface {
-	getMountPoint(name cgroups.Name) (string, error)
-	getPath(name cgroups.Name) (string, error)
-	getSingleFileUintStat(name cgroups.Name, stat string) (uint64, error)
-	getFullPath(name cgroups.Name) (string, error)
-	getHierarchyFn() cgroups.Hierarchy
+	getMountPoint(name cgroup1.Name) (string, error)
+	getPath(name cgroup1.Name) (string, error)
+	getSingleFileUintStat(name cgroup1.Name, stat string) (uint64, error)
+	getFullPath(name cgroup1.Name) (string, error)
+	getHierarchyFn() cgroup1.Hierarchy
 }
 
 type CgroupV1PathParser struct {
@@ -53,7 +53,7 @@ type cgroupV1Paths struct {
 	paths       map[string]string
 }
 
-func (cgi *cgroupV1Paths) getMountPoint(name cgroups.Name) (string, error) {
+func (cgi *cgroupV1Paths) getMountPoint(name cgroup1.Name) (string, error) {
 	if result, ok := cgi.mountPoints[string(name)]; ok {
 		return result, nil
 	}
@@ -61,7 +61,7 @@ func (cgi *cgroupV1Paths) getMountPoint(name cgroups.Name) (string, error) {
 	return "", fmt.Errorf("cgroup mount point not found for subsystem %s", name)
 }
 
-func (cgi *cgroupV1Paths) getPath(name cgroups.Name) (string, error) {
+func (cgi *cgroupV1Paths) getPath(name cgroup1.Name) (string, error) {
 	if result, ok := cgi.paths[string(name)]; ok {
 		return result, nil
 	}
@@ -69,7 +69,7 @@ func (cgi *cgroupV1Paths) getPath(name cgroups.Name) (string, error) {
 	return "", fmt.Errorf("cgroup path not found for subsystem %s", name)
 }
 
-func (cgi *cgroupV1Paths) getSingleFileUintStat(name cgroups.Name, stat string) (uint64, error) {
+func (cgi *cgroupV1Paths) getSingleFileUintStat(name cgroup1.Name, stat string) (uint64, error) {
 	fp, err := cgi.getFullPath(name)
 	if err != nil {
 		return 0, err
@@ -81,7 +81,7 @@ func (cgi *cgroupV1Paths) getSingleFileUintStat(name cgroups.Name, stat string) 
 	return c, nil
 }
 
-func (cgi *cgroupV1Paths) getFullPath(name cgroups.Name) (string, error) {
+func (cgi *cgroupV1Paths) getFullPath(name cgroup1.Name) (string, error) {
 	cgroupMountPoint, err := cgi.getMountPoint(name)
 	if err != nil {
 		return "", err
@@ -97,27 +97,27 @@ func (cgi *cgroupV1Paths) getFullPath(name cgroups.Name) (string, error) {
 
 // returns the subsystems where cgroups library has to look for, attaching the
 // hostContainerPath prefix to the folder if the integration is running inside a container
-func (cgi *cgroupV1Paths) getHierarchyFn() cgroups.Hierarchy {
-	return func() ([]cgroups.Subsystem, error) {
-		var subsystems []cgroups.Subsystem
+func (cgi *cgroupV1Paths) getHierarchyFn() cgroup1.Hierarchy {
+	return func() ([]cgroup1.Subsystem, error) {
+		var subsystems []cgroup1.Subsystem
 
-		if cpusetMountPoint, ok := cgi.mountPoints[string(cgroups.Cpuset)]; ok {
-			subsystems = append(subsystems, cgroups.NewCpuset(cpusetMountPoint))
+		if cpusetMountPoint, ok := cgi.mountPoints[string(cgroup1.Cpuset)]; ok {
+			subsystems = append(subsystems, cgroup1.NewCpuset(cpusetMountPoint))
 		}
-		if cpuMountPoint, ok := cgi.mountPoints[string(cgroups.Cpu)]; ok {
-			subsystems = append(subsystems, cgroups.NewCpu(cpuMountPoint))
+		if cpuMountPoint, ok := cgi.mountPoints[string(cgroup1.Cpu)]; ok {
+			subsystems = append(subsystems, cgroup1.NewCpu(cpuMountPoint))
 		}
-		if cpuacctMountPoint, ok := cgi.mountPoints[string(cgroups.Cpuacct)]; ok {
-			subsystems = append(subsystems, cgroups.NewCpuacct(cpuacctMountPoint))
+		if cpuacctMountPoint, ok := cgi.mountPoints[string(cgroup1.Cpuacct)]; ok {
+			subsystems = append(subsystems, cgroup1.NewCpuacct(cpuacctMountPoint))
 		}
-		if memoryMountPoint, ok := cgi.mountPoints[string(cgroups.Memory)]; ok {
-			subsystems = append(subsystems, cgroups.NewMemory(memoryMountPoint))
+		if memoryMountPoint, ok := cgi.mountPoints[string(cgroup1.Memory)]; ok {
+			subsystems = append(subsystems, cgroup1.NewMemory(memoryMountPoint))
 		}
-		if blkioMountPoint, ok := cgi.mountPoints[string(cgroups.Blkio)]; ok {
-			subsystems = append(subsystems, cgroups.NewBlkio(blkioMountPoint))
+		if blkioMountPoint, ok := cgi.mountPoints[string(cgroup1.Blkio)]; ok {
+			subsystems = append(subsystems, cgroup1.NewBlkio(blkioMountPoint))
 		}
-		if pidsMountPoint, ok := cgi.mountPoints[string(cgroups.Pids)]; ok {
-			subsystems = append(subsystems, cgroups.NewPids(pidsMountPoint))
+		if pidsMountPoint, ok := cgi.mountPoints[string(cgroup1.Pids)]; ok {
+			subsystems = append(subsystems, cgroup1.NewPids(pidsMountPoint))
 		}
 
 		return subsystems, nil

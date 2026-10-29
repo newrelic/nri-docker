@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"time"
 
-	cgroupsV2 "github.com/containerd/cgroups/v2"
-	cgroupstatsV2 "github.com/containerd/cgroups/v2/stats"
+	cgroupsV2 "github.com/containerd/cgroups/v3/cgroup2"
+	cgroupstatsV2 "github.com/containerd/cgroups/v3/cgroup2/stats"
 	"github.com/moby/moby/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 )
@@ -54,7 +54,7 @@ func (cg *CgroupsV2Fetcher) Fetch(containerInfo container.InspectResponse) (Metr
 		return stats, err
 	}
 
-	manager, err := cgroupsV2.LoadManager(cgroupInfo.getMountPoint(), cgroupInfo.getGroup())
+	manager, err := cgroupsV2.Load(cgroupInfo.getGroup(), cgroupsV2.WithMountpoint(cgroupInfo.getMountPoint()))
 	if err != nil {
 		return stats, err
 	}
