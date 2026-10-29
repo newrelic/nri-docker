@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/containerd/cgroups"
+	"github.com/containerd/cgroups/v3/cgroup1"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -126,11 +126,11 @@ func TestCgroupPathsGetFullPath(t *testing.T) {
 		},
 	}
 
-	fullPathCPU, err := cgroupInfo.getFullPath(cgroups.Cpu)
+	fullPathCPU, err := cgroupInfo.getFullPath(cgroup1.Cpu)
 	assert.NoError(t, err)
 	assert.Equal(t, "/sys/fs/cgroup/cpu/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0", fullPathCPU)
 
-	fullPathCpuacct, err := cgroupInfo.getFullPath(cgroups.Cpuacct)
+	fullPathCpuacct, err := cgroupInfo.getFullPath(cgroup1.Cpuacct)
 	assert.NoError(t, err)
 	assert.Equal(t, "/custom/host/sys/fs/cgroup/cpuacct/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0", fullPathCpuacct)
 }
@@ -144,7 +144,7 @@ func TestCgroupPathsGetMountPoint(t *testing.T) {
 		},
 	}
 
-	mountPoint, err := cgroupInfo.getMountPoint(cgroups.Cpu)
+	mountPoint, err := cgroupInfo.getMountPoint(cgroup1.Cpu)
 	assert.NoError(t, err)
 	assert.Equal(t, "/custom/host/sys/fs/cgroup", mountPoint)
 }
@@ -221,13 +221,13 @@ configfs /sys/kernel/config configfs rw,relatime 0 0`,
 2:cpu,cpuacct:/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0
 1:name=systemd:/docker/f7bd95ecd8dc9deb33491d044567db18f537fd9cf26613527ff5f636e7d9bdb0`,
 	}
-	expected := []cgroups.Subsystem{
-		cgroups.NewPids("/custom/host/sys/fs/cgroup1"),
-		cgroups.NewCpuset("/custom/host/sys/fs/cgroup2"),
-		cgroups.NewCpu("/custom/host/sys/fs/cgroup3"),
-		cgroups.NewCpuacct("/custom/host/sys/fs/cgroup3"),
-		cgroups.NewMemory("/custom/host/sys/fs/cgroup4"),
-		cgroups.NewBlkio("/custom/host/sys/fs/cgroup5"),
+	expected := []cgroup1.Subsystem{
+		cgroup1.NewPids("/custom/host/sys/fs/cgroup1"),
+		cgroup1.NewCpuset("/custom/host/sys/fs/cgroup2"),
+		cgroup1.NewCpu("/custom/host/sys/fs/cgroup3"),
+		cgroup1.NewCpuacct("/custom/host/sys/fs/cgroup3"),
+		cgroup1.NewMemory("/custom/host/sys/fs/cgroup4"),
+		cgroup1.NewBlkio("/custom/host/sys/fs/cgroup5"),
 	}
 
 	cgroupDetector := &CgroupV1PathParser{openFn: createFileOpenFnMock(filesMap)}
@@ -257,7 +257,7 @@ func TestGetSingleFileUintStat(t *testing.T) {
 		},
 	}
 
-	actual, err := cgi.getSingleFileUintStat(cgroups.Cpu, "cpu.shares")
+	actual, err := cgi.getSingleFileUintStat(cgroup1.Cpu, "cpu.shares")
 	assert.NoError(t, err)
 
 	assert.Equal(t, uint64(9999), actual)
