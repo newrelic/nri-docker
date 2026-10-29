@@ -13,8 +13,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/containerd/cgroups"
-	cgroupstats "github.com/containerd/cgroups/stats/v1"
+	"github.com/containerd/cgroups/v3/cgroup1"
+	cgroupstats "github.com/containerd/cgroups/v3/cgroup1/stats"
 	"github.com/moby/moby/api/types/container"
 	"github.com/newrelic/infra-integrations-sdk/v3/log"
 )
@@ -54,12 +54,12 @@ func (cg *CgroupsV1Fetcher) Fetch(c container.InspectResponse) (Metrics, error) 
 		return stats, err
 	}
 
-	control, err := cgroups.Load(cgroupInfo.getHierarchyFn(), cgroupInfo.getPath)
+	control, err := cgroup1.Load(cgroupInfo.getPath, cgroup1.WithHierarchy(cgroupInfo.getHierarchyFn()))
 	if err != nil {
 		return stats, err
 	}
 
-	metrics, err := control.Stat(cgroups.IgnoreNotExist)
+	metrics, err := control.Stat(cgroup1.IgnoreNotExist)
 	if err != nil {
 		return stats, err
 	}
@@ -70,7 +70,7 @@ func (cg *CgroupsV1Fetcher) Fetch(c container.InspectResponse) (Metrics, error) 
 		log.Error("couldn't read pids stats: %v", err)
 	}
 
-	cgroupFullPathBlkio, err := cgroupInfo.getFullPath(cgroups.Blkio)
+	cgroupFullPathBlkio, err := cgroupInfo.getFullPath(cgroup1.Blkio)
 
 	if err == nil {
 		if stats.Blkio, err = cg.blkio(cgroupFullPathBlkio); err != nil {
@@ -84,7 +84,7 @@ func (cg *CgroupsV1Fetcher) Fetch(c container.InspectResponse) (Metrics, error) 
 		log.Error("couldn't read cpu stats: %v", err)
 	}
 
-	if stats.CPU.Shares, err = cgroupInfo.getSingleFileUintStat(cgroups.Cpu, "cpu.shares"); err != nil {
+	if stats.CPU.Shares, err = cgroupInfo.getSingleFileUintStat(cgroup1.Cpu, "cpu.shares"); err != nil {
 		log.Error("couldn't read cpu shares: %v", err)
 	}
 
@@ -92,7 +92,7 @@ func (cg *CgroupsV1Fetcher) Fetch(c container.InspectResponse) (Metrics, error) 
 		log.Error("couldn't read memory stats: %v", err)
 	}
 
-	if stats.Memory.SoftLimit, err = cgroupInfo.getSingleFileUintStat(cgroups.Memory, "memory.soft_limit_in_bytes"); err != nil {
+	if stats.Memory.SoftLimit, err = cgroupInfo.getSingleFileUintStat(cgroup1.Memory, "memory.soft_limit_in_bytes"); err != nil {
 		log.Debug("couldn't read soft_limit_in_bytes stats: %v", err)
 	}
 
