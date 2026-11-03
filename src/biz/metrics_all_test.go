@@ -164,6 +164,58 @@ func TestMetricsFetcher_CPU_CounterResetKernelRises(t *testing.T) {
 	assert.InDelta(t, 50.0, got.KernelPercent, 0.001)
 }
 
+// User/kernel counters are optional. A missing one, in the current reading or in the stored
+// previous sample, must not panic and must not prevent the other CPU metrics from being reported.
+func TestMetricsFetcher_CPU_MissingUserKernelCounters(t *testing.T) {
+	now := time.Now().Truncate(time.Second) // the store keeps the previous time in whole seconds
+	json := &container.InspectResponse{HostConfig: &container.HostConfig{}}
+	sample := func(at time.Time, total, system uint64, withUserKernel bool) raw.Metrics {
+		m := raw.Metrics{
+			ContainerID: "test-container",
+			Time:        at,
+			CPU: raw.CPU{
+				TotalUsage:  total,
+				SystemUsage: system,
+				OnlineCPUs:  2,
+			},
+		}
+		if withUserKernel {
+			m.CPU.UsageInUsermode = utils.ToPointer(total)
+			m.CPU.UsageInKernelmode = utils.ToPointer(uint64(0))
+		}
+		return m
+	}
+
+	tests := []struct {
+		name          string
+		previousHasUK bool
+		currentHasUK  bool
+	}{
+		{name: "previous sample without user/kernel", previousHasUK: false, currentHasUK: true},
+		{name: "current sample without user/kernel", previousHasUK: true, currentHasUK: false},
+		{name: "neither sample has user/kernel", previousHasUK: false, currentHasUK: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mc := &MetricsFetcher{
+				store:            persist.NewInMemoryStore(),
+				getRuntimeNumCPU: func() int { return 2 },
+			}
+
+			mc.cpu(sample(now, 1_000_000_000, 100, tt.previousHasUK), json)
+
+			var got CPU
+			assert.NotPanics(t, func() {
+				got = mc.cpu(sample(now.Add(time.Second), 2_000_000_000, 200, tt.currentHasUK), json)
+			})
+			assert.InDelta(t, 1.0, got.UsedCores, 0.001)
+			assert.Equal(t, 0.0, got.UserPercent)
+			assert.Equal(t, 0.0, got.KernelPercent)
+		})
+	}
+}
+
 // swap tests are not applicable for windows
 // nolint: funlen
 func TestMetricsFetcher_memory(t *testing.T) {
