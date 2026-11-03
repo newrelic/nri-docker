@@ -146,11 +146,21 @@ func (mc *MetricsFetcher) cpu(metrics raw.Metrics, json *container.InspectRespon
 
 	cpu.CPUPercent = cpuPercent(previous.CPU, metrics.CPU)
 
-	userDelta := float64(counterDelta("user CPU usage", *metrics.CPU.UsageInUsermode, *previous.CPU.UsageInUsermode))
-	cpu.UserPercent = math.Min(maxVal, userDelta*100/durationNS)
+	// The user/kernel counters are optional: they may be missing from the current reading or from a
+	// previously stored sample (e.g. one written by an older version).
+	if metrics.CPU.UsageInUsermode != nil && previous.CPU.UsageInUsermode != nil {
+		userDelta := float64(counterDelta("user CPU usage", *metrics.CPU.UsageInUsermode, *previous.CPU.UsageInUsermode))
+		cpu.UserPercent = math.Min(maxVal, userDelta*100/durationNS)
+	} else {
+		log.Debug("could not retrieve user CPU usage for container %v", metrics.ContainerID)
+	}
 
-	kernelDelta := float64(counterDelta("kernel CPU usage", *metrics.CPU.UsageInKernelmode, *previous.CPU.UsageInKernelmode))
-	cpu.KernelPercent = math.Min(maxVal, kernelDelta*100/durationNS)
+	if metrics.CPU.UsageInKernelmode != nil && previous.CPU.UsageInKernelmode != nil {
+		kernelDelta := float64(counterDelta("kernel CPU usage", *metrics.CPU.UsageInKernelmode, *previous.CPU.UsageInKernelmode))
+		cpu.KernelPercent = math.Min(maxVal, kernelDelta*100/durationNS)
+	} else {
+		log.Debug("could not retrieve kernel CPU usage for container %v", metrics.ContainerID)
+	}
 
 	cpu.UsedCores = float64(counterDelta("total CPU usage", metrics.CPU.TotalUsage, previous.CPU.TotalUsage)) / durationNS
 

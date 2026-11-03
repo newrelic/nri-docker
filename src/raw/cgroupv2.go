@@ -5,6 +5,8 @@ package raw
 
 import (
 	"errors"
+	"fmt"
+	"os"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -52,6 +54,13 @@ func (cg *CgroupsV2Fetcher) Fetch(containerInfo container.InspectResponse) (Metr
 	cgroupInfo, err := cg.cgroupDetector.Paths(cg.hostRoot, pid)
 	if err != nil {
 		return stats, err
+	}
+
+	// The cgroups library returns zeroed stats, without an error, for a directory that doesn't exist.
+	// This happens when the path is resolved from /proc/<pid>/cgroup in a private cgroup namespace:
+	// a container outside the namespace shows up as "/../<name>", which loses the cgroup mount segment.
+	if _, err = os.Stat(cgroupInfo.getFullPath()); err != nil {
+		return stats, fmt.Errorf("cgroup directory for container %s not found: %w", containerID, err)
 	}
 
 	manager, err := cgroupsV2.Load(cgroupInfo.getGroup(), cgroupsV2.WithMountpoint(cgroupInfo.getMountPoint()))

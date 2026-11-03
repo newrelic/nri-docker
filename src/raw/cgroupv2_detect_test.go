@@ -3,8 +3,10 @@
 package raw
 
 import (
+	"os"
 	"testing"
 
+	"github.com/moby/moby/api/types/container"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -205,4 +207,24 @@ tmpfs /run/user/1000 tmpfs rw,nosuid,nodev,relatime,size=99456k,nr_inodes=24864,
 			require.Error(t, err)
 		})
 	}
+}
+
+type fakeCgroupV2Detector struct{ paths CgroupV2PathGetter }
+
+func (f fakeCgroupV2Detector) Paths(string, int) (CgroupV2PathGetter, error) { return f.paths, nil }
+
+func TestCgroupsV2Fetcher_FetchMissingCgroupDir(t *testing.T) {
+	fetcher := &CgroupsV2Fetcher{
+		cgroupDetector: fakeCgroupV2Detector{paths: &cgroupV2Paths{
+			mountPoint: t.TempDir(),
+			group:      "/docker-abc.scope",
+		}},
+	}
+
+	_, err := fetcher.Fetch(container.InspectResponse{
+		ID:    "abc",
+		State: &container.State{Pid: 1},
+	})
+
+	require.ErrorIs(t, err, os.ErrNotExist)
 }
