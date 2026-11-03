@@ -9,6 +9,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
+### bugfix
+- Fixed a nil pointer panic when a container's cgroup data is unavailable, e.g. when the agent runs in a private cgroup namespace
+
 ## v2.9.0 - 2026-10-29
 
 ### 🚀 Enhancements
