@@ -9,7 +9,9 @@ Unreleased section should follow [Release Toolkit](https://github.com/newrelic/r
 
 ## Unreleased
 
-### security
+## v2.10.0 - 2026-11-08
+
+### 🛡️ Security notices
 - Updated go.opentelemetry.io/otel, otel/trace, otel/metric, otel/sdk and otel/sdk/metric to v1.47.0 to address GHSA-q7gw-24fr-5p69
 
 ## v2.9.1 - 2026-11-03
