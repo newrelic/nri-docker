@@ -5,7 +5,7 @@ go 1.27.3
 require (
 	github.com/containerd/cgroups/v3 v3.1.3
 	github.com/dustin/go-humanize v1.1.0
-	github.com/moby/moby/api v1.56.1
+	github.com/moby/moby/api v1.57.0
 	github.com/moby/moby/client v0.4.0
 	github.com/newrelic/infra-integrations-sdk/v3 v3.9.1
 	github.com/shirou/gopsutil v3.21.11+incompatible
