@@ -1,6 +1,6 @@
 module github.com/newrelic/nri-docker
 
-go 1.27.3
+go 1.27.4
 
 require (
 	github.com/containerd/cgroups/v3 v3.1.3
